@@ -1,0 +1,332 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MSS3D Monetization Hub</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: #000; color: #edf2ff; font-family: system-ui, sans-serif; }
+    .hub { height: 100%; display: grid; grid-template-rows: 58px minmax(0, 1fr); }
+    .hub-nav {
+      position: relative; z-index: 10; display: flex; align-items: center; gap: 8px;
+      padding: 9px 18px; background: rgba(9, 10, 13, .97);
+      border-bottom: 1px solid rgba(255, 255, 255, .1);
+      box-shadow: 0 5px 22px rgba(0, 0, 0, .4);
+    }
+    .brand { margin-right: auto; font-weight: 750; letter-spacing: .01em; }
+    .brand span { color: #7589a8; font-size: 12px; font-weight: 500; }S
+    .hub-nav button {
+      border: 1px solid rgba(255, 255, 255, .13); border-radius: 999px;
+      padding: 9px 18px; background: #0b0c0f; color: #a6b8d4;
+      font: 700 13px/1 system-ui, sans-serif; cursor: pointer;
+    }
+    .hub-nav button:hover { color: #edf2ff; border-color: rgba(255, 255, 255, .25); }
+    .hub-nav button.active {
+      color: #031018; border-color: transparent;
+      background: linear-gradient(135deg, #00e5c3, #4d9fff);
+    }
+    .hub-nav button#authOut { margin-left: 14px; font-weight: 500; color: #7589a8; }
+    .hub-nav button#authOut:hover { color: #ff8ca1; border-color: rgba(255, 140, 161, .4); }
+    .reports { position: relative; min-height: 0; }
+    .report-frame {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      border: 0; background: #000;
+    }
+    .report-frame[hidden] { display: none; }
+    @media (max-width: 620px) {
+      .hub { grid-template-rows: 54px minmax(0, 1fr); }
+      .hub-nav { padding: 8px; }
+      .brand span { display: none; }
+      .hub-nav button { padding: 8px 11px; font-size: 12px; }
+    }
+
+    /* ---- light theme ---- */
+    body.lt { background: #eef1f7; color: #0d1b2e; }
+    body.lt .hub-nav { background: rgba(255, 255, 255, .95);
+      border-bottom-color: rgba(15, 30, 60, .1); box-shadow: 0 5px 22px rgba(30, 50, 90, .08); }
+    body.lt .brand span { color: #8394ad; }
+    body.lt .hub-nav button { background: #fff; color: #56657f; border-color: rgba(15, 30, 60, .14); }
+    body.lt .hub-nav button:hover { color: #0d1b2e; border-color: rgba(15, 30, 60, .3); }
+    body.lt .hub-nav button.active { color: #fff;
+      background: linear-gradient(135deg, #00b39a, #2f7fe0); border-color: transparent; }
+    body.lt .report-frame { background: #eef1f7; }
+    html[data-theme=light] { background: #eef1f7; }
+
+    /* ---- login gate ---- */
+    #authGate { position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center; background: #000; }
+    #authGate.done { display: none; }
+    #authBox { width: 340px; background: #0b0c0f; border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 14px; padding: 28px 26px; }
+    #authBox h1 { font: 750 17px system-ui, sans-serif; margin: 0 0 4px; }
+    #authBox p.sub { font-size: 11px; color: #7589a8; margin: 0 0 18px;
+      letter-spacing: .12em; text-transform: uppercase; }
+    #authBox label { display: block; font-size: 11px; color: #7589a8; margin: 12px 0 5px;
+      letter-spacing: .08em; text-transform: uppercase; }
+    #authBox input { width: 100%; background: #070809; border: 1px solid rgba(255, 255, 255, .14);
+      color: #edf2ff; border-radius: 8px; padding: 9px 11px; font-size: 13px; outline: 0; }
+    #authBox input:focus { border-color: #00e5c3; }
+    #authBox button { width: 100%; margin-top: 18px; border: 0; border-radius: 999px; padding: 11px;
+      background: linear-gradient(135deg, #00e5c3, #4d9fff); color: #031018;
+      font: 700 13px system-ui, sans-serif; cursor: pointer; }
+    #authBox button:disabled { opacity: .5; cursor: not-allowed; }
+    #authMsg { margin-top: 12px; font-size: 11px; line-height: 1.6; color: #ff4d6d;
+      min-height: 15px; white-space: pre-line; }
+  </style>
+<script>
+/* ---- shared theme, synced across the hub and every report ----
+   The choice is written to localStorage, which same-origin documents share.
+   A `storage` event fires in every OTHER document when one of them writes,
+   which is how a click in one iframe reaches the rest.S
+
+   Charts read their colours from CSS variables at build time, so they have to
+   be rebuilt on a change. That rebuild is expensive and blocks the main thread,
+   so it is deliberately pushed behind a paint: the CSS flip lands on the next
+   frame, and the redraw happens after. A report that is currently hidden (its
+   iframe is display:none, so its document has no width) stays marked dirty and
+   redraws when it is shown again — otherwise three reports would rebuild at
+   once on a thread they all share. */
+(function(){
+  var KEY = 'mss3d_theme';
+  var dirty = false;
+
+  function paint(mode){
+    var light = (mode === 'light');
+    if (document.body) document.body.classList.toggle('lt', light);
+    document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
+    var btn = document.getElementById('themeBtn');
+    if (btn) btn.innerHTML = light ? '\u{1F319} Dark' : '\u2600 Light';
+  }
+
+  function flush(){
+    if (!dirty) return;
+    if (typeof window.__themeRerender !== 'function') { dirty = false; return; }
+    // A hidden iframe has no layout; leave it dirty until it is shown.
+    if (!document.documentElement.clientWidth) return;
+    dirty = false;
+    try { window.__themeRerender(); } catch (e) {}
+  }
+
+  function apply(mode, initial){
+    paint(mode);
+    if (initial) return;                       // first paint: nothing built yet
+    dirty = true;
+    // rAF gets us past the paint, the timeout past the frame's own work.
+    requestAnimationFrame(function(){ setTimeout(flush, 0); });
+  }
+
+  window.getTheme = function(){ try { return localStorage.getItem(KEY) || 'dark'; } catch(e){ return 'dark'; } };
+  window.setTheme = function(mode){ try { localStorage.setItem(KEY, mode); } catch(e){} apply(mode); };
+  window.toggleThemeGlobal = function(){ window.setTheme(window.getTheme() === 'light' ? 'dark' : 'light'); };
+
+  window.addEventListener('storage', function(ev){ if (ev.key === KEY) apply(ev.newValue || 'dark'); });
+  window.addEventListener('resize', flush);    // fires when a hidden iframe is shown
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ apply(window.getTheme(), true); });
+  } else {
+    apply(window.getTheme(), true);
+  }
+})();
+</script>
+<style>
+html,body{transition:background-color .18s linear,color .18s linear}
+.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:background-color .18s linear,border-color .18s linear}
+@media (prefers-reduced-motion: reduce){html,body,.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:none}}
+</style>
+</head>
+<body>
+
+  <div id="authGate">
+    <div id="authBox">
+      <h1>Sign in</h1>
+      <p class="sub">Playspare &middot; MSS3D</p>
+      <label for="authUser">Username</label>
+      <input id="authUser" type="text" autocomplete="username" autocapitalize="off" spellcheck="false">
+      <label for="authPass">Password</label>
+      <input id="authPass" type="password" autocomplete="current-password">
+      <button id="authBtn" type="button">Sign in</button>
+      <div id="authMsg"></div>
+    </div>
+  </div>
+
+  <main class="hub">
+    <nav class="hub-nav" aria-label="Report period">
+      <div class="brand">playspare <span>&middot; MSS3D Monetization Hub</span></div>
+      <button type="button" class="active" data-report="till-date" aria-selected="true">Till Date</button>
+      <button type="button" data-report="weekly" aria-selected="false">Weekly</button>
+      <button type="button" data-report="ua" aria-selected="false">UA</button>
+      <button type="button" id="themeBtn">☀ Light</button>
+      <button type="button" id="authOut">Sign out</button>
+    </nav>
+
+    <section class="reports">
+      <iframe
+        class="report-frame"
+        id="report-till-date"
+        data-src="monetization_report_till_date.html?v=20260727-sticky-date-bar"
+        title="Monetization report till date"></iframe>
+      <iframe
+        class="report-frame"
+        id="report-weekly"
+        data-src="monetization_report_weekly.html?v=20260727-monetization-report-label"
+        title="Weekly monetization report"
+        hidden></iframe>
+      <iframe
+        class="report-frame"
+        id="report-ua"
+        data-src="ua_report.html?v=20260727-filtered-platform-revenue-mix"
+        title="User acquisition report"
+        hidden></iframe>
+    </section>
+  </main>
+
+  <script>
+    /* ============================================================
+       PASTE YOUR THREE /exec URLs HERE — the only thing to fill in.
+       Not secrets: every request still needs a token. But keep the
+       deployments themselves private.
+       ============================================================ */
+    const API_URLS = {
+      ua:       'https://script.google.com/macros/s/AKfycbzPMKh4b9gA_N05_Dxjt3qJwAJNi4IoE7N3x5sjS-7EbtUPAAm9zABivxCm0jC-9-qJ/exec',
+      weekly:   'https://script.google.com/macros/s/AKfycbwhZhBqnp8jmEuL12XUS4RWYZJz9n3YjJEEOvvo--zoOL3BhCQx1IjoJRR8z8A-p64lMw/exec',
+      tilldate: 'https://script.google.com/macros/s/AKfycbyaSzBDM3Ayh9dSdyjhdLWC7l2er6kTUhD6kcO6GEfnW22GRA3_KnvIxTELyv-1cYtj/exec'
+    };
+
+    /* Each backend issues its own token, so we hold three. Same-origin
+       iframes share sessionStorage, which is how each report picks up
+       the one it needs. */
+    const TOKEN_KEYS = { ua: 'tok_ua', weekly: 'tok_weekly', tilldate: 'tok_tilldate' };
+
+    async function apiLogin(which, username, password) {
+      const url = API_URLS[which];
+      if (!url || url.indexOf('PASTE_') === 0) throw new Error(which + ': web app URL not set');
+      if (url.indexOf('/exec') < 0) throw new Error(which + ': URL must end in /exec, not /dev');
+
+      let res;
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          // text/plain on purpose: application/json triggers a CORS preflight
+          // that Apps Script web apps cannot answer.
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'login', username: username, password: password }),
+          redirect: 'follow'
+        });
+      } catch (err) {
+        // A network-level failure never reaches the script. Almost always one of:
+        // a file:// page, a /dev URL, or access not set to "Anyone".
+        throw new Error(which + ': could not reach the web app.\n' +
+          'Check that the page is served over http (not file://), the URL ends in /exec, ' +
+          'and the deployment is set to Execute as Me + Anyone.');
+      }
+      if (!res.ok) throw new Error(which + ': HTTP ' + res.status);
+      const data = await res.json();
+      if (!data.ok) throw new Error(which + ': ' + (data.error || 'login failed'));
+      return data.token;
+    }
+
+    /* Each report runs in its own document and cannot read API_URLS from here,
+       so its web app URL is appended to the iframe src. The token travels
+       separately, in sessionStorage, which same-origin iframes share. */
+    const FRAME_API = { 'report-ua': 'ua', 'report-weekly': 'weekly', 'report-till-date': 'tilldate' };
+
+    function loadReports() {
+      document.querySelectorAll('.report-frame[data-src]').forEach((frame) => {
+        const which = FRAME_API[frame.id];
+        const base = frame.dataset.src;
+        const join = base.indexOf('?') >= 0 ? '&' : '?';
+        frame.src = base + join + 'api=' + encodeURIComponent(API_URLS[which]);
+        frame.removeAttribute('data-src');
+      });
+    }
+
+    async function doLogin() {
+      const btn  = document.getElementById('authBtn');
+      const user = document.getElementById('authUser').value.trim();
+      const pass = document.getElementById('authPass').value;
+      const msg  = document.getElementById('authMsg');
+      if (!user || !pass) { msg.style.color = '#ff4d6d'; msg.textContent = 'Enter your username and password.'; return; }
+
+      btn.disabled = true;
+      msg.style.color = '#7589a8';
+      msg.textContent = 'Signing in\u2026';
+      try {
+        // One password, three backends, in parallel. allSettled rather than all,
+        // so a single broken deployment reports itself instead of masking the others.
+        const names   = Object.keys(API_URLS);
+        const results = await Promise.allSettled(names.map((n) => apiLogin(n, user, pass)));
+
+        const failed = [];
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled') sessionStorage.setItem(TOKEN_KEYS[names[i]], r.value);
+          else failed.push(r.reason && r.reason.message ? r.reason.message : String(r.reason));
+        });
+        if (failed.length) throw new Error(failed.join('\n\n'));
+
+        document.getElementById('authPass').value = '';
+        document.getElementById('authGate').classList.add('done');
+        loadReports();
+      } catch (err) {
+        msg.style.color = '#ff4d6d';
+        msg.textContent = err.message || 'Sign in failed';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function doLogout() {
+      Object.values(TOKEN_KEYS).forEach((k) => sessionStorage.removeItem(k));
+      location.reload();
+    }
+
+    /* ---- report switching (unchanged) ---- */
+    const reportButtons = document.querySelectorAll('[data-report]');
+    const reportFrames = document.querySelectorAll('.report-frame');
+
+    function showReport(name) {
+      reportButtons.forEach((button) => {
+        const selected = button.dataset.report === name;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-selected', String(selected));
+      });
+
+      reportFrames.forEach((frame) => {
+        frame.hidden = frame.id !== `report-${name}`;
+      });
+
+      history.replaceState(null, '', `#${name}`);
+    }
+
+    reportButtons.forEach((button) => {
+      button.addEventListener('click', () => showReport(button.dataset.report));
+    });
+
+    const requestedReport = location.hash.slice(1);
+    showReport(['till-date', 'weekly', 'ua'].includes(requestedReport) ? requestedReport : 'till-date');
+
+    /* ---- gate wiring ---- */
+    document.getElementById('authBtn').addEventListener('click', doLogin);
+    document.getElementById('authOut').addEventListener('click', doLogout);
+    document.getElementById('themeBtn').addEventListener('click', () => window.toggleThemeGlobal());
+    ['authUser', 'authPass'].forEach((id) => document.getElementById(id)
+      .addEventListener('keydown', (ev) => { if (ev.key === 'Enter') doLogin(); }));
+
+    // Already signed in this tab? Skip the gate.
+    if (Object.values(TOKEN_KEYS).every((k) => sessionStorage.getItem(k))) {
+      document.getElementById('authGate').classList.add('done');
+      loadReports();
+    } else {
+      document.getElementById('authUser').focus();
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+
+
