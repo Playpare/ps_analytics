@@ -1,0 +1,697 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MSS3D · UA Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Quicksand:wght@600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    :root{--bg:#000;--card:#0b0c0f;--card2:#070809;--border:rgba(255,255,255,.08);--borderB:rgba(255,255,255,.14);--t1:#edf2ff;--t2:#a6b8d4;--t3:#7589a8;--teal:#00e5c3;--blue:#4d9fff;--pink:#ec0a9b;--green:#00c47a;--amber:#ffb800;--coral:#ff4d6d;--grad:linear-gradient(135deg,#00e5c3,#4d9fff);--r:14px;--sh:0 8px 40px rgba(0,0,0,.6)}
+    *{box-sizing:border-box;margin:0;padding:0}html{background:#000}body{min-width:980px;background:#000;color:var(--t1);font-family:Poppins,system-ui,sans-serif;padding-bottom:35px}.mono{font-family:'DM Mono',monospace}.top{position:sticky;top:0;z-index:50;height:58px;padding:0 24px;display:flex;align-items:center;gap:10px;background:rgba(9,10,13,.97);border-bottom:1px solid var(--borderB)}.brand{font:700 16px Quicksand,sans-serif;margin-right:10px}.brand b{background:var(--grad);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}.tabs{display:flex;gap:5px}.tabs button,.btn{border:1px solid var(--borderB);border-radius:20px;background:var(--card);color:var(--t2);padding:8px 13px;font:600 11px 'DM Mono';cursor:pointer}.tabs button.active,.btn.primary{color:#031018;border-color:transparent;background:var(--grad)}.connect{margin-left:auto;display:flex;gap:6px}.connect input{width:225px;background:var(--card2);color:var(--t1);border:1px solid var(--borderB);border-radius:8px;padding:7px 9px;font:10px 'DM Mono'}.connect input.key{width:125px}.status{font:10px 'DM Mono';color:var(--t3);max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.view{display:none}.view.active{display:block}.slide{width:min(1520px,100vw);min-height:855px;margin:34px auto 0;background:var(--bg);box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column}.sh{height:58px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;background:rgba(9,10,13,.9);border-bottom:1px solid var(--border)}.sh .date{color:#020d1a;padding:7px 16px;border-radius:20px;background:var(--grad);font:600 11px 'DM Mono'}.sb{flex:1;padding:18px 40px 22px}.eyebrow{color:var(--t3);font:500 11px 'DM Mono';letter-spacing:.16em;text-transform:uppercase}.h1{font:800 27px Syne;margin:4px 0 15px}.grid-main{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(240px,.6fr);gap:14px}.stack{display:grid;gap:12px}.card,.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh)}.card{padding:15px 17px}.card h2{font:700 15px Syne;margin-bottom:9px}.kpi{padding:15px 18px;border-left:3px solid var(--teal);display:flex;flex-direction:column;justify-content:center}.kpi:nth-child(even){border-left-color:var(--blue)}.kpi .l{color:var(--t3);font:500 9.5px 'DM Mono';text-transform:uppercase}.kpi .v{font:500 24px 'DM Mono';margin:5px 0}.kpi .d{color:var(--green);font:500 10px 'DM Mono'}.chartbox{height:250px;position:relative}.chartbox.tall{height:300px}.mt{margin-top:14px}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.piegrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}/* Slides end where their content ends - the old fixed floor left dead black
+   under the last card. The Overview is the exception: it fills the window so
+   its cards cover the page rather than stopping halfway down. */
+    .slide{min-height:0}
+    #overview .slide{min-height:calc(100vh - 58px)}
+    /* The legend is a sibling of .piebox, never a child: Chart.js sizes the
+       canvas from its parent, so a legend inside that parent whose height
+       changes with the canvas creates a resize loop - the chart collapses and
+       the page flickers as it redraws forever. */
+    .piebox{height:245px;position:relative}
+    /* align-items:flex-start keeps .piebox at its own fixed height, so the
+       legend's height can never feed back into the canvas size. */
+    .pie-row{display:flex;gap:18px;align-items:flex-start}
+    .pie-row>.piebox{flex:1 1 58%;min-width:0}
+    .pie-row>.pie-legend{flex:1 1 42%;min-width:0}
+    .pie-legend{display:grid;grid-template-columns:1fr;gap:3px 20px;font:600 10px 'DM Mono',monospace;padding:8px 2px 0;align-content:start}
+    .pie-legend.two-col{grid-template-columns:1fr 1fr}
+    .pl-row{display:grid;grid-template-columns:auto 10px minmax(0,1fr) auto;align-items:center;gap:7px;min-width:0}
+    .pl-n{color:#7589a8;text-align:right;min-width:15px}
+    .pl-sw{width:10px;height:10px;border-radius:3px}
+    .pl-lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)}
+    .pl-pc{text-align:right;font-variant-numeric:tabular-nums;color:var(--t1)}
+    body.lt .pl-n{color:#5b6b85}.sf{height:32px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);color:var(--t3);font:9.5px 'DM Mono'}.tablewrap{overflow:auto;max-height:510px;border:1px solid var(--border);border-radius:8px}table{width:100%;border-collapse:collapse;font-size:10px}th{position:sticky;top:0;z-index:2;background:#11151b;color:var(--t2);text-align:left;padding:8px 7px;font:500 9px 'DM Mono';white-space:nowrap;border-bottom:1px solid var(--borderB)}td{padding:7px;border-bottom:1px solid var(--border);white-space:nowrap}td.num{text-align:right;font-family:'DM Mono'}tbody tr:hover td{background:rgba(255,255,255,.035)}.heat-blue{background:rgba(77,159,255,.18)}.heat-teal{background:rgba(0,229,195,.16)}.heat-pink{background:rgba(236,10,155,.17)}.heat-green{background:rgba(0,196,122,.18)}.heat-amber{background:rgba(255,184,0,.16)}.empty{height:500px;display:grid;place-items:center;color:var(--t3);font:12px 'DM Mono';text-align:center;line-height:1.8}.error{color:var(--coral)}
+    .view{opacity:0;transform:translateY(8px)}.view.active{animation:viewIn .3s ease forwards}@keyframes viewIn{to{opacity:1;transform:none}}
+    .view.active > .slide > .sh{position:sticky;top:58px;z-index:49;box-shadow:0 8px 20px rgba(0,0,0,.28);backdrop-filter:blur(10px)}
+    .sh .date{border:0;outline:0;cursor:pointer}.sh select.date option{background:#0b0c0f;color:#edf2ff}.date-controls{display:flex;align-items:center;gap:6px}.date-span{color:#7589a8;font:600 10px 'DM Mono',monospace;white-space:nowrap;letter-spacing:.02em}body.lt .date-span{color:#5b6b85}.date-span:empty{display:none}.date-controls input[type=date]{display:none;color:#020d1a;padding:7px 10px;border:0;border-radius:20px;background:linear-gradient(135deg,#00e5c3,#4d9fff);font:600 10px 'DM Mono';outline:0}.date-confirm{display:none;border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:7px 13px;background:#0b0c0f;color:#edf2ff;font:600 10px 'DM Mono';cursor:pointer}.date-confirm:hover{border-color:#00e5c3;color:#00e5c3}.date-controls.single .single-date,.date-controls.custom .range-date,.date-controls.single .date-confirm,.date-controls.custom .date-confirm{display:block}
+    #networks .slide{width:100vw;max-width:none;margin:0;box-shadow:none}#networks .sb{width:100%;padding:18px 0 22px}#networks .eyebrow,#networks .h1{margin-left:24px;margin-right:24px}#networks .sb>.card:first-of-type{width:100%;border-left:0;border-right:0;border-radius:0;padding-left:24px;padding-right:24px}#networks .two,#networks .sb>.card.mt{margin-left:24px;margin-right:24px}#networks .sh{padding-left:24px;padding-right:24px}
+    .slide{width:100vw;max-width:none;margin:0;box-shadow:none}.sb{padding-left:24px;padding-right:24px}.sh{padding-left:24px;padding-right:24px}.piebox{height:470px;min-height:470px}.piegrid .chartbox.tall{height:420px;min-height:420px}.piegrid{gap:20px}.stack>.card:has(canvas){min-height:420px}.stack>.card:has(canvas) .piebox{height:350px}.two .chartbox.tall{height:410px}.page-pies{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin:0 0 18px}.page-pies>.card{min-height:430px}.page-pies .piebox,.page-pies .chartbox{height:470px;min-height:470px}.two:has(> :only-child){grid-template-columns:1fr}.stack:empty{display:none}th.num{text-align:right}th.num,td.num{font-variant-numeric:tabular-nums}
+    .loader{position:fixed;inset:58px 0 0;z-index:100;display:none;place-items:center;background:rgba(0,0,0,.82);backdrop-filter:blur(8px)}.loader.show{display:grid}.loaderbox{text-align:center;color:var(--t2);font:11px 'DM Mono'}.spinner{width:54px;height:54px;margin:0 auto 14px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--teal);border-right-color:var(--blue);border-radius:50%;animation:spin .75s linear infinite}.pulse{width:120px;height:3px;margin:12px auto 0;border-radius:3px;background:linear-gradient(90deg,transparent,var(--teal),var(--blue),transparent);background-size:200% 100%;animation:flow 1.1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@keyframes flow{to{background-position:-200% 0}}
+  </style>
+  <style>
+    /* --- UA report Android/iOS layout tweaks --- */
+    .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .kpi-row.three{grid-template-columns:repeat(3,1fr)}
+    .kpi-row.four{grid-template-columns:repeat(4,1fr)}
+    .kpi-row.five{grid-template-columns:repeat(5,1fr)}
+    .kpi .v.neg{color:var(--coral)}
+    .kpi-row .kpi{padding:16px 20px}
+    .kpi-row .kpi .v{font-size:26px}
+    .card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:9px}
+    .card-head h2{margin:0}
+    .chan-filter{background:var(--card2);color:var(--t1);border:1px solid var(--borderB);border-radius:8px;padding:6px 26px 6px 10px;font:600 10px 'DM Mono';cursor:pointer;outline:0;max-width:190px;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--t2) 50%),linear-gradient(135deg,var(--t2) 50%,transparent 50%);background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+    .chan-filter:hover{border-color:var(--teal)}
+    .chan-filter option{background:#0b0c0f;color:#edf2ff}
+    td.wk{font-family:'DM Mono';color:var(--t2);white-space:nowrap;letter-spacing:.02em}
+    tr.wk-break td{border-top:2px solid rgba(0,229,195,.35)}
+    /* compact the IAA vs IAP share table so Channel / Ad Share / IAP Share sit close */
+    .share-table table{width:100%;min-width:0}
+    .share-table th,.share-table td{padding-left:10px;padding-right:40px}
+    .share-table th:last-child,.share-table td:last-child{padding-right:14px}
+    /* row-number column for conditionally formatted tables */
+    th.idx,td.idx{width:34px;min-width:34px;text-align:right;color:var(--t3);background:#11151b}
+    /* Spend Share / IAP Revenue Share pies: side legend needs more height */
+    .piebox.pie-side{height:500px;min-height:500px}
+  </style>
+<style>
+/* light theme — same tokens, inverted surfaces */
+body.lt{--bg:#eef1f7;--card:#ffffff;--card2:#f5f7fc;
+  --border:rgba(15,30,60,.09);--borderB:rgba(15,30,60,.16);
+  --t1:#0d1b2e;--t2:#56657f;--t3:#8394ad;
+  --teal:#00b39a;--blue:#2f7fe0;--pink:#c2077f;--green:#00a065;
+  --amber:#d99400;--coral:#e23a59;
+  --grad:linear-gradient(135deg,#00b39a,#2f7fe0);
+  --sh:0 8px 30px rgba(30,50,90,.12);}
+body.lt tbody tr:hover td{background:rgba(15,30,60,.04)}
+body.lt th,body.lt th.idx,body.lt td.idx{background:#e7ecf6}
+</style>
+<script>
+/* ---- shared theme, synced across the hub and every report ----
+   The choice is written to localStorage, which same-origin documents share.
+   A `storage` event fires in every OTHER document when one of them writes,
+   which is how a click in one iframe reaches the rest.
+
+   Charts read their colours from CSS variables at build time, so they have to
+   be rebuilt on a change. That rebuild is expensive and blocks the main thread,
+   so it is deliberately pushed behind a paint: the CSS flip lands on the next
+   frame, and the redraw happens after. A report that is currently hidden (its
+   iframe is display:none, so its document has no width) stays marked dirty and
+   redraws when it is shown again — otherwise three reports would rebuild at
+   once on a thread they all share. */
+(function(){
+  var KEY = 'mss3d_theme';
+  var dirty = false;
+
+  function paint(mode){
+    var light = (mode === 'light');
+    if (document.body) document.body.classList.toggle('lt', light);
+    document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
+    var btn = document.getElementById('themeBtn');
+    if (btn) btn.innerHTML = light ? '\u{1F319} Dark' : '\u2600 Light';
+  }
+
+  function flush(){
+    if (!dirty) return;
+    if (typeof window.__themeRerender !== 'function') { dirty = false; return; }
+    // A hidden iframe has no layout; leave it dirty until it is shown.
+    if (!document.documentElement.clientWidth) return;
+    dirty = false;
+    try { window.__themeRerender(); } catch (e) {}
+  }
+
+  function apply(mode, initial){
+    paint(mode);
+    if (initial) return;                       // first paint: nothing built yet
+    dirty = true;
+    // rAF gets us past the paint, the timeout past the frame's own work.
+    requestAnimationFrame(function(){ setTimeout(flush, 0); });
+  }
+
+  window.getTheme = function(){ try { return localStorage.getItem(KEY) || 'dark'; } catch(e){ return 'dark'; } };
+  window.setTheme = function(mode){ try { localStorage.setItem(KEY, mode); } catch(e){} apply(mode); };
+  window.toggleThemeGlobal = function(){ window.setTheme(window.getTheme() === 'light' ? 'dark' : 'light'); };
+
+  window.addEventListener('storage', function(ev){ if (ev.key === KEY) apply(ev.newValue || 'dark'); });
+  window.addEventListener('resize', flush);    // fires when a hidden iframe is shown
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ apply(window.getTheme(), true); });
+  } else {
+    apply(window.getTheme(), true);
+  }
+})();
+</script>
+<style>
+/* light mode: surfaces that were painted with literal hex, not variables */
+html[data-theme=light]{background:#eef1f7}
+body.lt{background:#eef1f7;color:#0d1b2e}
+body.lt .top,
+body.lt .sh{background:rgba(255,255,255,.95)}
+body.lt th,
+body.lt .tablewrap thead th,
+body.lt th.idx,
+body.lt td.idx{background:#e7ecf6;color:#56657f}
+body.lt .sh select.date option,
+body.lt .chan-filter option{background:#ffffff;color:#0d1b2e}
+body.lt .date-confirm{background:#ffffff;color:#0d1b2e;border-color:rgba(15,30,60,.16)}
+body.lt .loader{background:rgba(238,241,247,.85)}
+body.lt .spinner{border-color:rgba(15,30,60,.12);border-top-color:var(--teal);border-right-color:var(--blue)}
+body.lt .empty{color:#8394ad}
+</style>
+<style>
+html,body{transition:background-color .18s linear,color .18s linear}
+.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:background-color .18s linear,border-color .18s linear}
+@media (prefers-reduced-motion: reduce){html,body,.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:none}}
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><b>playspare</b> · UA</div>
+    <nav class="tabs"><button class="active" data-view="overview">Overview</button><button data-view="android">Android</button><button data-view="ios">iOS</button><button data-view="legacy">Legacy</button></nav>
+    <div class="connect"><button id="connectBtn" class="btn">Refresh</button></div><span id="status" class="status">Not connected</span>
+  </header>
+
+  <main id="overview" class="view active"><section class="slide"><div class="sh"><div class="brand"><b>playspare</b> · Supermarket · AND + iOS</div><div class="date" data-date-range>Live Sheet Data</div></div><div class="sb"><div class="eyebrow">Combined User Acquisition Performance</div><div class="h1">Cost, Revenue & Return</div><div class="kpi-row five"><div class="kpi"><div class="l">Overall Spend</div><div class="v" id="overallSpend">—</div><div class="d">Selected period</div></div><div class="kpi"><div class="l">Revenue</div><div class="v" id="overallRevenue">—</div><div class="d">All revenue</div></div><div class="kpi"><div class="l">Profit</div><div class="v" id="overallProfit">—</div><div class="d">Revenue − cost</div></div><div class="kpi"><div class="l">ROI</div><div class="v" id="overallRoi">—</div><div class="d">All revenue ÷ cost</div></div><div class="kpi"><div class="l">Installs</div><div class="v" id="overallInstalls">—</div><div class="d">Android + iOS</div></div></div><div class="two mt"><article class="card"><h2>Cost & Revenue WxW · Last 6 Weeks</h2><div class="chartbox tall"><canvas id="overallWeekly"></canvas></div></article><article class="card"><h2>Cost & Revenue DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="overallDaily"></canvas></div></article></div></div><div class="sf"><span>UA · Combined Overview</span><span>Playspare · Game District</span></div></section></main>
+
+  <main id="android" class="view"><section class="slide"><div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Android</div><div class="date" data-date-range>Live Sheet Data</div></div><div class="sb"><div class="eyebrow">Platform: Android</div><div class="h1">Android UA Performance</div><div class="kpi-row four"><div class="kpi"><div class="l">Cost</div><div class="v" id="androidSpend">—</div></div><div class="kpi"><div class="l">Revenue</div><div class="v" id="androidRevenue">—</div></div><div class="kpi"><div class="l">Profit</div><div class="v" id="androidProfit">—</div></div><div class="kpi"><div class="l">ROI</div><div class="v" id="androidRoi">—</div></div></div><div class="two mt"><article class="card"><h2>Cost & Revenue WxW</h2><div class="chartbox tall"><canvas id="androidWeekly"></canvas></div></article><article class="card"><h2>Cost & Revenue DxD</h2><div class="chartbox tall"><canvas id="androidDaily"></canvas></div></article></div><div class="two mt"><article class="card"><h2>Spend Share</h2><div class="piebox pie-side"><canvas id="androidSpendShare"></canvas></div></article><article class="card"><h2>IAP Revenue Share</h2><div class="piebox pie-side"><canvas id="androidIapNetworkShare"></canvas></div></article></div></div><div class="sf"><span>UA · Android</span><span>Playspare · Game District</span></div></section></main>
+
+  <main id="ios" class="view"><section class="slide"><div class="sh"><div class="brand"><b>playspare</b> · Supermarket · iOS</div><div class="date" data-date-range>Live Sheet Data</div></div><div class="sb"><div class="eyebrow">Platform: iOS</div><div class="h1">iOS UA Performance</div><div class="kpi-row four"><div class="kpi"><div class="l">Cost</div><div class="v" id="iosSpend">—</div></div><div class="kpi"><div class="l">Revenue</div><div class="v" id="iosRevenue">—</div></div><div class="kpi"><div class="l">Profit</div><div class="v" id="iosProfit">—</div></div><div class="kpi"><div class="l">ROI</div><div class="v" id="iosRoi">—</div></div></div><div class="two mt"><article class="card"><h2>Cost & Revenue WxW · Last 6 Weeks</h2><div class="chartbox tall"><canvas id="iosWeekly"></canvas></div></article><article class="card"><h2>Cost & Revenue DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="iosDaily"></canvas></div></article></div><div class="two mt"><article class="card"><h2>Spend Share</h2><div class="piebox pie-side"><canvas id="iosSpendShare"></canvas></div></article><article class="card"><h2>IAP Revenue Share</h2><div class="piebox pie-side"><canvas id="iosIapNetworkShare"></canvas></div></article></div></div><div class="sf"><span>UA · iOS</span><span>Playspare · Game District</span></div></section></main>
+
+  <main id="networks" class="view"><section class="slide"><div class="sh"><div class="brand"><b>playspare</b> · Network Overview</div><div class="date" data-date-range>Live Sheet Data</div></div><div class="sb"><div class="eyebrow">Android + iOS · 35% Deduction</div><div class="h1">UA Network Performance</div><article class="card"><h2>Network Overview</h2><div id="networkTable" class="tablewrap"></div></article><div class="two mt"><article class="card"><h2>UA Network Share · IAA vs IAP</h2><div id="networkShareTable" class="tablewrap"></div></article><article class="card"><h2>IAP Revenue Share</h2><div class="chartbox tall"><canvas id="networkIapShare"></canvas></div></article></div><article class="card mt"><h2>Revenue & Cost Analysis</h2><div id="revCostTable" class="tablewrap"></div></article></div><div class="sf"><span>UA · Networks</span><span>Playspare · Game District</span></div></section></main>
+
+  <main id="google-ads" class="view"><section class="slide"><div class="sh"><div class="brand"><b>playspare</b> · Google Ads</div><div class="date" data-date-range>Live Sheet Data</div></div><div class="sb"><div class="eyebrow">Campaign Performance · Google Ads Channel</div><div class="h1">Google Ads Performance</div><div class="grid-main"><div><article class="card"><h2>Revenue & ROAS over time</h2><div class="chartbox tall"><canvas id="googleAdsTrend"></canvas></div></article><article class="card mt"><h2>Cost and All Revenue over time</h2><div class="chartbox tall"><canvas id="googleAdsCost"></canvas></div></article></div><aside class="stack"><div class="kpi"><div class="l">Cost</div><div class="v" id="googleCost">—</div></div><div class="kpi"><div class="l">All Revenue</div><div class="v" id="googleRevenue">—</div></div><div class="kpi"><div class="l">Installs</div><div class="v" id="googleInstalls">—</div></div><div class="kpi"><div class="l">ROAS D0</div><div class="v" id="googleRoas">—</div></div></aside></div><article class="card mt"><h2>Google Ads Campaigns</h2><div id="googleCampaignTable" class="tablewrap"></div></article></div><div class="sf"><span>UA · Google Ads</span><span>Playspare · Game District</span></div></section></main>
+
+  <main id="legacy" class="view"><section class="slide"><div class="sh"><div class="brand"><b>playspare</b> · Legacy Games · AND + iOS</div><div class="date" data-date-range>Live Sheet Data</div></div><div class="sb"><div class="eyebrow">Portfolio excluding Supermarket</div><div class="h1">Legacy Games</div><div class="kpi-row"><div class="kpi"><div class="l">Total Revenue</div><div class="v" id="legacyRevenue">—</div></div><div class="kpi"><div class="l">Total ROI</div><div class="v" id="legacyTotalRoi">—</div></div></div><article class="card mt"><h2>Android + iOS DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="legacyCombined"></canvas></div></article><div class="kpi-row four mt"><div class="kpi"><div class="l">Android Cost</div><div class="v" id="legacyAndroidCost">—</div></div><div class="kpi"><div class="l">Android ROI</div><div class="v" id="legacyAndroidRoi">—</div></div><div class="kpi"><div class="l">Android Profit</div><div class="v" id="legacyAndroidProfit">—</div></div><div class="kpi"><div class="l">Android Revenue</div><div class="v" id="legacyAndroidRevenue">—</div></div></div><article class="card mt"><h2>Android DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="legacyAndroid"></canvas></div></article><div class="kpi-row four mt"><div class="kpi"><div class="l">iOS Cost</div><div class="v" id="legacyIosCost">—</div></div><div class="kpi"><div class="l">iOS ROI</div><div class="v" id="legacyIosRoi">—</div></div><div class="kpi"><div class="l">iOS Profit</div><div class="v" id="legacyIosProfit">—</div></div><div class="kpi"><div class="l">iOS Revenue</div><div class="v" id="legacyIosRevenue">—</div></div></div><article class="card mt"><h2>iOS DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="legacyIos"></canvas></div></article></div><div class="sf"><span>UA · Legacy Games</span><span>Playspare · Game District</span></div></section></main>
+
+
+  <div id="loader" class="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading live UA data</b><div class="pulse"></div></div></div>
+
+  <script>
+/* ---- API client: URL arrives via ?api= from the hub, token via sessionStorage ---- */
+window.__themeRerender = function(){ if (typeof DATA !== 'undefined' && DATA) render(); };
+
+const API = {
+  url: new URLSearchParams(location.search).get('api') || '',
+  tokenKey: 'tok_ua',
+  get token(){ return sessionStorage.getItem(API.tokenKey) || ''; },
+  async call(action, params){
+    if(!API.url) throw new Error('No API URL - open this report from the hub, not on its own.');
+    if(!API.token) throw new Error('Not signed in - open the hub and sign in.');
+    const res = await fetch(API.url, {
+      method: 'POST',
+      /* text/plain on purpose: application/json triggers a CORS preflight
+         that Apps Script web apps cannot answer. */
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action: action, token: API.token }, params || {})),
+      redirect: 'follow'
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status + ' from Apps Script');
+    const data = await res.json();
+    if(data.code === 401) throw new Error('Session expired - reload the hub and sign in again.');
+    if(!data.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+};
+
+// Paste the deployed Google Apps Script Web App URL here.
+
+
+const COLORS={blue:'#4d9fff',teal:'#00e5c3',pink:'#ec0a9b',line:'#a6b8d4',green:'#00c47a',amber:'#ffb800',coral:'#ff4d6d'};
+const PIE=['#4d9fff','#00e5c3','#ec0a9b','#ff7a00','#ffb800','#78b84b','#7656d6','#19a6d8','#f06292','#a6b8d4'];
+const SIDE_PIE={legend:'right',legendFont:12,legendPadding:8,radius:'99%',padding:{top:14,right:6,bottom:14,left:8}};
+const charts={}; let DATA={}; let DATE_FILTER='w2',SINGLE_DATE='',RANGE_START='',RANGE_END='',GLOBAL_MAX_DATE=null;
+Chart.defaults.color='#a6b8d4'; Chart.defaults.borderColor='rgba(255,255,255,.08)'; Chart.defaults.font.family='DM Mono'; Chart.defaults.font.size=9;
+const $=id=>document.getElementById(id), num=v=>Number(v)||0, sum=(a,k)=>a.reduce((s,r)=>s+num(r[k]),0);
+const money=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',notation:Math.abs(v)>=100000?'compact':'standard',maximumFractionDigits:1}).format(v||0);
+const compact=v=>new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(v||0);
+const pct=v=>`${(num(v)*(Math.abs(num(v))<=1?100:1)).toFixed(1)}%`;
+const dateVal=v=>{const d=new Date(v);return isNaN(d)?null:d};
+function rowDate(r){return dateVal(r.day||r.Date||r.date||r.Week||r.week)}
+const MS_DAY=86400000, WEEK_SPAN_DAYS=6; /* set negative if a 'week' column stores the week END instead of start */
+function rowDateInfo(r){const keys=['day','Date','date','Week','week'];for(const k of keys){if(r[k]!=null&&r[k]!==''){return{d:dateVal(r[k]),weekly:/^week$/i.test(k)}}}return{d:null,weekly:false}}
+function rowSpan(info){const t=info.d.getTime();return info.weekly?(WEEK_SPAN_DAYS>=0?[t,t+WEEK_SPAN_DAYS*MS_DAY]:[t+WEEK_SPAN_DAYS*MS_DAY,t]):[t,t]}
+
+/* Weeks run Monday to Sunday. weekEndSunday() returns the Sunday that closes the
+   most recent COMPLETE week on or before d, so "last 2 weeks" is a whole
+   Mon-Sun pair (e.g. 22 Jun - 5 Jul) rather than a rolling 14 days. Because the
+   window lands exactly on week boundaries, a weekly row's 7-day span sits fully
+   inside it instead of clipping a third week. */
+function weekEndSunday(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - x.getDay());          // getDay(): 0=Sun, so Sunday stays put
+  return x;
+}
+function weekWindow(weeks, anchor){
+  const sun = weekEndSunday(anchor);
+  const mon = new Date(sun); mon.setDate(mon.getDate() - (weeks * 7 - 1));
+  return {
+    start: new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()).getTime(),
+    end:   new Date(sun.getFullYear(), sun.getMonth(), sun.getDate(), 23, 59, 59, 999).getTime()
+  };
+}
+/* A Mon-Sun week has not closed until its Sunday has finished, so the newest
+   date the anchor may take is the last instant before today began. Clamping to
+   now instead would let Sunday itself read as a completed week: weekEndSunday()
+   returns Sunday unchanged (getDay() is 0), the window jumps a week forward,
+   and the tables sit on a week the sheets have not filled in yet. */
+function lastClosedInstant(){
+  const t = new Date();
+  return new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime() - 1;
+}
+/* The dates the active filter actually covers, for the label beside the picker.
+   The branching mirrors filterRows() so the two can never disagree - a window
+   the user cannot see is what made the Sunday off-by-one so hard to spot. */
+function activeRangeLabel(){
+  const span = (a, b) => shortDate(a) + ' \u2013 ' + shortDate(b);
+  if(DATE_FILTER === 'all') return 'All dates';
+  if(DATE_FILTER === 'single') return SINGLE_DATE ? shortDate(SINGLE_DATE) : '';
+  if(DATE_FILTER === 'custom'){
+    if(!RANGE_START && !RANGE_END) return '';
+    return span(RANGE_START || 'start', RANGE_END || 'today');
+  }
+  if(!GLOBAL_MAX_DATE) return '';
+  const maxMs = new Date(GLOBAL_MAX_DATE).getTime();
+  const m = /^w(\d+)$/.exec(DATE_FILTER);
+  if(m){
+    const w = weekWindow(Number(m[1]), new Date(maxMs));
+    return span(new Date(w.start), new Date(w.end));
+  }
+  const days = Number(DATE_FILTER);
+  if(!days) return '';
+  return span(new Date(maxMs - (days - 1) * MS_DAY), new Date(maxMs));
+}
+function weekWindowLabel(){ return activeRangeLabel(); }
+function filterRows(rows){if(DATE_FILTER==='all')return rows;const dated=rows.map(r=>({r,info:rowDateInfo(r)})).filter(x=>x.info.d);if(!dated.length)return rows;let winStart,winEnd;if(DATE_FILTER==='single'){if(!SINGLE_DATE)return rows;const s=new Date(SINGLE_DATE+'T00:00:00').getTime();winStart=s;winEnd=s+MS_DAY-1}else if(DATE_FILTER==='custom'){if(!RANGE_START&&!RANGE_END)return rows;winStart=RANGE_START?new Date(RANGE_START+'T00:00:00').getTime():-8.64e15;winEnd=RANGE_END?new Date(RANGE_END+'T23:59:59').getTime():8.64e15}else{const maxMs=GLOBAL_MAX_DATE?new Date(GLOBAL_MAX_DATE).getTime():Math.max(...dated.map(x=>x.info.d.getTime()));const wm=/^w(\d+)$/.exec(DATE_FILTER);if(wm){const w=weekWindow(Number(wm[1]),new Date(maxMs));winStart=w.start;winEnd=w.end}else{const days=Number(DATE_FILTER);winEnd=maxMs+MS_DAY-1;winStart=maxMs-(days-1)*MS_DAY}}return dated.filter(x=>{const[a,b]=rowSpan(x.info);return a<=winEnd&&b>=winStart}).map(x=>x.r)}
+function localISO(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
+function syncDateControls(){const label=activeRangeLabel();document.querySelectorAll('.date-controls').forEach(box=>{box.classList.toggle('single',DATE_FILTER==='single');box.classList.toggle('custom',DATE_FILTER==='custom');box.querySelector('select').value=DATE_FILTER;box.querySelector('.single-date').value=SINGLE_DATE;box.querySelector('.range-start').value=RANGE_START;box.querySelector('.range-end').value=RANGE_END;const span=box.querySelector('.date-span');if(span)span.textContent=label})}
+
+/* A "last N weeks" window is anchored on the newest date in the data. If any
+   tab carries a forward-looking date - a planned week, a projection row - that
+   anchor lands in the future and every window comes back empty. The anchor is
+   therefore clamped to the last closed day; this logs each dataset's span so a
+   stray future date is easy to spot. */
+function logDateSpans(){
+  try{
+    const rows=[];
+    Object.keys(DATA).forEach(k=>{
+      const ds=DATA[k]; if(!ds||!ds.rows||!ds.rows.length)return;
+      // Reported as covered dates, not row labels, so a weekly dataset reads
+      // as the Sunday it runs to - the same basis the week anchor uses.
+      const b=dataSpanBounds(ds.rows);
+      if(b.max===null)return;
+      rows.push({dataset:k, rows:ds.rows.length,
+                 first:localISO(new Date(b.min)), last:localISO(new Date(b.max)),
+                 future:b.max>Date.now()?'YES':''});
+    });
+    console.log('[UA] date span per dataset (anchor for week windows = '+
+      (GLOBAL_MAX_DATE?localISO(GLOBAL_MAX_DATE):'none')+')');
+    console.table(rows);
+    const strays=rows.filter(r=>r.future);
+    if(strays.length) console.warn('[UA] future-dated rows in: '+strays.map(r=>r.dataset).join(', ')+
+      ' - the week anchor has been clamped to today.');
+  }catch(e){}
+}
+/* The span of dates the loaded data actually covers, measured by the END of
+   each row's period - a weekly row dated Mon 20 Jul covers through Sun 26 Jul.
+   Used for the date-picker bounds and the console diagnostic. It no longer
+   decides the week window; see GLOBAL_MAX_DATE below. */
+function dataSpanBounds(rows){
+  let min=null, max=null;
+  rows.forEach(r=>{
+    const info=rowDateInfo(r); if(!info.d)return;
+    const [a,b]=rowSpan(info);
+    if(min===null||a<min)min=a;
+    if(max===null||b>max)max=b;
+  });
+  return {min, max};
+}
+/* Re-filtering is synchronous, so the browser never gets a chance to paint
+   between showing the overlay and finishing the work - flipping it on and off
+   in one tick displays nothing at all. Yield two frames so the spinner is
+   actually drawn, and hold it briefly afterwards so a fast filter still reads
+   as "something happened" instead of looking like a dead control. */
+function withFilterLoader(run){
+  const el=document.getElementById('loader');
+  if(!el) return run();
+  el.classList.add('show');
+  const started=Date.now();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    try{ run(); }
+    finally{ setTimeout(()=>el.classList.remove('show'), Math.max(0,300-(Date.now()-started))); }
+  }));
+}
+function initDateFilters(){const allRows=Object.values(DATA).flatMap(ds=>ds?.rows||[]),bounds=dataSpanBounds(allRows),min=bounds.min!==null?localISO(new Date(bounds.min)):'',max=bounds.max!==null?localISO(new Date(bounds.max)):'';/* "Last 2 weeks" is a calendar question, not a data question: on Mon 27 Jul it
+   means 13-26 Jul, whatever the sheet happens to contain. Anchoring on the
+   newest row instead made the window slide backwards whenever a tab fell
+   behind - a stale sheet quietly redefined "last 2 weeks" as an older pair and
+   looked like a working report. Now the window is fixed by today, so a tab
+   that has not been updated shows up as a missing week rather than hiding
+   itself. lastClosedInstant() keeps the in-progress week out. */
+GLOBAL_MAX_DATE=new Date(lastClosedInstant());logDateSpans();if(!SINGLE_DATE)SINGLE_DATE=max;if(!RANGE_START)RANGE_START=min;if(!RANGE_END)RANGE_END=max;document.querySelectorAll('[data-date-range]').forEach(el=>{const box=document.createElement('div');box.className='date-controls';box.innerHTML='<span class="date-span" title="Dates covered by the current filter"></span><select class="date"><option value="w2">Last 2 weeks</option><option value="w4">Last 4 weeks</option><option value="w6">Last 6 weeks</option><option value="w8">Last 8 weeks</option><option value="w10">Last 10 weeks</option><option value="single">Single date</option><option value="custom">Custom date</option></select><input class="single-date" type="date"><input class="range-date range-start" type="date" title="From date"><input class="range-date range-end" type="date" title="To date"><button type="button" class="date-confirm">Apply</button>';const select=box.querySelector('select');select.value=DATE_FILTER;const single=box.querySelector('.single-date'),start=box.querySelector('.range-start'),end=box.querySelector('.range-end'),confirm=box.querySelector('.date-confirm');[single,start,end].forEach(input=>{input.min=min;input.max=max});select.onchange=()=>{DATE_FILTER=select.value;syncDateControls();if(DATE_FILTER!=='single'&&DATE_FILTER!=='custom'){setStatus('Applying filter\u2026');withFilterLoader(()=>{render();const lbl=weekWindowLabel();setStatus(select.options[select.selectedIndex].text+(lbl?' \u00b7 '+lbl:''))})}};single.onchange=()=>{SINGLE_DATE=single.value};start.onchange=()=>{RANGE_START=start.value};end.onchange=()=>{RANGE_END=end.value};confirm.onclick=()=>{if(DATE_FILTER==='single'&&!SINGLE_DATE){setStatus('Choose a date before applying',true);return}if(DATE_FILTER==='custom'&&(!RANGE_START||!RANGE_END)){setStatus('Choose both From and To dates',true);return}if(DATE_FILTER==='custom'&&RANGE_START&&RANGE_END&&RANGE_START>RANGE_END){const _t=RANGE_START;RANGE_START=RANGE_END;RANGE_END=_t}syncDateControls();setStatus('Applying filter…');withFilterLoader(()=>{render();setStatus('Date filter applied'+(activeRangeLabel()?' · '+activeRangeLabel():''))})};el.replaceWith(box)});syncDateControls()}
+/* Reads a themed colour so charts stay legible in both light and dark mode. */
+function cssVar(name,fallback){
+  try{const v=getComputedStyle(document.body).getPropertyValue(name).trim();return v||fallback}
+  catch(e){return fallback}
+}
+/* Draws each slice's share on the slice itself. Slices under 3%, or too narrow
+   to fit the text, are skipped - the legend already carries their number. */
+const uaPiePercentLabels={
+  id:'uaPiePercentLabels',
+  afterDatasetsDraw(chart){
+    const type=chart.config&&chart.config.type;
+    if(type!=='pie'&&type!=='doughnut')return;
+    const ctx=chart.ctx,ds=chart.data.datasets[0],vals=(ds&&ds.data)||[];
+    const total=vals.reduce((s,v)=>s+(Number(v)||0),0);
+    if(total<=0)return;
+    chart.getDatasetMeta(0).data.forEach((arc,i)=>{
+      const share=(Number(vals[i])||0)/total*100;
+      if(share<3)return;
+      const text=share.toFixed(1)+'%';
+      ctx.save();
+      ctx.font='700 11px "DM Mono",monospace';
+      const w=ctx.measureText(text).width;
+      if((arc.endAngle-arc.startAngle)*arc.outerRadius<w+10){ctx.restore();return}
+      const ang=(arc.startAngle+arc.endAngle)/2;
+      const r=arc.innerRadius+(arc.outerRadius-arc.innerRadius)*0.62;
+      const x=arc.x+Math.cos(ang)*r,y=arc.y+Math.sin(ang)*r;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      /* Plain black on the slice: the palette is light enough to read against
+         in both themes, and the pill that used to sit behind it read as a
+         smudge on thin slices. */
+      ctx.fillStyle='#000';
+      ctx.fillText(text,x,y);
+      ctx.restore();
+    });
+  }
+};
+function appIs(row,platform){const s=String(row.app||'').toLowerCase();return platform==='ios'?/(ios|iphone|apple)/.test(s):/(and|android)/.test(s)}
+function destroy(id){if(charts[id]) charts[id].destroy()}
+function grouped(rows,key,limit){const m=new Map;rows.forEach(r=>{const label=String(r[key]??'Unknown');const x=m.get(label)||{label,cost:0,revenue:0,installs:0};x.cost+=num(r.cost??r.network_cost);x.revenue+=num(r.all_revenue??r.revenue);x.installs+=num(r.installs);m.set(label,x)});return [...m.values()].sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0)).slice(-(limit||999))}
+function combo(id,items){destroy(id);const el=$(id);if(!el)return;const roiValues=items.map(x=>x.roi??(x.cost?x.revenue/x.cost:0)).filter(v=>Number.isFinite(v)&&v>0),roiMin=roiValues.length?Math.max(0,Math.min(...roiValues)-.08):0,roiMax=roiValues.length?Math.max(...roiValues)+.08:1;charts[id]=new Chart(el,{data:{labels:items.map(x=>shortDate(x.label)),datasets:[{type:'bar',label:'Revenue',data:items.map(x=>x.revenue),backgroundColor:COLORS.blue},{type:'bar',label:'Cost',data:items.map(x=>x.cost),backgroundColor:COLORS.teal},{type:'bar',label:'Profit',data:items.map(x=>x.profit??(x.revenue-x.cost)),backgroundColor:COLORS.pink},{type:'line',label:'ROI',data:roiValues.length?items.map(x=>x.roi??(x.cost?x.revenue/x.cost:0)):[],borderColor:COLORS.line,backgroundColor:COLORS.line,yAxisID:'roi',tension:.15,pointRadius:3}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:{duration:450},plugins:{legend:{position:'top',align:'start'}},scales:{x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:0}},y:{beginAtZero:true,ticks:{callback:v=>compact(v)}},roi:{position:'right',min:roiMin,max:roiMax,grid:{drawOnChartArea:false},ticks:{callback:v=>v.toFixed(2)+'x'}}}}})}
+/* Chart.js draws each legend entry as one run of text, so a percentage can only
+   ever trail the label and the column wanders with label length. The legend is
+   therefore HTML: a grid pins the number, swatch, name and percentage to their
+   own columns, so the percentages line up no matter how long the names run. */
+/* Puts .piebox and its legend side by side in a flex row. The legend is a
+   SIBLING of .piebox, never a child: Chart.js sizes the canvas from its parent,
+   so a legend inside that parent feeds its own height back into the canvas and
+   the chart resizes forever. The row is built before the chart so the canvas is
+   never moved in the DOM after it has been drawn. */
+function ensurePieRow(id){
+  const canvas=$(id); if(!canvas) return null;
+  const box=canvas.parentElement; if(!box) return null;
+  let row=box.parentElement;
+  if(!row||!row.classList.contains('pie-row')){
+    row=document.createElement('div'); row.className='pie-row';
+    box.insertAdjacentElement('beforebegin',row); row.appendChild(box);
+  }
+  let el=row.querySelector(':scope > .pie-legend');
+  if(!el){ el=document.createElement('div'); el.className='pie-legend'; row.appendChild(el); }
+  return el;
+}
+/* Card headings shipped with the window baked into the text ("Last 6 Weeks"),
+   so they kept claiming six weeks whatever the picker said. The first pass
+   stores the part before the separator, and every render re-derives the rest
+   from the active filter. */
+function filterName(){
+  if(DATE_FILTER==='all') return 'All dates';
+  if(DATE_FILTER==='single') return 'Single date';
+  if(DATE_FILTER==='custom') return 'Custom range';
+  const m=/^w(\d+)$/.exec(DATE_FILTER);
+  if(m) return 'Last '+m[1]+' Week'+(m[1]==='1'?'':'s');
+  return Number(DATE_FILTER)?('Last '+DATE_FILTER+' Days'):'';
+}
+function syncCardTitles(){
+  const name=filterName(), span=activeRangeLabel();
+  document.querySelectorAll('h2').forEach(h=>{
+    let base=h.dataset.titleBase;
+    if(base===undefined){
+      base=h.textContent.split('·')[0].trim();
+      if(!/^Cost & Revenue/.test(base)) return;   // leave every other heading alone
+      h.dataset.titleBase=base;
+    }
+    h.textContent=base+(name?' · '+name:'')+(span&&span!==name?' · '+span:'');
+  });
+}
+function renderPieLegend(id,chart){
+  const el=ensurePieRow(id); if(!el) return;
+  const ds=chart.data.datasets[0]||{data:[]}, vals=ds.data||[];
+  const total=vals.reduce((s,v)=>s+(Number(v)||0),0);
+  const cols=Array.isArray(ds.backgroundColor)?ds.backgroundColor:[ds.backgroundColor];
+  const names=chart.data.labels||[];
+  /* Beside the chart the legend column is narrow, so stay single-column until
+     the list is long enough that one column would overrun the chart height. */
+  el.classList.toggle('two-col',names.length>20);
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  el.innerHTML=names.map((label,i)=>{
+    const share=total?(Number(vals[i])||0)/total*100:0;
+    return '<div class="pl-row" title="'+esc(label)+' - '+share.toFixed(1)+'%">'
+      +'<span class="pl-n">'+(i+1)+'</span>'
+      +'<span class="pl-sw" style="background:'+cols[i%cols.length]+'"></span>'
+      +'<span class="pl-lb">'+esc(label)+'</span>'
+      +'<span class="pl-pc">'+share.toFixed(1)+'%</span></div>';
+  }).join('');
+}
+function pie(id,labels,values,title,opts){opts=opts||{};destroy(id);if(!$(id))return;ensurePieRow(id);charts[id]=new Chart($(id),{type:'pie',data:{labels,datasets:[{data:values,backgroundColor:PIE,borderColor:cssVar('--bg','#000'),borderWidth:1.5,hoverOffset:8,radius:opts.radius||'92%'}]},options:{maintainAspectRatio:false,layout:{padding:opts.padding||{top:26,right:28,bottom:18,left:28}},animation:{duration:500},plugins:{legend:{display:false},tooltip:{enabled:true,displayColors:true,callbacks:{label:ctx=>{const values=ctx.dataset.data,total=values.reduce((s,v)=>s+(Number(v)||0),0),value=Number(ctx.raw)||0,percentage=total?value/total*100:0;return ` ${percentage.toFixed(2)}%`}}},title:{display:!!title,text:title,color:cssVar('--t1','#edf2ff'),padding:{bottom:10},font:{size:13}}}},plugins:[uaPiePercentLabels]});renderPieLegend(id,charts[id])}
+function shortDate(v){const d=dateVal(v);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):String(v)}
+function channelAgg(rows,valueKey='cost'){const m={};rows.forEach(r=>{const k=r.channel||'Unknown';m[k]=(m[k]||0)+num(r[valueKey])});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+function table(target,rows,columns){const el=$(target);if(!el)return;if(!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const cols=columns||Object.keys(rows[0]),numericCols=new Set(cols.filter(c=>rows.some(r=>typeof r[c]==='number')));el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th class="${numericCols.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>`<td class="${numericCols.has(c)?'num ':''}${heat(c)}">${formatCell(c,r[c])}</td>`).join('')+'</tr>').join('')+'</tbody></table>'}
+function label(s){return String(s).replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}
+function heat(c){c=String(c);if(/cost|spend/.test(c))return'heat-blue';if(/install/.test(c))return'heat-teal';if(/ad_revenue/.test(c))return'heat-pink';if(/^revenue|all_revenue|iap/.test(c))return'heat-amber';if(/roi|roas/.test(c))return'heat-green';return''}
+function formatCell(k,v){if(v==null||v==='')return'-';const key=String(k).toLowerCase();if(typeof v!=='number'){if(/week|date|day/.test(key)&&dateVal(v))return shortDate(v);return String(v)}if(key==='roi')return v.toFixed(2)+'x';if(/roas|retention|share|rate/.test(key))return (v*100).toFixed(1)+'%';if(/cost|revenue|spend/.test(key))return money(v);return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v)}
+function field(row,name){const wanted=name.toLowerCase().replace(/[^a-z0-9]/g,'');const key=Object.keys(row||{}).find(k=>k.toLowerCase().replace(/[^a-z0-9]/g,'')===wanted);return key==null?null:row[key]}
+function firstField(row,names){for(const name of names){const value=field(row,name);if(value!==null&&value!=='')return value}return 0}
+function analysisRoi(platform){const rows=filterRows(DATA.rev_cost_analysis?.rows||[]);let revenueGroups,costGroups;if(platform==='android'){revenueGroups=[['And_Revenue','And_Reveue']];costGroups=[['And_Cost']]}else if(platform==='ios'){revenueGroups=[['IOS_Revenue','IOS_Reveue']];costGroups=[['IOS_Cost']]}else{revenueGroups=[['And_Revenue','And_Reveue'],['IOS_Revenue','IOS_Reveue']];costGroups=[['And_Cost'],['IOS_Cost']]}const revenue=rows.reduce((s,r)=>s+revenueGroups.reduce((x,names)=>x+num(firstField(r,names)),0),0),cost=rows.reduce((s,r)=>s+costGroups.reduce((x,names)=>x+num(firstField(r,names)),0),0);return cost?revenue/cost:0}
+/* 'overall' means both platforms merged, not "not android" - without this the
+   isAndroid test below silently read the IOS_ columns for the combined tiles. */
+function analysisItems(platform,period){if(platform!=='android'&&platform!=='ios')return combinedAnalysis(period);const rows=filterRows(DATA.rev_cost_analysis?.rows||[]),isAndroid=platform==='android',revenueNames=isAndroid?['And_Revenue','And_Reveue']:['IOS_Revenue','IOS_Reveue'],costNames=isAndroid?['And_Cost']:['IOS_Cost'],profitNames=isAndroid?['And_Profit']:['IOS_Profit'],roiNames=isAndroid?['And_ROI','AND_ROI']:['IOS_ROI'];const raw=rows.map(r=>({label:period==='weekly'?(field(r,'Weeks')||field(r,'Week')||field(r,'Date')):(field(r,'Date')||field(r,'day')),revenue:num(firstField(r,revenueNames)),cost:num(firstField(r,costNames)),profit:num(firstField(r,profitNames)),roi:num(firstField(r,roiNames))})).filter(x=>x.label!=null&&x.label!==''&&(x.revenue||x.cost||x.profit||x.roi));/* No fixed tail: the rows arrive already trimmed by the date filter, and a
+   hard slice here silently capped a 4- or 10-week window at 14 days / 6 weeks
+   regardless of what the picker said. */
+if(period!=='weekly')return raw.sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0));const groups=new Map;raw.forEach(x=>{const key=String(x.label),g=groups.get(key)||{label:x.label,revenue:0,cost:0,profit:0,roiWeighted:0,roiWeight:0};g.revenue+=x.revenue;g.cost+=x.cost;g.profit+=x.profit;g.roiWeighted+=x.roi*x.cost;g.roiWeight+=x.cost;groups.set(key,g)});return [...groups.values()].map(g=>({label:g.label,revenue:g.revenue,cost:g.cost,profit:g.profit,roi:g.roiWeight?g.roiWeighted/g.roiWeight:(g.cost?g.revenue/g.cost:0)})).filter(x=>x.revenue||x.cost||x.profit||x.roi).sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0))}
+/* ONE source, no fallback. Every tile here reads rev&cost analysis - the same
+   rows the WxW/DxD charts directly beneath them use, and what the ROI tile has
+   always used, so a card can never contradict the chart under it.
+
+   There is deliberately no second source. Revenue and Profit used to fall back
+   to sums of 'Networks overview', which carries zero-cost buckets ('Untrusted
+   Devices', 'Organic') and put $10.7M on the Android revenue tile against
+   $145K of spend. Falling back to that on a window rev&cost analysis does not
+   cover would silently bring those numbers back, and a wrong number that looks
+   plausible is worse than a blank one. A window with no analysis rows shows a
+   dash instead. */
+function setKpis(prefix,platform){
+  const dash=()=>['Spend','Revenue','Profit','Roi'].forEach(k=>{
+    const el=$(prefix+k);
+    if(el){ el.textContent='—'; el.classList.remove('neg'); }
+  });
+  const items=analysisItems(platform,'daily');
+  if(!items.length) return dash();
+  const cost=items.reduce((s,x)=>s+x.cost,0),
+        revenue=items.reduce((s,x)=>s+x.revenue,0),
+        profit=items.reduce((s,x)=>s+(x.profit||(x.revenue-x.cost)),0);
+  if(!cost&&!revenue) return dash();
+  const roi=analysisRoi(platform)||(cost?revenue/cost:0);
+  $(prefix+'Spend').textContent=money(cost);
+  $(prefix+'Roi').textContent=roi?roi.toFixed(2)+'x':'—';
+  setMoneyKpi(prefix+'Revenue',revenue);
+  setMoneyKpi(prefix+'Profit',profit);
+}
+/* Writes a currency KPI and flags a negative value, so a loss is obvious. */
+function setMoneyKpi(id,value){const el=$(id);if(!el)return;el.textContent=money(value);el.classList.toggle('neg',Number(value)<0)}
+function revenueMix(rows){const ad=sum(rows,'ad_revenue'),iap=sum(rows,'revenue');return{ad,iap,total:ad+iap}}
+function supermarket(row){return /supermarket/i.test(String(row.app||row.campaign_network||''))}
+function googleAds(row){return /google/i.test(String(row.channel||''))}
+function weekStart(d){const x=new Date(d);const off=(x.getDay()+6)%7;x.setDate(x.getDate()-off);x.setHours(0,0,0,0);return x}
+function groupedWeekly(rows,limit){const m=new Map;rows.forEach(r=>{const d=dateVal(r.day||r.date||r.Date||r.week||r.Week);if(!d)return;const key=localISO(weekStart(d));const x=m.get(key)||{label:key,cost:0,revenue:0,installs:0};x.cost+=num(r.cost??r.network_cost);x.revenue+=num(r.all_revenue??r.revenue);x.installs+=num(r.installs);m.set(key,x)});return [...m.values()].sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0)).slice(-(limit||6))}
+function combinedAnalysis(period){const a=analysisItems('android',period),i=analysisItems('ios',period);const m=new Map;[...a,...i].forEach(x=>{const key=String(x.label),g=m.get(key)||{label:x.label,revenue:0,cost:0,profit:0};g.revenue+=x.revenue;g.cost+=x.cost;g.profit+=x.profit;m.set(key,g)});return [...m.values()].map(g=>({label:g.label,revenue:g.revenue,cost:g.cost,profit:g.profit,roi:g.cost?g.revenue/g.cost:0})).sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0))}
+/* Confirms each page is summing only its own platform. Any row landing in
+   neither bucket, or in both, is reported. */
+function logPlatformSplit(rows){
+  try{
+    const both=rows.filter(r=>appIs(r,'ios')&&appIs(r,'android'));
+    const none=rows.filter(r=>!appIs(r,'ios')&&!appIs(r,'android'));
+    const sumC=rs=>rs.reduce((s,r)=>s+num(r.network_cost??r.cost),0);
+    const sumR=rs=>rs.reduce((s,r)=>s+num(r.all_revenue??r.revenue),0);
+    const ios=rows.filter(r=>appIs(r,'ios')),and=rows.filter(r=>appIs(r,'android'));
+    console.table([
+      {page:'iOS',rows:ios.length,cost:Math.round(sumC(ios)),revenue:Math.round(sumR(ios))},
+      {page:'Android',rows:and.length,cost:Math.round(sumC(and)),revenue:Math.round(sumR(and))},
+      {page:'(neither)',rows:none.length,cost:Math.round(sumC(none)),revenue:Math.round(sumR(none))},
+      {page:'(both - bug)',rows:both.length,cost:Math.round(sumC(both)),revenue:Math.round(sumR(both))}
+    ]);
+    if(both.length)console.warn('[UA] rows matching BOTH platforms:',[...new Set(both.map(r=>r.app))]);
+    if(none.length)console.warn('[UA] rows matching NEITHER platform:',[...new Set(none.map(r=>r.app))]);
+  }catch(e){}
+}
+function render(){syncCardTitles();const overall=filterRows(DATA.overall_data?.rows||[]), daily=filterRows(DATA.networks_overview?.rows||[]);const cw=combinedAnalysis('weekly'),cd=combinedAnalysis('daily');combo('overallWeekly',cw.length?cw:groupedWeekly(daily,6));combo('overallDaily',cd.length?cd:grouped(daily,'day',14));setKpis('overall','overall');$('overallInstalls').textContent=compact(sum(overall,'installs'));
+  /* The Overall tiles are set by the setKpis('overall', …) call above, which now
+     reads the same merged rev&cost analysis rows the overall charts use. They
+     used to be overwritten at the end of this function by sums of 'Networks
+     overview' - which is why Overall read $14.2M revenue against $426.9K spend
+     while Android + iOS added up to ~$594K. That tab carries zero-cost buckets
+     ('Untrusted Devices', 'Organic') that are not UA performance. */
+  ['android','ios'].forEach(p=>{const ow=overall.filter(r=>appIs(r,p)&&platformChannelAllowed(p,r.channel)),dd=daily.filter(r=>appIs(r,p)&&platformChannelAllowed(p,r.channel)),weeklyAnalysis=analysisItems(p,'weekly').filter(r=>platformChannelAllowed(p,field(r,'channel'))),dailyAnalysis=analysisItems(p,'daily').filter(r=>platformChannelAllowed(p,field(r,'channel')));combo(p+'Weekly',weeklyAnalysis.length?weeklyAnalysis:groupedWeekly(dd,6));combo(p+'Daily',dailyAnalysis.length?dailyAnalysis:grouped(dd,'day',14));setKpis(p,p);const shares=channelAgg(dd,'network_cost');pie(p+'SpendShare',shares.map(x=>x[0]),shares.map(x=>x[1]),'Spend Share',SIDE_PIE);renderPlatformNetwork(p,ow,dd)});logPlatformSplit(daily);
+  const rs=DATA.revenue_share||{};renderCurrentWeekPies(overall);renderPlatformRevenuePies(rs);
+  const networks=daily;table('networkTable',networks,['day','app','channel','network_cost','all_revenue','roas_all_d0','all_revenue_total_d0','roas_ad_d0','ad_revenue']);const na=channelAgg(overall,'all_revenue');table('networkShareTable',na.map(([channel,total])=>({channel,total})),['channel','total']);pie('networkIapShare',na.slice(0,10).map(x=>x[0]),na.slice(0,10).map(x=>x[1]),'Revenue Share');table('revCostTable',filterRows(DATA.rev_cost_analysis?.rows||[]));
+  renderLegacy();updateDates([...overall,...daily]);}
+function renderGoogleAds(campaigns){const rows=campaigns.filter(googleAds);const weekly=grouped(rows,'week',14);combo('googleAdsTrend',weekly);combo('googleAdsCost',weekly);const cost=sum(rows,'cost'),revenue=sum(rows,'all_revenue')||sum(rows,'revenue');$('googleCost').textContent=money(cost);$('googleRevenue').textContent=money(revenue);$('googleInstalls').textContent=compact(sum(rows,'installs'));$('googleRoas').textContent=cost?(revenue/cost).toFixed(2)+'x':'-';table('googleCampaignTable',rows)}
+function installPlatformNetworkSections(){const androidIap=$('androidIap');if(androidIap)androidIap.closest('.kpi')?.remove();['android','ios'].forEach(p=>{const body=document.querySelector(`#${p} .sb`);if(!body||$(`${p}NetworkTable`))return;const title=p==='android'?'Android':'iOS';const section=document.createElement('section');section.className='platform-network mt';section.innerHTML=`<article class="card"><div class="card-head"><h2>${title} Network Overview · 35% Deduction</h2><select id="${p}OverviewChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}NetworkTable" class="tablewrap"></div></article><div class="two mt"><article class="card"><h2>UA Network Share · IAA vs IAP</h2><div id="${p}NetworkShareTable" class="tablewrap share-table"></div></article><article class="card"><h2 id="${p}CurrentWeekTitle">${title} · Revenue Mix</h2><div class="piebox"><canvas id="${p}CurrentWeekPie"></canvas></div></article></div><article class="card mt"><div class="card-head"><h2>DxD Spend & D0 ROAS</h2><select id="${p}DxdChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div class="chartbox"><canvas id="${p}RoasDaily"></canvas></div></article><article class="card mt"><div class="card-head"><h2>Weekly Campaign Performance</h2><select id="${p}CampaignChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}CampaignTable" class="tablewrap"></div></article><article class="card mt"><div class="card-head"><h2>ROAS Cohorts</h2><select id="${p}CohortChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}CohortTable" class="tablewrap"></div></article>`;body.appendChild(section);$(`${p}OverviewChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].overview=e.target.value;refreshPlatform(p)});$(`${p}DxdChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)});$(`${p}CampaignChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)});$(`${p}CohortChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)})})}
+const PLATFORM_FILTER={android:{overview:'all',dxd:'all'},ios:{overview:'all',dxd:'all'}};
+const EXCLUDED_PLATFORM_CHANNELS={
+  ios:new Set(['ironsource','untrusted device','untrusted devices','organic','nativax','natiavax','google ads','liftoff','inmobi']),
+  android:new Set(['ironsource','untrusted device','untrusted devices','xiaomi global','unknown device','unknown devices','unity ads','organic','oppo','nativax','google ads','moloco','liftoff','google organic search','apple'])
+};
+function channelKey(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ')}
+function platformChannelAllowed(p,v){
+  const key=channelKey(v),compact=key.replace(/[^a-z0-9]/g,'');
+  if(p==='ios'&&(compact.includes('nativex')||compact.includes('nativax')||compact.includes('natiavax')))return false;
+  return !EXCLUDED_PLATFORM_CHANNELS[p].has(key)
+}
+function campaignChannelAllowed(p,v){return platformChannelAllowed(p,v)&&channelKey(v)!=='google ads'}
+const LAST_ROWS={};
+function refreshPlatform(p){const r=LAST_ROWS[p];if(r)renderPlatformNetwork(p,r.overallRows,r.dailyRows)}
+function populateChannelSelect(id,channels,current){const sel=$(id);if(!sel)return;sel.innerHTML='<option value="all">All channels</option>'+channels.map(c=>`<option value="${c}">${c}</option>`).join('');sel.value=(current&&(current==='all'||channels.includes(current)))?current:'all'}
+function colHue(c){c=String(c).toLowerCase().replace(/[^a-z0-9]/g,'');if(/adrevenue|adshare/.test(c))return[236,10,155];if(/cost|spend|cpi/.test(c))return[77,159,255];if(/install/.test(c))return[0,229,195];if(/iap|revenue/.test(c))return[255,184,0];if(/roi|roas/.test(c))return[0,196,122];if(/retention|rate|d1|d7/.test(c))return[120,86,214];return[166,184,212]}
+function weekValue(row){const k=Object.keys(row||{}).find(k=>/^weeks?$/.test(String(k).toLowerCase().replace(/[^a-z0-9]/g,'')));return k==null?null:row[k]}
+function weekSorter(rows){const keys=Object.keys(rows[0]||{}),ck=keys.find(k=>/cost|spend/i.test(k)&&rows.some(r=>typeof r[k]==='number'))||null;return(a,b)=>{const da=dateVal(weekValue(a)),db=dateVal(weekValue(b)),ta=da?da.getTime():null,tb=db?db.getTime():null;if(ta!==tb)return(ta??Infinity)-(tb??Infinity);return ck?num(b[ck])-num(a[ck]):0}}
+function richTable(target,rows,opts){opts=opts||{};const el=$(target);if(!el)return;if(!rows||!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');const excl=(opts.exclude||[]).map(norm);let cols=(opts.columns||Object.keys(rows[0])).filter(c=>!excl.includes(norm(c)));const wcol=cols.find(c=>/^weeks?$/.test(norm(c)))||null;if(wcol)cols=[wcol,...cols.filter(c=>c!==wcol)];const numericCols=cols.filter(c=>c!==wcol&&rows.some(r=>typeof r[c]==='number'));const numSet=new Set(numericCols);let sortCol=(opts.sortBy&&cols.includes(opts.sortBy))?opts.sortBy:null;if(!sortCol){const pri=[/spend|cost/,/allrevenue|^revenue|iaprevenue/,/roas|roi/,/install/];for(const rx of pri){const f=numericCols.find(c=>rx.test(norm(c)));if(f){sortCol=f;break}}if(!sortCol)sortCol=numericCols[0]}const data=rows.slice();if(typeof opts.sort==='function')data.sort(opts.sort);else if(sortCol)data.sort((a,b)=>num(b[sortCol])-num(a[sortCol]));const ranges={};numericCols.forEach(c=>{let mn=Infinity,mx=-Infinity;data.forEach(r=>{const v=Number(r[c]);if(Number.isFinite(v)){if(v<mn)mn=v;if(v>mx)mx=v}});ranges[c]=[mn,mx]});const bg=(c,v)=>{if(!numSet.has(c))return'';const val=Number(v);if(!Number.isFinite(val))return'';const[mn,mx]=ranges[c];const t=mx>mn?(val-mn)/(mx-mn):0;const[r,g,b]=colHue(c);return`background:rgba(${r},${g},${b},${(0.84-0.72*t).toFixed(3)})`};const showNum=opts.number!==false;const head='<tr>'+(showNum?'<th class="idx">#</th>':'')+cols.map(c=>`<th class="${numSet.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr>';let prevWeek=null;const bodyHtml=data.map((r,i)=>{const wk=wcol?String(r[wcol]??''):null;const brk=wcol&&i>0&&wk!==prevWeek;prevWeek=wk;return `<tr class="${brk?'wk-break':''}">`+(showNum?`<td class="idx">${i+1}</td>`:'')+cols.map(c=>`<td class="${numSet.has(c)?'num':''}${c===wcol?' wk':''}" style="${bg(c,r[c])}">${formatCell(c,r[c])}</td>`).join('')+'</tr>'}).join('');el.innerHTML=`<table><thead>${head}</thead><tbody>${bodyHtml}</tbody></table>`}
+function renderPlatformNetwork(p,overallRows,dailyRows){
+  overallRows=(overallRows||[]).filter(r=>platformChannelAllowed(p,r.channel));
+  dailyRows=(dailyRows||[]).filter(r=>platformChannelAllowed(p,r.channel));
+  LAST_ROWS[p]={overallRows,dailyRows};
+  const fOv=PLATFORM_FILTER[p].overview,fDx=PLATFORM_FILTER[p].dxd;
+  const overviewAll=overallRows.map(r=>({channel:r.channel,Spend:num(r.cost),Installs:num(r.installs),Ad_Revenue:num(r.ad_revenue),IAP_Revenue:num(r.revenue),All_Revenue:num(r.all_revenue),CPI:num(r.ecpi_all),ROI:num(r.custom_roas),ROAS_D0:num(r.roas_d0),Retention_D1:num(r.retention_rate_d1),Retention_D7:num(r.retention_rate_d7)}));
+  const ovChannels=[...new Set(overviewAll.map(r=>r.channel).filter(Boolean).map(String))].sort();
+  populateChannelSelect(p+'OverviewChannel',ovChannels,fOv);
+  const overviewRows=fOv==='all'?overviewAll:overviewAll.filter(r=>String(r.channel)===fOv);
+  richTable(p+'NetworkTable',overviewRows,{columns:['channel','Spend','Installs','Ad_Revenue','IAP_Revenue','All_Revenue','CPI','ROI','ROAS_D0','Retention_D1','Retention_D7'],number:true,sortBy:'Spend'});
+  const channelTotals={};overviewAll.forEach(r=>{const c=r.channel||'Unknown',x=channelTotals[c]||(channelTotals[c]={channel:c,Ad_Revenue:0,IAP_Revenue:0});x.Ad_Revenue+=r.Ad_Revenue;x.IAP_Revenue+=r.IAP_Revenue});
+  const shares=Object.values(channelTotals).map(r=>{const total=r.Ad_Revenue+r.IAP_Revenue;return{channel:r.channel,Ad_Share:total?r.Ad_Revenue/total:0,IAP_Share:total?r.IAP_Revenue/total:0,IAP_Revenue:r.IAP_Revenue}});
+  richTable(p+'NetworkShareTable',shares,{columns:['channel','Ad_Share','IAP_Share'],number:true,sortBy:'IAP_Share'});
+  const sByIap=shares.slice().sort((a,b)=>b.IAP_Revenue-a.IAP_Revenue);pie(p+'IapNetworkShare',sByIap.map(x=>x.channel),sByIap.map(x=>x.IAP_Revenue),'IAP Revenue Share',SIDE_PIE);
+  const dxSource=(dailyRows&&dailyRows.length?dailyRows:overallRows).filter(r=>platformChannelAllowed(p,r.channel));
+  let campaigns=filterRows(DATA.campaigns_data?.rows||[]).filter(r=>appIs(r,p)&&campaignChannelAllowed(p,field(r,'channel')));
+  let cohorts=filterRows(DATA.weekly_network?.rows||[]).filter(r=>appIs(r,p)&&campaignChannelAllowed(p,field(r,'channel')));
+  const dxChannels=[...new Set(dxSource.map(r=>r.channel).filter(Boolean).map(String))].sort();
+  const tableChannels=[...new Set([...campaigns,...cohorts].map(r=>field(r,'channel')).filter(Boolean).map(String))].sort();
+  const sharedChannels=[...new Set([...dxChannels,...tableChannels])].sort();
+  populateChannelSelect(p+'DxdChannel',sharedChannels,fDx);populateChannelSelect(p+'CampaignChannel',sharedChannels,fDx);populateChannelSelect(p+'CohortChannel',sharedChannels,fDx);
+  const roasRows=fDx==='all'?dxSource:dxSource.filter(r=>channelKey(r.channel)===channelKey(fDx));renderPlatformRoas(p+'RoasDaily',roasRows);
+  if(fDx!=='all'){campaigns=campaigns.filter(r=>channelKey(field(r,'channel'))===channelKey(fDx));cohorts=cohorts.filter(r=>channelKey(field(r,'channel'))===channelKey(fDx))}
+  richTable(p+'CampaignTable',campaigns,{exclude:['app','Network Cost Diff'],number:true,sort:weekSorter(campaigns)});
+  richTable(p+'CohortTable',cohorts,{exclude:['app'],number:true,sort:weekSorter(cohorts)});
+}/* "DxD" is day-by-day, but this grouped on the week column, so a two-week
+   window produced two bars. Bucket by day where the rows carry one, and fall
+   back to the week column for datasets that only have weekly granularity. */
+function renderPlatformRoas(id,rows){const byWeek=new Map;rows.forEach(r=>{const label=r.day??r.Date??r.date??r.Week??r.week;if(label==null||label==='')return;const x=byWeek.get(String(label))||{label,cost:0,d0Revenue:0,weightedRoas:0};const cost=num(r.cost??r.network_cost);x.cost+=cost;x.d0Revenue+=num(r.all_revenue_total_d0);x.weightedRoas+=num(r.roas_d0??r.roas_all_d0)*cost;byWeek.set(String(label),x)});const g=[...byWeek.values()].sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0));destroy(id);if(!$(id))return;charts[id]=new Chart($(id),{data:{labels:g.map(x=>shortDate(x.label)),datasets:[{type:'bar',label:'Spend',data:g.map(x=>x.cost),backgroundColor:COLORS.blue},{type:'line',label:'D0 ROAS',data:g.map(x=>x.cost?(x.d0Revenue?x.d0Revenue/x.cost:x.weightedRoas/x.cost):0),borderColor:COLORS.line,backgroundColor:COLORS.line,yAxisID:'roi',tension:.15,pointRadius:3}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'start'}},scales:{y:{beginAtZero:true,ticks:{callback:compact}},roi:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{callback:v=>pct(v)}}}}})}
+function revenueDetail(rs,p){return (rs.details||[]).find(d=>String(d.platform).toLowerCase()===(p==='ios'?'ios':'android'))}
+function currentRevenueShare(rs,p){const rows=rs.rows||[];const target=p==='ios'?'ios':'android';return rows.find(r=>String(r.platform||'').toLowerCase()===target&&String(r.label).toLowerCase()==='current week')}
+function renderPlatformRevenuePies(rs){['android','ios'].forEach(p=>{const detail=revenueDetail(rs,p),rows=detail?.rows||[];if(!rows.length)return;const channelMap={};rows.forEach(r=>{const channel=field(r,'channel')||field(r,'network')||'Unknown';channelMap[channel]=(channelMap[channel]||0)+num(field(r,'IAP_Revenue'))});const entries=Object.entries(channelMap).sort((a,b)=>b[1]-a[1]);pie(`${p}IapNetworkShare`,entries.map(x=>x[0]),entries.map(x=>x[1]),'IAP Revenue Share',SIDE_PIE)})}
+function renderLegacy(){const raw=DATA.legacy_totals?.rows||[];if(!raw.length){const daily=filterRows(DATA.networks_overview?.rows||[]);const legacy=daily.filter(r=>!supermarket(r));const and=legacy.filter(r=>appIs(r,'android')),ios=legacy.filter(r=>appIs(r,'ios'));combo('legacyAndroid',grouped(and,'day',14));combo('legacyIos',grouped(ios,'day',14));combo('legacyCombined',grouped(legacy,'day',14));const aC=sum(and,'network_cost'),aR=sum(and,'all_revenue'),iC=sum(ios,'network_cost'),iR=sum(ios,'all_revenue');$('legacyAndroidCost').textContent=money(aC);$('legacyAndroidRoi').textContent=aC?(aR/aC).toFixed(2)+'x':'-';$('legacyAndroidRevenue').textContent=money(aR);$('legacyAndroidProfit').textContent=money(aR-aC);$('legacyIosCost').textContent=money(iC);$('legacyIosRoi').textContent=iC?(iR/iC).toFixed(2)+'x':'-';$('legacyIosRevenue').textContent=money(iR);$('legacyIosProfit').textContent=money(iR-iC);$('legacyRevenue').textContent=money(aR+iR);$('legacyTotalRoi').textContent=(aC+iC)?((aR+iR)/(aC+iC)).toFixed(2)+'x':'-';return}const toItem=r=>({date:field(r,'Date'),andRev:num(field(r,'And Total Revenue')),andCost:num(field(r,'And Total Daily Cost')),andProfit:num(field(r,'And Profit')),iosRev:num(field(r,'IOS Total Revenue')),iosCost:num(field(r,'IOS Total Daily Cost')),iosProfit:num(field(r,'IOS Profit')),totRev:num(field(r,'Total Revenue')),totCost:num(field(r,'Total Cost')),totProfit:num(field(r,'Total Profit'))});const valid=x=>x.date!=null&&x.date!==''&&dateVal(x.date);const hasData=x=>x.andRev||x.andCost||x.iosRev||x.iosCost||x.totRev||x.totCost;const byDate=(a,b)=>(dateVal(a.date)||0)-(dateVal(b.date)||0);let items;if(DATE_FILTER==='all'){const all=raw.map(toItem).filter(valid).sort(byDate);items=all.filter(hasData).slice(-15)}else{const fr=filterRows(raw);items=fr.map(toItem).filter(valid).sort(byDate)}combo('legacyAndroid',items.map(x=>({label:x.date,revenue:x.andRev,cost:x.andCost,profit:x.andProfit,roi:x.andCost?x.andRev/x.andCost:0})));combo('legacyIos',items.map(x=>({label:x.date,revenue:x.iosRev,cost:x.iosCost,profit:x.iosProfit,roi:x.iosCost?x.iosRev/x.iosCost:0})));combo('legacyCombined',items.map(x=>({label:x.date,revenue:x.totRev,cost:x.totCost,profit:x.totProfit,roi:x.totCost?x.totRev/x.totCost:0})));const kpi=DATE_FILTER==='all'?raw.map(toItem).filter(valid):items;const andCost=kpi.reduce((s,x)=>s+x.andCost,0),andRev=kpi.reduce((s,x)=>s+x.andRev,0),andProfit=kpi.reduce((s,x)=>s+x.andProfit,0),iosCost=kpi.reduce((s,x)=>s+x.iosCost,0),iosRev=kpi.reduce((s,x)=>s+x.iosRev,0),iosProfit=kpi.reduce((s,x)=>s+x.iosProfit,0),totRev=kpi.reduce((s,x)=>s+x.totRev,0),totCost=kpi.reduce((s,x)=>s+x.totCost,0);$('legacyAndroidCost').textContent='$'+compact(andCost);$('legacyAndroidRoi').textContent=andCost?(andRev/andCost).toFixed(2)+'x':'-';$('legacyAndroidRevenue').textContent='$'+compact(andRev);$('legacyAndroidProfit').textContent='$'+compact(andProfit);$('legacyIosCost').textContent='$'+compact(iosCost);$('legacyIosRoi').textContent=iosCost?(iosRev/iosCost).toFixed(2)+'x':'-';$('legacyIosRevenue').textContent='$'+compact(iosRev);$('legacyIosProfit').textContent='$'+compact(iosProfit);$('legacyRevenue').textContent='$'+compact(totRev);$('legacyTotalRoi').textContent=totCost?(totRev/totCost).toFixed(2)+'x':'-'}
+function renderRoas(rows){const g=grouped(rows,'day',14);destroy('roasDaily');charts.roasDaily=new Chart($('roasDaily'),{data:{labels:g.map(x=>shortDate(x.label)),datasets:[{type:'bar',label:'Network cost',data:g.map(x=>x.cost),backgroundColor:COLORS.blue},{type:'line',label:'ROAS D0',data:g.map(x=>x.cost?x.revenue/x.cost:0),borderColor:COLORS.line,yAxisID:'roi'}]},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{callback:compact}},roi:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{callback:v=>pct(v)}}}}})}
+function renderCurrentWeekPies(filteredOverall){
+  const range=activeRangeLabel();
+  ['android','ios'].forEach(p=>{
+    const title=p==='android'?'Android':'iOS';
+    const rows=(filteredOverall||[]).filter(r=>appIs(r,p)&&platformChannelAllowed(p,r.channel));
+    const ad=sum(rows,'ad_revenue'),iap=sum(rows,'revenue');
+    const heading=$(`${p}CurrentWeekTitle`);
+    if(heading)heading.textContent=`${title} · Revenue Mix · ${range}`;
+    pie(`${p}CurrentWeekPie`,['Ad Revenue (IAA)','In-App Revenue (IAP)'],[ad,iap],`${title} · ${range}`);
+  })
+}
+function updateDates(rows){const ds=rows.map(r=>dateVal(r.day||r.Week||r.week)).filter(Boolean).sort((a,b)=>a-b);if(!ds.length)return;const text=`${shortDate(ds[0])} - ${shortDate(ds.at(-1))}`;document.querySelectorAll('[data-date-range]').forEach(e=>e.textContent=text)}
+async function connect(){
+  setStatus('Loading...');$('loader').classList.add('show');
+  try{
+    const j = await API.call('datasets');
+    DATA = j.datasets || {};
+    initDateFilters(); render();
+    setStatus('Loaded - ' + new Date(j.updated || Date.now()).toLocaleTimeString());
+  }catch(e){ setStatus(e.message || String(e), true); }
+  finally{ $('loader').classList.remove('show'); }
+}
+function setStatus(s,error){$('status').textContent=s;$('status').classList.toggle('error',!!error)}
+function promotePieSections(){document.querySelectorAll('.view').forEach(view=>{if(view.id==='android'||view.id==='ios')return;const body=view.querySelector('.sb');if(!body)return;const pieCards=[...view.querySelectorAll('canvas')].filter(canvas=>/pie|share/i.test(canvas.id)).map(canvas=>canvas.closest('.card')).filter((card,index,all)=>card&&all.indexOf(card)===index);if(!pieCards.length)return;const row=document.createElement('section');row.className='page-pies';pieCards.forEach(card=>row.appendChild(card));body.prepend(row);view.querySelectorAll('.piegrid,.two,.stack').forEach(container=>{if(!container.children.length)container.remove()})})}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===b.dataset.view));Object.values(charts).forEach(c=>c.resize())});
+installPlatformNetworkSections();promotePieSections();$('connectBtn').onclick=connect;try{localStorage.removeItem('ua_api_url');localStorage.removeItem('ua_api_key');}catch(e){}connect();
+/**
+ * ============================================================
+ * Router_ua.gs   — add to the UA script project
+ * ------------------------------------------------------------
+ * Sits next to Auth.gs. ua.gs keeps DATASETS, buildDataset,
+ * buildRevenueShare and every helper exactly as they are.
+ *
+ * IMPORTANT: leave the existing doGet(e) in ua.gs alone for now.
+ * This file adds a second, token-protected way in, so the old
+ * ?key= route keeps working while the frontend is switched over.
+ * Delete doGet only once the dashboard is talking to doPost.
+ *
+ * Auth.gs owns doPost and calls the function below AFTER the
+ * token has been validated.
+ * ============================================================
+ */
+
+function routeAction_(action, p, session) {
+
+  if (action !== 'datasets') throw new Error('Unknown action: ' + action);
+
+  const requested = String(p.dataset || '').trim();
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'dash_' + (requested || 'all');
+  const isFull = !requested;
+
+  // Same short cache the existing doGet uses. It holds data only,
+  // never credentials, and is keyed by dataset rather than by user.
+  if (CACHE_SECONDS > 0 && !isFull) {
+    try {
+      const hit = cache.get(cacheKey);
+      if (hit) return { ok: true, cached: true, datasets: JSON.parse(hit) };
+    } catch (err) { /* fall through and rebuild */ }
+  }
+
+  let keys;
+  if (requested) {
+    if (!DATASETS[requested]) throw new Error("Unknown dataset '" + requested + "'");
+    keys = [requested];
+  } else {
+    keys = Object.keys(DATASETS);
+  }
+
+  const out = {};
+  keys.forEach(function (k) {
+    const cfg = DATASETS[k];
+    out[k] = (cfg.mode === 'revenue_share') ? buildRevenueShare(cfg) : buildDataset(cfg);
+  });
+
+  if (CACHE_SECONDS > 0 && !isFull) {
+    const blob = JSON.stringify(out);
+    if (blob.length < 95000) {
+      try { cache.put(cacheKey, blob, CACHE_SECONDS); } catch (err) { /* too big; serve uncached */ }
+    }
+  }
+
+  return { ok: true, updated: new Date().toISOString(), datasets: out };
+}
+
+/* ============================================================
+ * Run this from the editor to prove the protected route works
+ * before touching any HTML.
+ * ============================================================ */
+function testRoute() {
+  const login = handleLogin_({
+    username: readAllowedUsers_()[0],
+    password: AUTH.PASSWORD
+  });
+  if (!login.ok) { Logger.log('login failed: %s', login.error); return; }
+  Logger.log('logged in as %s', login.user.username);
+
+  const session = validateToken_(login.token);
+  const res = routeAction_('datasets', { dataset: 'weekly_network' }, session);
+  const ds = res.datasets.weekly_network;
+  Logger.log('datasets action returned %s rows, %s columns',
+    ds.count, (ds.columns || []).length);
+
+  try {
+    requireAuth_({ token: 'made-up-token' });
+    Logger.log('PROBLEM: a bogus token was accepted');
+  } catch (err) {
+    Logger.log('bogus token rejected -> %s', err.message);
+  }
+}
+
+  </script>
+</body>
+</html>
+
+
