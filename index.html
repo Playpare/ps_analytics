@@ -1,7 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MSS3D Monetization Hub</title>
   <style>
@@ -17,17 +20,20 @@
       box-shadow: 0 5px 22px rgba(0, 0, 0, .4);
     }
     .brand { margin-right: auto; font-weight: 750; letter-spacing: .01em; }
-    .brand span { color: #7589a8; font-size: 12px; font-weight: 500; }S
+    .brand span { color: #7589a8; font-size: 12px; font-weight: 500; }
     .hub-nav button {
       border: 1px solid rgba(255, 255, 255, .13); border-radius: 999px;
       padding: 9px 18px; background: #0b0c0f; color: #a6b8d4;
       font: 700 13px/1 system-ui, sans-serif; cursor: pointer;
     }
     .hub-nav button:hover { color: #edf2ff; border-color: rgba(255, 255, 255, .25); }
+    .hub-nav button:focus-visible { outline: 2px solid #00e5c3; outline-offset: 2px; }
     .hub-nav button.active {
       color: #031018; border-color: transparent;
       background: linear-gradient(135deg, #00e5c3, #4d9fff);
     }
+    .hub-nav button[disabled] { opacity: .4; cursor: not-allowed; }
+    .hub-nav button[disabled]:hover { color: #a6b8d4; border-color: rgba(255, 255, 255, .13); }
     .hub-nav button#authOut { margin-left: 14px; font-weight: 500; color: #7589a8; }
     .hub-nav button#authOut:hover { color: #ff8ca1; border-color: rgba(255, 140, 161, .4); }
     .reports { position: relative; min-height: 0; }
@@ -36,11 +42,39 @@
       border: 0; background: #000;
     }
     .report-frame[hidden] { display: none; }
+    /* Browsers paint an iframe without src as a white about:blank document.
+       Keep it out of the paint tree until the hub can start the real report. */
+    .report-frame:not([src]) { visibility: hidden; }
+
+    /* A report that has not been given a src yet shows this instead of black. */
+    #framePlaceholder {
+      position: absolute; inset: 0; z-index: 2; display: none; place-items: center;
+      background: #000;
+      color: #7589a8; font: 500 12px system-ui, sans-serif; letter-spacing: .1em;
+      text-transform: uppercase; pointer-events: none;
+    }
+    #framePlaceholder.show { display: grid; }
+
+    /* Non-blocking note in the nav — used when one backend is unreachable. */
+    #hubNote {
+      display: none; align-items: center; gap: 9px; margin-left: 6px;
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid rgba(255, 184, 0, .35); background: rgba(255, 184, 0, .08);
+      color: #ffb800; font: 600 11px/1.3 system-ui, sans-serif; max-width: 46vw;
+    }
+    #hubNote.show { display: flex; }
+    #hubNote span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #hubNote button {
+      padding: 4px 10px; font-size: 11px; font-weight: 600;
+      border-color: rgba(255, 184, 0, .35); background: transparent; color: #ffb800;
+    }
+
     @media (max-width: 620px) {
       .hub { grid-template-rows: 54px minmax(0, 1fr); }
       .hub-nav { padding: 8px; }
       .brand span { display: none; }
       .hub-nav button { padding: 8px 11px; font-size: 12px; }
+      #hubNote { display: none !important; }
     }
 
     /* ---- light theme ---- */
@@ -53,6 +87,7 @@
     body.lt .hub-nav button.active { color: #fff;
       background: linear-gradient(135deg, #00b39a, #2f7fe0); border-color: transparent; }
     body.lt .report-frame { background: #eef1f7; }
+    body.lt #framePlaceholder { background: #eef1f7; color: #8394ad; }
     html[data-theme=light] { background: #eef1f7; }
 
     /* ---- login gate ---- */
@@ -79,7 +114,7 @@
 /* ---- shared theme, synced across the hub and every report ----
    The choice is written to localStorage, which same-origin documents share.
    A `storage` event fires in every OTHER document when one of them writes,
-   which is how a click in one iframe reaches the rest.S
+   which is how a click in one iframe reaches the rest.
 
    Charts read their colours from CSS variables at build time, so they have to
    be rebuilt on a change. That rebuild is expensive and blocks the main thread,
@@ -123,7 +158,11 @@
 
   window.addEventListener('storage', function(ev){ if (ev.key === KEY) apply(ev.newValue || 'dark'); });
   window.addEventListener('resize', flush);    // fires when a hidden iframe is shown
+  document.addEventListener('visibilitychange', flush);
 
+  /* The first paint has to happen before the body is visible, or the light
+     theme arrives one frame late and users see a flash of black. */
+  paint(window.getTheme());
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function(){ apply(window.getTheme(), true); });
   } else {
@@ -148,42 +187,50 @@ html,body{transition:background-color .18s linear,color .18s linear}
       <label for="authPass">Password</label>
       <input id="authPass" type="password" autocomplete="current-password">
       <button id="authBtn" type="button">Sign in</button>
-      <div id="authMsg"></div>
+      <div id="authMsg" role="status" aria-live="polite"></div>
     </div>
   </div>
 
   <main class="hub">
     <nav class="hub-nav" aria-label="Report period">
       <div class="brand">playspare <span>&middot; MSS3D Monetization Hub</span></div>
+      <div id="hubNote" role="status" aria-live="polite">
+        <span id="hubNoteText"></span>
+        <button type="button" id="hubNoteAction">Sign in again</button>
+      </div>
       <button type="button" class="active" data-report="till-date" aria-selected="true">Till Date</button>
       <button type="button" data-report="weekly" aria-selected="false">Weekly</button>
       <button type="button" data-report="ua" aria-selected="false">UA</button>
-      <button type="button" id="themeBtn">☀ Light</button>
+      <button type="button" id="themeBtn">&#9728; Light</button>
       <button type="button" id="authOut">Sign out</button>
     </nav>
 
     <section class="reports">
+      <div id="framePlaceholder">Opening report&hellip;</div>
       <iframe
         class="report-frame"
         id="report-till-date"
-        data-src="monetization_report_till_date.html?v=20260727-sticky-date-bar"
+        data-src="monetization_report_till_date.html?v=20260729-loading-status"
         title="Monetization report till date"></iframe>
       <iframe
         class="report-frame"
         id="report-weekly"
-        data-src="monetization_report_weekly.html?v=20260727-monetization-report-label"
+        data-src="monetization_report_weekly.html?v=20260729-visible-loading-status"
         title="Weekly monetization report"
         hidden></iframe>
       <iframe
         class="report-frame"
         id="report-ua"
-        data-src="ua_report.html?v=20260727-filtered-platform-revenue-mix"
+        data-src="ua_report.html?v=20260729-roi-axis"
         title="User acquisition report"
         hidden></iframe>
     </section>
   </main>
 
   <script>
+  (function () {
+    'use strict';
+
     /* ============================================================
        PASTE YOUR THREE /exec URLs HERE — the only thing to fill in.
        Not secrets: every request still needs a token. But keep the
@@ -195,138 +242,528 @@ html,body{transition:background-color .18s linear,color .18s linear}
       tilldate: 'https://script.google.com/macros/s/AKfycbyaSzBDM3Ayh9dSdyjhdLWC7l2er6kTUhD6kcO6GEfnW22GRA3_KnvIxTELyv-1cYtj/exec'
     };
 
-    /* Each backend issues its own token, so we hold three. Same-origin
-       iframes share sessionStorage, which is how each report picks up
-       the one it needs. */
-    const TOKEN_KEYS = { ua: 'tok_ua', weekly: 'tok_weekly', tilldate: 'tok_tilldate' };
+    /* How long a hub session is trusted for when the backend does not say.
+       Keep this at or below the server-side token lifetime in Auth.gs —
+       if the hub trusts a token for longer than the server does, users get
+       a signed-in hub full of reports that all fail with "session expired". */
+    const DEFAULT_SESSION_MS = 120 * 60 * 1000;   // matches Auth.gs TTL_MINUTES
 
-    async function apiLogin(which, username, password) {
-      const url = API_URLS[which];
-      if (!url || url.indexOf('PASTE_') === 0) throw new Error(which + ': web app URL not set');
-      if (url.indexOf('/exec') < 0) throw new Error(which + ': URL must end in /exec, not /dev');
+    /* Apps Script cold starts are slow, so give login room before giving up. */
+    const REQUEST_TIMEOUT_MS = 50000;
+    const REQUEST_RETRIES    = 2;
 
-      let res;
+    /* UA issues one signed token. All three Apps Script projects validate the
+       same signature locally with their shared AUTH_HMAC_SECRET_V1. */
+    const TOKEN_KEY   = 'mss3d_token';
+
+    /* Report id (used in the URL hash and on the buttons) -> backend name. */
+    const BACKEND_OF  = { 'till-date': 'tilldate', 'weekly': 'weekly', 'ua': 'ua' };
+    const REPORT_IDS  = ['ua', 'weekly', 'till-date'];
+    const LABEL_OF    = { tilldate: 'Till Date', weekly: 'Weekly', ua: 'UA' };
+
+    const $ = (id) => document.getElementById(id);
+
+    /* ============================================================
+       1. Session storage
+       ------------------------------------------------------------
+       sessionStorage alone loses the session on every new tab, bookmark
+       and window restore, which is what made signing in feel random. The
+       durable copy lives in localStorage with an explicit expiry; it is
+       mirrored into sessionStorage on every load so the reports keep
+       reading it exactly where they already look.
+       ============================================================ */
+    /* v4 migrates the browser from three project-local tokens to one shared
+       HMAC-signed token and forces one clean sign-in after deployment. */
+    const AUTH_KEY = 'mss3d_auth_v4';
+    try { localStorage.removeItem('mss3d_auth_v1'); } catch (e) {}
+    try { localStorage.removeItem('mss3d_auth_v2'); } catch (e) {}
+    try { localStorage.removeItem('mss3d_auth_v3'); } catch (e) {}
+
+    function readSession() {
+      let raw = null;
+      try { raw = localStorage.getItem(AUTH_KEY); } catch (e) { /* storage blocked */ }
+      if (!raw) return null;
       try {
-        res = await fetch(url, {
-          method: 'POST',
-          // text/plain on purpose: application/json triggers a CORS preflight
-          // that Apps Script web apps cannot answer.
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'login', username: username, password: password }),
-          redirect: 'follow'
-        });
-      } catch (err) {
-        // A network-level failure never reaches the script. Almost always one of:
-        // a file:// page, a /dev URL, or access not set to "Anyone".
-        throw new Error(which + ': could not reach the web app.\n' +
-          'Check that the page is served over http (not file://), the URL ends in /exec, ' +
-          'and the deployment is set to Execute as Me + Anyone.');
-      }
-      if (!res.ok) throw new Error(which + ': HTTP ' + res.status);
-      const data = await res.json();
-      if (!data.ok) throw new Error(which + ': ' + (data.error || 'login failed'));
-      return data.token;
+        const rec = JSON.parse(raw);
+        if (!rec || !rec.token || typeof rec.token !== 'string') return null;
+        /* Older hub builds saved 8-hour expiries even though Auth.gs issued
+           120-minute tokens. Cap every stored record by its save time so an
+           old localStorage entry cannot hide the login gate after the server
+           session has ended. */
+        const trustedUntil = Math.min(
+          Number(rec.expiresAt) || 0,
+          (Number(rec.savedAt) || 0) + DEFAULT_SESSION_MS
+        );
+        if (!trustedUntil || trustedUntil <= Date.now()) return null;
+        rec.expiresAt = trustedUntil;
+        return rec;
+      } catch (e) { return null; }
     }
 
-    /* Each report runs in its own document and cannot read API_URLS from here,
-       so its web app URL is appended to the iframe src. The token travels
-       separately, in sessionStorage, which same-origin iframes share. */
-    const FRAME_API = { 'report-ua': 'ua', 'report-weekly': 'weekly', 'report-till-date': 'tilldate' };
+    function writeSession(token, expiresAt) {
+      const rec = {
+        token: token,
+        savedAt: Date.now(),
+        expiresAt: expiresAt || (Date.now() + DEFAULT_SESSION_MS)
+      };
+      try { localStorage.setItem(AUTH_KEY, JSON.stringify(rec)); } catch (e) { /* storage blocked */ }
+      mirrorToSession(rec);
+      return rec;
+    }
 
-    function loadReports() {
-      document.querySelectorAll('.report-frame[data-src]').forEach((frame) => {
-        const which = FRAME_API[frame.id];
-        const base = frame.dataset.src;
-        const join = base.indexOf('?') >= 0 ? '&' : '?';
-        frame.src = base + join + 'api=' + encodeURIComponent(API_URLS[which]);
-        frame.removeAttribute('data-src');
+    /* Every report reads this same-origin sessionStorage key on each request. */
+    function mirrorToSession(rec) {
+      const token = rec && rec.token ? rec.token : null;
+      try { token ? sessionStorage.setItem(TOKEN_KEY, token) : sessionStorage.removeItem(TOKEN_KEY); }
+      catch (e) { /* storage blocked */ }
+    }
+
+    function clearSession() {
+      try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+      try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+      /* Remove legacy per-project browser keys left by older hub builds. */
+      ['tok_ua', 'tok_weekly', 'tok_tilldate'].forEach((key) => {
+        try { sessionStorage.removeItem(key); } catch (e) {}
       });
     }
 
-    async function doLogin() {
-      const btn  = document.getElementById('authBtn');
-      const user = document.getElementById('authUser').value.trim();
-      const pass = document.getElementById('authPass').value;
-      const msg  = document.getElementById('authMsg');
-      if (!user || !pass) { msg.style.color = '#ff4d6d'; msg.textContent = 'Enter your username and password.'; return; }
+    /* ============================================================
+       2. Network
+       ------------------------------------------------------------
+       Three things go wrong with an Apps Script /exec endpoint that a
+       bare fetch().json() cannot tell apart, and all three used to
+       surface as the same unhelpful failure:
+         - it answers 200 with an HTML Google sign-in page
+         - it never answers at all (cold start, dropped connection)
+         - it answers with a real JSON error
+       ============================================================ */
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-      btn.disabled = true;
-      msg.style.color = '#7589a8';
-      msg.textContent = 'Signing in\u2026';
-      try {
-        // One password, three backends, in parallel. allSettled rather than all,
-        // so a single broken deployment reports itself instead of masking the others.
-        const names   = Object.keys(API_URLS);
-        const results = await Promise.allSettled(names.map((n) => apiLogin(n, user, pass)));
+    function fail(message, opts) {
+      const err = new Error(message);
+      Object.assign(err, opts || {});
+      return err;
+    }
 
-        const failed = [];
-        results.forEach((r, i) => {
-          if (r.status === 'fulfilled') sessionStorage.setItem(TOKEN_KEYS[names[i]], r.value);
-          else failed.push(r.reason && r.reason.message ? r.reason.message : String(r.reason));
-        });
-        if (failed.length) throw new Error(failed.join('\n\n'));
+    async function postJson(url, payload, label) {
+      let lastError;
 
-        document.getElementById('authPass').value = '';
-        document.getElementById('authGate').classList.add('done');
-        loadReports();
-      } catch (err) {
-        msg.style.color = '#ff4d6d';
-        msg.textContent = err.message || 'Sign in failed';
-      } finally {
-        btn.disabled = false;
+      for (let attempt = 0; attempt <= REQUEST_RETRIES; attempt++) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            // text/plain on purpose: application/json triggers a CORS preflight
+            // that Apps Script web apps cannot answer.
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload),
+            redirect: 'follow',
+            signal: controller.signal
+          });
+          clearTimeout(timer);
+
+          const body = (await res.text()).trim();
+
+          if (!res.ok) {
+            throw fail(label + ': the web app answered HTTP ' + res.status + '.',
+              { retryable: res.status === 404 || res.status === 429 || res.status >= 500 });
+          }
+          // Apps Script serves its own login page with a 200, so status is not
+          // enough — anything starting with a tag is Google, not our JSON.
+          if (body.charAt(0) === '<') {
+            throw fail(label + ': the web app returned a Google sign-in page instead of data.\n' +
+              'Redeploy it with "Execute as: Me" and "Who has access: Anyone", ' +
+              'or open the /exec URL once in this browser and approve access.',
+              { retryable: false, code: 'GOOGLE_LOGIN' });
+          }
+          try {
+            return JSON.parse(body);
+          } catch (e) {
+            throw fail(label + ': the web app returned something that is not JSON.',
+              { retryable: false });
+          }
+        } catch (err) {
+          clearTimeout(timer);
+          lastError = describeNetworkError(err, label);
+          if (lastError.retryable === false || attempt === REQUEST_RETRIES) throw lastError;
+          await sleep(800 * Math.pow(2, attempt));
+        }
       }
+      throw lastError;
     }
 
-    function doLogout() {
-      Object.values(TOKEN_KEYS).forEach((k) => sessionStorage.removeItem(k));
-      location.reload();
+    function describeNetworkError(err, label) {
+      if (err && err.retryable !== undefined) return err;           // already ours
+      if (err && err.name === 'AbortError') {
+        return fail(label + ': the web app did not answer within ' +
+          Math.round(REQUEST_TIMEOUT_MS / 1000) + ' seconds.', { retryable: true });
+      }
+      return fail(label + ': could not reach the web app.\n' +
+        'Serve this page over http or https (not file://), check the URL ends in /exec, ' +
+        'and set the deployment to Execute as Me + Anyone.', { retryable: true });
     }
 
-    /* ---- report switching (unchanged) ---- */
+    /* A backend may hand back an expiry; if it does, trust it over our default. */
+    function readExpiry(data) {
+      if (data.expiresAt) {
+        const parsed = Date.parse(data.expiresAt) || Number(data.expiresAt);
+        if (parsed > Date.now()) return parsed;
+      }
+      if (data.expiresIn) {
+        const n = Number(data.expiresIn);
+        // Accept either seconds or milliseconds.
+        if (n > 0) return Date.now() + (n > 1e6 ? n : n * 1000);
+      }
+      if (data.expiresInMinutes) {
+        const minutes = Number(data.expiresInMinutes);
+        if (minutes > 0) return Date.now() + minutes * 60 * 1000;
+      }
+      return null;
+    }
+
+    async function apiLogin(name, username, password) {
+      const url = API_URLS[name];
+      const label = LABEL_OF[name];
+      if (!url || /^(hidden|paste)/i.test(url)) {
+        throw fail(label + ': no web app URL set in index.html.', { retryable: false });
+      }
+      if (url.indexOf('/exec') < 0) {
+        throw fail(label + ': the URL must end in /exec, not /dev.', { retryable: false });
+      }
+
+      const data = await postJson(url, { action: 'login', username: username, password: password }, label);
+      if (!data.ok || !data.token) {
+        throw fail(label + ': ' + (data.error || 'sign in was rejected.'),
+          { retryable: false, credentials: true });
+      }
+      return { token: data.token, expiresAt: readExpiry(data) };
+    }
+
+    /* ============================================================
+       3. Frames
+       ------------------------------------------------------------
+       Loading all three at once put three heavy Apps Script requests in
+       flight together. Apps Script runs one execution at a time per user,
+       so the two hidden reports queued in front of the one being looked
+       at. Now the visible report loads first and the others follow, one
+       at a time, once it is done.
+       ============================================================ */
+    const frameBase = {};
+    REPORT_IDS.forEach((id) => {
+      const frame = $('report-' + id);
+      if (frame) frameBase[id] = frame.dataset.src || '';
+    });
+
+    let prefetchQueued = false;
+    let prefetchFallback = null;
+
+    function startFrame(id) {
+      const frame = $('report-' + id);
+      if (!frame || frame.src) return false;
+      const base = frameBase[id];
+      if (!base) return false;
+      const backend = BACKEND_OF[id];
+      /* Navigation stays available while a backend is still signing in, but
+         its heavy report must not start without a token and fail as
+         "Unauthorized". Background authentication calls prefetchRest again
+         as soon as the token is stored. */
+      if (!isAvailable(backend)) return false;
+      const join = base.indexOf('?') >= 0 ? '&' : '?';
+      frame.src = base + join + 'api=' + encodeURIComponent(API_URLS[backend]);
+      frame.removeAttribute('data-src');
+      return true;
+    }
+
+    function stopFrames() {
+      prefetchQueued = false;
+      if (prefetchFallback) clearTimeout(prefetchFallback);
+      prefetchFallback = null;
+      REPORT_IDS.forEach((id) => {
+        const frame = $('report-' + id);
+        if (!frame) return;
+        // about:blank first, or some browsers keep painting the old document.
+        try { frame.src = 'about:blank'; } catch (e) {}
+        frame.removeAttribute('src');
+        frame.dataset.src = frameBase[id];
+      });
+    }
+
+    /* Load the remaining reports one after another so they never compete
+       for the same Apps Script execution slot. */
+    function prefetchRest() {
+      /* If the user selected a report while its backend was connecting, load
+         that report first once its token arrives. */
+      const order = [currentReport].concat(REPORT_IDS.filter((id) => id !== currentReport));
+      const next = order
+        .map((id) => ({ id: id, frame: $('report-' + id) }))
+        .find((entry) => entry.frame && !entry.frame.src && isAvailable(BACKEND_OF[entry.id]));
+      if (!next) return;
+      startFrame(next.id);
+      if (prefetchFallback) clearTimeout(prefetchFallback);
+      /* If a report fails before it can announce data-ready, do not block the
+         rest of the dashboard forever. Normal progression is driven by the
+         explicit report-ready message below. */
+      prefetchFallback = setTimeout(prefetchRest, 330000);
+    }
+
+    function queuePrefetch(afterFrame) {
+      if (prefetchQueued) return;
+      prefetchQueued = true;
+      if (prefetchFallback) clearTimeout(prefetchFallback);
+      prefetchFallback = setTimeout(prefetchRest, 330000);
+    }
+
+    /* ============================================================
+       4. Report switching
+       ============================================================ */
     const reportButtons = document.querySelectorAll('[data-report]');
-    const reportFrames = document.querySelectorAll('.report-frame');
+    let currentReport = 'ua';
 
-    function showReport(name) {
+    function isAvailable(backend) {
+      const rec = readSession();
+      return !!(rec && rec.token);
+    }
+
+    function showReport(id) {
+      if (!REPORT_IDS.includes(id)) id = 'ua';
+      currentReport = id;
+
       reportButtons.forEach((button) => {
-        const selected = button.dataset.report === name;
+        const selected = button.dataset.report === id;
         button.classList.toggle('active', selected);
         button.setAttribute('aria-selected', String(selected));
       });
 
-      reportFrames.forEach((frame) => {
-        frame.hidden = frame.id !== `report-${name}`;
+      REPORT_IDS.forEach((other) => {
+        const frame = $('report-' + other);
+        if (frame) frame.hidden = other !== id;
       });
 
-      history.replaceState(null, '', `#${name}`);
+      const frame = $('report-' + id);
+      const gateOpen = !$('authGate').classList.contains('done');
+
+      if (frame && !gateOpen) {
+        const started = startFrame(id);
+        $('framePlaceholder').classList.toggle('show', started || !frame.src);
+        if (started) frame.addEventListener('load', () => $('framePlaceholder').classList.remove('show'), { once: true });
+        else $('framePlaceholder').classList.remove('show');
+
+        /* A chart built while its iframe was display:none has zero width.
+           Nudging the document on show makes Chart.js re-measure. */
+        try {
+          const win = frame.contentWindow;
+          if (win) requestAnimationFrame(() => {
+            try { win.dispatchEvent(new Event('resize')); } catch (e) {}
+          });
+        } catch (e) { /* cross-origin, nothing to do */ }
+      }
+
+      try { history.replaceState(null, '', '#' + id); } catch (e) { /* file:// */ }
     }
 
-    reportButtons.forEach((button) => {
-      button.addEventListener('click', () => showReport(button.dataset.report));
+    /* ============================================================
+       5. Sign in / sign out
+       ============================================================ */
+    let signingIn = false;
+
+    function setNote(text) {
+      const note = $('hubNote');
+      if (!text) { note.classList.remove('show'); return; }
+      $('hubNoteText').textContent = text;
+      note.classList.add('show');
+    }
+
+    function applyAvailability() {
+      reportButtons.forEach((button) => {
+        const backend = BACKEND_OF[button.dataset.report];
+        const ok = isAvailable(backend);
+        /* A pending backend is a loading state, not a reason to lock report
+           navigation. Clicking it opens that report and it starts as soon as
+           background authentication supplies the token. */
+        button.disabled = false;
+        button.setAttribute('aria-disabled', 'false');
+        button.title = ok ? '' : LABEL_OF[backend] + ' is connecting\u2026';
+      });
+    }
+
+    function openHub(preferred) {
+      $('authGate').classList.add('done');
+      applyAvailability();
+
+      /* UA is always the initial report after sign-in. The other reports use
+         the same token and remain immediately selectable. */
+      const target = preferred === 'ua' ? 'ua' : currentReport;
+      showReport(REPORT_IDS.includes(target) ? target : 'ua');
+      queuePrefetch($('report-' + currentReport));
+      setNote('');
+    }
+
+    function showGate(message) {
+      $('authGate').classList.remove('done');
+      $('framePlaceholder').classList.remove('show');
+      setNote('');
+      const msg = $('authMsg');
+      msg.style.color = message ? '#ffb800' : '#ff4d6d';
+      msg.textContent = message || '';
+      $('authPass').value = '';
+      const focusTarget = $('authUser').value ? $('authPass') : $('authUser');
+      setTimeout(() => focusTarget.focus(), 0);
+    }
+
+    async function doLogin() {
+      if (signingIn) return;
+
+      const button = $('authBtn');
+      const user = $('authUser').value.trim();
+      const pass = $('authPass').value;
+      const msg = $('authMsg');
+
+      if (!user || !pass) {
+        msg.style.color = '#ff4d6d';
+        msg.textContent = 'Enter your username and password.';
+        return;
+      }
+
+      signingIn = true;
+      button.disabled = true;
+      msg.style.color = '#7589a8';
+      msg.textContent = 'Signing in\u2026';
+
+      try {
+        /*
+         * UA is the single authentication authority. Weekly and Till Date
+         * validate this same signed token locally; they do not log in again.
+         */
+        const uaLogin = await apiLogin('ua', user, pass);
+        writeSession(uaLogin.token, uaLogin.expiresAt);
+        $('authPass').value = '';
+        msg.textContent = '';
+        openHub('ua');
+      } catch (err) {
+        clearSession();
+        msg.style.color = '#ff4d6d';
+        msg.textContent = err.message || 'Sign in failed.';
+      } finally {
+        signingIn = false;
+        button.disabled = false;
+      }
+    }
+
+    function doLogout() {
+      clearSession();
+      stopFrames();
+      location.reload();
+    }
+
+    /* Session ran out while the hub was open. Reports would start failing one
+       request at a time; take the session down cleanly instead. */
+    function handleExpiry() {
+      clearSession();
+      stopFrames();
+      showGate('Your session ended. Sign in again to reload the reports.');
+    }
+
+    setInterval(() => {
+      const gateOpen = !$('authGate').classList.contains('done');
+      if (!gateOpen && !readSession()) handleExpiry();
+    }, 60000);
+
+    /* A report can ask the hub to re-check the session — same-origin only. */
+    window.addEventListener('message', (ev) => {
+      if (ev.origin !== location.origin) return;
+      const data = ev.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'mss3d:session-expired') { handleExpiry(); return; }
+      if (data.type === 'mss3d:need-token') {
+        const rec = readSession();
+        if (rec) mirrorToSession(rec); else handleExpiry();
+        return;
+      }
+      if (data.type === 'mss3d:report-ready') {
+        if (prefetchFallback) clearTimeout(prefetchFallback);
+        prefetchFallback = null;
+        setTimeout(prefetchRest, 800);
+      }
     });
 
-    const requestedReport = location.hash.slice(1);
-    showReport(['till-date', 'weekly', 'ua'].includes(requestedReport) ? requestedReport : 'till-date');
+    /* Another tab signed out, or signed in. Follow it. */
+    window.addEventListener('storage', (ev) => {
+      if (ev.key !== AUTH_KEY) return;
+      const rec = readSession();
+      if (rec) { mirrorToSession(rec); }
+      else if ($('authGate').classList.contains('done')) { handleExpiry(); }
+    });
 
-    /* ---- gate wiring ---- */
-    document.getElementById('authBtn').addEventListener('click', doLogin);
-    document.getElementById('authOut').addEventListener('click', doLogout);
-    document.getElementById('themeBtn').addEventListener('click', () => window.toggleThemeGlobal());
-    ['authUser', 'authPass'].forEach((id) => document.getElementById(id)
-      .addEventListener('keydown', (ev) => { if (ev.key === 'Enter') doLogin(); }));
+    /* Reconcile both storage and visible UI whenever Chrome restores this
+       document from its back/forward cache. Merely mirroring tokens left a
+       restored tab showing whichever screen it had before it was cached. */
+    window.addEventListener('pageshow', (ev) => {
+      const rec = readSession();
+      if (rec) {
+        mirrorToSession(rec);
+        if (!$('authGate').classList.contains('done')) openHub(currentReport);
+      } else {
+        clearSession();
+        if ($('authGate').classList.contains('done') || ev.persisted) {
+          stopFrames();
+          showGate();
+        }
+      }
+    });
 
-    // Already signed in this tab? Skip the gate.
-    if (Object.values(TOKEN_KEYS).every((k) => sessionStorage.getItem(k))) {
-      document.getElementById('authGate').classList.add('done');
-      loadReports();
+    /* ---- wiring ---- */
+    reportButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        showReport(button.dataset.report);
+      });
+    });
+
+    $('authBtn').addEventListener('click', doLogin);
+    $('authOut').addEventListener('click', doLogout);
+    $('hubNoteAction').addEventListener('click', () => { clearSession(); stopFrames(); showGate(); });
+    $('themeBtn').addEventListener('click', () => window.toggleThemeGlobal());
+    ['authUser', 'authPass'].forEach((id) => {
+      $(id).addEventListener('keydown', (ev) => { if (ev.key === 'Enter') doLogin(); });
+    });
+
+    /* ---- boot ---- */
+    const requested = location.hash.slice(1);
+    currentReport = REPORT_IDS.includes(requested) ? requested : 'ua';
+
+    /* Shaving a round trip off the first request: warm the TLS connection to
+       the Apps Script host while the user is still typing. */
+    (function preconnect() {
+      const seen = new Set();
+      Object.values(API_URLS).forEach((url) => {
+        if (!url || url.indexOf('http') !== 0) return;
+        let origin;
+        try { origin = new URL(url).origin; } catch (e) { return; }
+        if (seen.has(origin)) return;
+        seen.add(origin);
+        const link = document.createElement('link');
+        link.rel = 'preconnect';
+        link.href = origin;
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+      });
+    })();
+
+    /* Every fresh load of the hub requires a new sign-in. This deliberately
+       avoids browser-specific reload detection, which is unreliable with
+       localhost restarts, restored tabs and URL re-entry. */
+    clearSession();
+
+    const existing = readSession();
+    if (existing) {
+      mirrorToSession(existing);
+      openHub(currentReport);
     } else {
-      document.getElementById('authUser').focus();
+      clearSession();          // drop half-written tokens from an earlier attempt
+      showReport(currentReport);
+      showGate();
     }
+  })();
   </script>
 </body>
 </html>
-
-
-
-
-
-
