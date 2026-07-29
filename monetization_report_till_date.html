@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -117,7 +117,7 @@
     .date-controls{display:flex;align-items:center;gap:6px}
     .date-span{color:var(--t3,#7589a8);font:600 10px 'DM Mono',monospace;white-space:nowrap;letter-spacing:.02em}
     .date-span:empty{display:none}
-    select.date{color:var(--onGrad);padding:7px 16px;border:0;outline:0;border-radius:20px;background:var(--grad);font:600 11px 'DM Mono',monospace;cursor:pointer;appearance:none;-webkit-appearance:none}
+    select.date{color:var(--onGrad);padding:7px 34px 7px 16px;border:0;outline:0;border-radius:20px;font:600 11px 'DM Mono',monospace;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--onGrad) 50%),linear-gradient(135deg,var(--onGrad) 50%,transparent 50%),var(--grad);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%,0 0;background-size:5px 5px,5px 5px,100% 100%;background-repeat:no-repeat}
     select.date option{background:var(--card);color:var(--t1)}
     .date-controls input[type=date]{display:none;color:var(--onGrad);padding:7px 10px;border:0;border-radius:20px;background:var(--grad);font:600 10px 'DM Mono',monospace;outline:0;color-scheme:dark}
     body.lt .date-controls input[type=date]{color-scheme:light}
@@ -235,7 +235,7 @@ html,body{transition:background-color .18s linear,color .18s linear}
   <div class="connect">
     <button class="btn" id="refreshBtn" onclick="refreshData()">&#8635; Refresh</button>
     
-    <span id="dataStatus" class="status"></span>
+    <span id="dataStatus" class="status">Loading...</span>
   </div>
 </header>
 
@@ -603,30 +603,86 @@ html,body{transition:background-color .18s linear,color .18s linear}
   <div class="sf"><span>Monetization &middot; Ad Metrics</span><span>Playspare &middot; Game District</span></div>
 </section></main>
 
-<div class="loader" id="loader"><div class="loaderbox"><div class="spinner"></div>Loading sheet data<div class="pulse"></div></div></div>
+<div class="loader" id="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading live Till Date data</b><div class="pulse"></div></div></div>
 
 <script>
 /* ---- API client: URL arrives via ?api= from the hub, token via sessionStorage ---- */
 const API = {
   url: new URLSearchParams(location.search).get('api') || '',
-  tokenKey: 'tok_tilldate',
+  tokenKey: 'mss3d_token',
   get token(){ return sessionStorage.getItem(API.tokenKey) || ''; },
   async call(action, params){
     if(!API.url) throw new Error('No API URL - open this report from the hub, not on its own.');
-    if(!API.token) throw new Error('Not signed in - open the hub and sign in.');
-    const res = await fetch(API.url, {
-      method: 'POST',
-      /* text/plain on purpose: application/json triggers a CORS preflight
-         that Apps Script web apps cannot answer. */
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({ action: action, token: API.token }, params || {})),
-      redirect: 'follow'
-    });
-    if(!res.ok) throw new Error('HTTP ' + res.status + ' from Apps Script');
-    const data = await res.json();
-    if(data.code === 401) throw new Error('Session expired - reload the hub and sign in again.');
-    if(!data.ok) throw new Error(data.error || 'Request failed');
-    return data;
+    if(!API.token){
+      try{window.parent.postMessage({type:'mss3d:need-token'},location.origin)}catch(e){}
+      await new Promise(resolve=>setTimeout(resolve,150));
+    }
+    if(!API.token){
+      try{window.parent.postMessage({type:'mss3d:session-expired'},location.origin)}catch(e){}
+      throw new Error('Not signed in - open the hub and sign in.');
+    }
+    let lastError;
+    for(let attempt=1;attempt<=4;attempt++){
+      const controller=new AbortController();
+      /* Till Date reads many tabs and can exceed one minute on an Apps Script
+         cold start. Let the original execution finish instead of aborting it
+         and launching a second competing execution. */
+      const timer=setTimeout(()=>controller.abort(),300000);
+      try{
+        const res = await fetch(API.url, {
+          method: 'POST',
+          /* text/plain on purpose: application/json triggers a CORS preflight
+             that Apps Script web apps cannot answer. */
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(Object.assign({ action: action, token: API.token }, params || {})),
+          redirect: 'follow',
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+        const body=(await res.text()).trim();
+        if(!res.ok){
+          const err=new Error('HTTP '+res.status+' from Apps Script');
+          err.retryable=res.status===404||res.status===429||res.status>=500;
+          throw err;
+        }
+        if(body.charAt(0)==='<'){
+          const err=new Error('Apps Script returned a Google sign-in page instead of data');
+          err.retryable=false;
+          throw err;
+        }
+        let data;
+        try{data=JSON.parse(body);}catch(e){
+          const err=new Error('Apps Script returned an invalid JSON response');
+          err.retryable=false;
+          throw err;
+        }
+        if(data.code===401||/^Unauthorized\b/i.test(String(data.error||''))){
+          if(attempt<4){
+            try{window.parent.postMessage({type:'mss3d:need-token'},location.origin)}catch(e){}
+          }else{
+            try{window.parent.postMessage({type:'mss3d:session-expired'},location.origin)}catch(e){}
+          }
+          const err=new Error(attempt<4?'Authentication rejected - refreshing token and retrying.':'Session expired - reload the hub and sign in again.');
+          err.retryable=attempt<4;
+          err.authFailure=true;
+          throw err;
+        }
+        if(!data.ok){
+          const err=new Error(data.error||'Request failed');
+          err.retryable=data.code>=500||/retry shortly/i.test(data.error||'');
+          throw err;
+        }
+        return data;
+      }catch(e){
+        clearTimeout(timer);
+        lastError=e;
+        const retryable=e.retryable===true||e.name==='AbortError'||e instanceof TypeError;
+        if(!retryable||attempt===4)throw e;
+        setDataStatus(e?.authFailure?`Till Date authentication rejected — retrying automatically (${attempt}/4)…`:`Till Date request interrupted — retrying automatically (${attempt}/4)…`);
+        await new Promise(resolve=>setTimeout(resolve,Math.min(10000,1500*Math.pow(2,attempt-1))));
+      }
+    }
+    throw lastError||new Error('Till Date request failed');
   }
 };
 
@@ -928,9 +984,12 @@ function mkChart(id,type,labels,datasets,yFmt,yOpts,logAnnotations){
 
 function computeDataMaxDate(){
   let mx=0;
-  const scan=arr=>arr&&arr.forEach(r=>{const t=new Date(r.date||r.install_day).getTime(); if(t>mx)mx=t;});
-  scan(RAW.ios_iap); scan(RAW.android_iap); scan(RAW.user_activity); scan(RAW.cohort);
-  return new Date(mx);
+  const scan=arr=>arr&&arr.forEach(r=>{
+    const t=new Date(r.date||r.install_day||r.week||r.day).getTime();
+    if(Number.isFinite(t)&&t>mx)mx=t;
+  });
+  Object.values(RAW).forEach(scan);
+  return mx ? new Date(mx) : new Date();
 }
 let DATA_MAX_DATE = computeDataMaxDate();
 function dateInPeriod(s,per){
@@ -1978,98 +2037,21 @@ async function rebuildRawFromGoogleSheet(){
   return {sheetsLoaded, errors, diagnostics};
 }
 
-/**
- * ============================================================
- * Router_tilldate.gs   — add to the TILL-DATE script project
- * ------------------------------------------------------------
- * This is the one that actually closes the hole you described.
- *
- * Today till_date.html reads the spreadsheet straight from the
- * browser via the gviz endpoint:
- *     docs.google.com/spreadsheets/d/<ID>/gviz/tq?...
- * That only works if the sheet is shared "Anyone with the link",
- * i.e. the database is public and the ID is sitting in the page.
- *
- * This endpoint returns the same tabs in the same shape, read
- * server-side by the owner, so the sheet can go back to private
- * and the ID never leaves the backend.
- *
- * till_date.gs (the Adjust sync) is untouched — it keeps writing
- * to these tabs on its trigger exactly as before.
- * ============================================================
- */
-
-/** The tabs the till-date report needs, matching its SHEET_TO_RAW_KEY. */
-const TILLDATE_TABS = [
-  'user_activity', 'ios_iap', 'android_iap', 'cohort', 'network_rev',
-  'ltv_overall', 'ltv_us', 'stickiness', 'whale', 'retention', 'ftp',
-  'us_ftp_ios', 'us_ftp_android', 'user_activity_us', 'ios_iap_us',
-  'android_iap_us', 'cohort_us', 'stickiness_us', 'retention_us'
-];
-
-/** Serves the dashboard. The web app URL is injected here, server-side. */
-function doGet(e) {
-  const t = HtmlService.createTemplateFromFile('tilldate');   // tilldate.html in this project
-  t.apiUrl = ScriptApp.getService().getUrl();
-  return t.evaluate()
-    .setTitle('MSS3D · Monetization To Date')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
-}
-
-/** Called by Auth.gs only AFTER the token has been validated. */
-function routeAction_(action, p, session) {
-
-  if (action === 'tabs') {
-    // Optionally fetch a subset: { action:'tabs', only:'user_activity,cohort' }
-    const only = String(p.only || '').trim();
-    const wanted = only ? only.split(',').map(s => s.trim()).filter(Boolean) : TILLDATE_TABS;
-    const out = {};
-    wanted.forEach(name => { out[name] = readTab_(name); });
-    return { ok: true, updated: new Date().toISOString(), tabs: out };
-  }
-
-  throw new Error('Unknown action: ' + action);
-}
-
-/**
- * Reads one tab into { headers, dataRows } — deliberately the same shape
- * the gviz response was converted into, so the report's existing
- * rowsToRecords(payload, headerMap) keeps working with no changes.
- */
-function readTab_(name) {
-  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
-  if (!sh) return { headers: [], dataRows: [], missing: true };
-
-  const lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
-  if (lastRow < 2 || lastCol < 1) return { headers: [], dataRows: [] };
-
-  const values = sh.getRange(1, 1, lastRow, lastCol).getValues();
-  const headers = values[0].map(h => String(h == null ? '' : h).trim());
-
-  const dataRows = [];
-  for (let r = 1; r < values.length; r++) {
-    const row = values[r];
-    if (row.every(v => v === '' || v === null)) continue;
-    // Dates become ISO strings, matching what gviz used to hand over.
-    dataRows.push(row.map(v => (v instanceof Date) ? v.toISOString() : v));
-  }
-  return { headers: headers, dataRows: dataRows };
-}
-
 async function refreshData(){
   // No sheet to connect to any more - the API is always the source.
-  setDataStatus('Refreshing…');
+  setDataStatus('Loading...');
   try{
-    const {sheetsLoaded, errors, diagnostics} = await rebuildRawFromGoogleSheet();
+    const loaded=await rebuildRawFromGoogleSheet();
+    const {sheetsLoaded, errors, diagnostics}=loaded;
     renderActive();
     const now=new Date();
     const totalRecords = Object.values(diagnostics).reduce((s,d)=>s+(d.recordsBuilt||0),0);
     if(errors.length){
-      setDataStatus(`✓ ${sheetsLoaded} tabs, ${totalRecords} rows loaded — ${errors.length} tabs failed (${errors.slice(0,3).join(', ')}${errors.length>3?'…':''}) · ${now.toLocaleTimeString()}`);
+      setDataStatus(`Loaded - ${now.toLocaleTimeString()}`);
     } else {
-      setDataStatus(`✓ ${totalRecords} rows loaded · ${now.toLocaleTimeString()}`);
+      setDataStatus(`Loaded - ${now.toLocaleTimeString()}`);
     }
+    try{window.parent.postMessage({type:'mss3d:report-ready',report:'tilldate'},location.origin)}catch(e){}
   }catch(e){
     // No fallback dataset exists, so a failure means the report is showing
     // nothing at all — say that outright instead of leaving a blank page.
@@ -2081,7 +2063,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   // Nothing is rendered before the live fetch: RAW is empty at this point, so
   // painting first would only draw blank charts and, if it threw on an empty
   // array, would take refreshData() down with it.
-  setDataStatus('Loading live data…');
+  setDataStatus('Loading...');
   try{ localStorage.removeItem('mss3d_sheet_id'); }catch(e){}
   /* Deferred by one tick on purpose. The date-filter module further down the
      page wraps window.refreshData in its own DOMContentLoaded handler, and
@@ -2129,6 +2111,15 @@ function weekWindow(weeks, anchor){
 
   function dataMax(){
     try{ const d = new Date(DATA_MAX_DATE); return isNaN(d) ? new Date() : d; }catch(e){ return new Date(); }
+  }
+  /* Date pickers and rolling day presets are allowed through today even when
+     the newest source tab is a few days behind. Data availability and filter
+     availability are separate concerns: an empty tail must not lock the user
+     to the latest row date. */
+  function filterMax(){
+    const now = new Date(), sheetMax = dataMax();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return sheetMax > today ? sheetMax : today;
   }
   /* A Mon-Sun week has not closed until its Sunday has finished, so the week
      anchor may never reach today. Without this, viewing on a Sunday makes
@@ -2179,7 +2170,7 @@ function weekWindow(weeks, anchor){
       from = localISO(new Date(w.start)); to = localISO(new Date(w.end));
     }
     else {
-      const mx = dataMax();
+      const mx = filterMax();
       to = localISO(mx);
       from = localISO(new Date(mx.getTime() - (Number(value)-1)*MS_DAY));
     }
@@ -2192,7 +2183,7 @@ function weekWindow(weeks, anchor){
   function build(box){
     const cfg = SCOPES[box.dataset.scope];
     if(!cfg) return;
-    const min = localISO(dataMin()), max = localISO(dataMax());
+    const min = localISO(dataMin()), max = localISO(filterMax());
     box.innerHTML =
       '<span class="date-span" title="Dates covered by the current filter"></span>'
       + '<select class="date">'
@@ -2285,7 +2276,7 @@ function weekWindow(weeks, anchor){
      at the epoch. Re-point them once real rows land, without disturbing
      whatever period the user has already chosen. */
   function refreshBounds(){
-    const min = localISO(dataMin()), max = localISO(dataMax());
+    const min = localISO(dataMin()), max = localISO(filterMax());
     document.querySelectorAll('.date-controls[data-scope]').forEach(box=>{
       const single = box.querySelector('.single-date'),
             start  = box.querySelector('.range-start'),
@@ -2323,7 +2314,3 @@ function weekWindow(weeks, anchor){
 </script>
 </body>
 </html>
-
-
-
-
