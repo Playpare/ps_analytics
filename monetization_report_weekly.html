@@ -17,7 +17,7 @@ body.live-error::before{content:'Live data could not be loaded. Use the controls
 #weeklyLiveControls label{display:flex;flex-direction:column;gap:4px;color:#7589a8;font:500 8px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
 #weeklyLiveControls input,#weeklyLiveControls select{height:31px;color:#edf2ff;background:#070809;border:1px solid rgba(255,255,255,.14);border-radius:7px;padding:0 9px;font:500 10px 'DM Mono',monospace;color-scheme:dark}
 #weeklyLiveControls button{height:31px;border:0;border-radius:17px;padding:0 17px;background:linear-gradient(135deg,#00e5c3,#4d9fff);color:#020d1a;font:700 10px 'DM Mono',monospace;cursor:pointer}
-#weeklyLiveStatus{min-width:210px;max-width:360px;color:#a6b8d4;font:500 9px 'DM Mono',monospace;line-height:1.35}
+#weeklyLiveStatus{min-width:210px;max-width:360px;color:#a6b8d4;font:500 10px 'DM Mono',monospace;line-height:1.35}
 #weeklyLiveStatus.err{color:#ff4d6d}
 .live-cover{position:absolute;z-index:8;left:14px;right:14px;top:48px;bottom:14px;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:var(--card);border:1px dashed var(--borderB);border-radius:10px;color:var(--t3);font:500 10px/1.6 'DM Mono',monospace}
 .live-no-chart{position:absolute;z-index:7;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;background:var(--card);color:var(--t3);font:500 10px/1.5 'DM Mono',monospace}
@@ -45,9 +45,10 @@ body.live-error::before{content:'Live data could not be loaded. Use the controls
 --r:14px;--rs:8px;--sh:0 8px 40px rgba(0,0,0,.6);
 }
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow-x:hidden}
 body{font-family:'Poppins',system-ui,sans-serif;background:#1a1a1a;display:flex;flex-direction:column;align-items:center;gap:34px;padding:34px 0;}
 .mono{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;}
-.slide{width:min(1520px,100vw);min-height:calc(min(1520px,100vw)*0.5625);height:auto;background:var(--bg);color:var(--t1);position:relative;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;container-type:inline-size;}
+.slide{width:min(1520px,100%);min-height:calc(min(1520px,100vw)*0.5625);height:auto;background:var(--bg);color:var(--t1);position:relative;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;container-type:inline-size;}
 .sh{height:58px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;background:var(--glass);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
 .brand{font-family:'Quicksand',sans-serif;font-weight:700;font-size:16px;color:var(--t1);letter-spacing:.01em;}
 .brand b{font-weight:700;}
@@ -151,7 +152,7 @@ table.airy thead th{padding:9px 6px;}
 #tabnav button{font-family:'Quicksand',sans-serif;font-weight:700;font-size:14px;color:#a6b8d4;background:#0b0c0f;border:1px solid rgba(255,255,255,.12);padding:9px 22px;border-radius:22px;cursor:pointer;}
 #tabnav button.active{color:#031018;background:linear-gradient(135deg,#00e5c3,#4d9fff);border-color:transparent;}
 .tabview{display:flex;flex-direction:column;align-items:center;gap:34px;width:100%;} .tabview.hidden{display:none;}
-.tabview .slide{width:100vw;max-width:none;box-shadow:none;}
+.tabview .slide{width:100%;max-width:none;box-shadow:none;}
 .subnav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px 12px;position:sticky;top:0;z-index:60;background:rgba(11,12,15,.9);backdrop-filter:blur(8px);border:1px solid var(--borderB);border-radius:999px;margin-bottom:-6px;}
 .subnav button{cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--t2);background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:999px;padding:7px 20px;transition:background .15s,color .15s;}
 .subnav button:hover{color:var(--t1);background:rgba(255,255,255,.1);}
@@ -345,6 +346,11 @@ body.lt .slide{background:#ffffff;box-shadow:0 10px 34px rgba(30,50,90,.10)}
 html,body{transition:background-color .18s linear,color .18s linear}
 .top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:background-color .18s linear,border-color .18s linear}
 @media (prefers-reduced-motion: reduce){html,body,.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:none}}
+/* Root report sections must never establish a horizontal scroll range.
+   Tables retain their own .tablewrap scrolling where it is actually needed. */
+html,body{width:100%;max-width:100%;overflow-x:clip!important}
+.tabview,.tabview .slide,.slide,.sb{width:100%;max-width:100%;min-width:0}
+canvas{max-width:100%!important}
 </style>
 </head><body><div id="tabnav"><span class="brand"><span class="brandgr">playspare</span> · Monetization Report</span><button id="btn-report" class="navbtn active" type="button">Monetization Report</button><button id="btn-analytics" class="navbtn" type="button">Analytics</button><div class="navdrop" id="platform-nav"><button id="btn-platform" class="navbtn" data-toggle type="button">Platform ▾</button><div class="navmenu"><button data-platform="ios">iOS</button><button data-platform="android">Android</button></div></div><div id="weeklyRefreshArea"><button id="weeklyRefresh" class="navbtn" type="button">↻ Refresh</button><span id="weeklyLiveStatus">Loading...</span></div></div><div id="weeklyFilterBar" class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Weekly</span></div><div id="weeklyDateHost"></div></div><div id="tab-report" class="tabview">
 <div class="slide">
@@ -1457,7 +1463,7 @@ async function refreshData(){
 'use strict';
 
 
-const STATE={data:null,charts:{},cohortChoice:{},loading:false,asOf:null,rendered:new Set()};
+const STATE={data:null,charts:{},cohortChoice:{},loading:false,asOf:null,rendered:new Set(),fromCache:false};
 /* Weeks run Monday to Sunday. weekEndSunday() returns the Sunday closing the
    most recent COMPLETE week on or before d, so "last 2 weeks" is a whole
    Mon-Sun pair (22 Jun - 5 Jul), never a rolling 14 days ending mid-week. */
@@ -1497,6 +1503,10 @@ const num=(v,d=0)=>finite(v)?v.toLocaleString('en-US',{minimumFractionDigits:d,m
 const money=(v,d=0)=>finite(v)?'$'+v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):'N/A';
 const pct=(v,d=1,ratio=true)=>finite(v)?num(ratio?v*100:v,d)+'%':'N/A';
 const shortDate=s=>{if(!s)return 'N/A';const d=new Date(s+'T00:00:00');return Number.isNaN(d.getTime())?s:d.toLocaleDateString('en-US',{month:'short',day:'2-digit'});};
+/* Pinned to en-US 12-hour rather than left to toLocaleTimeString()'s default,
+   which follows the browser locale and prints 23:52:41 on a 24-hour machine.
+   The three reports state the load time identically. */
+const clockTime=d=>new Date(d).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true});
 const longRange=(a,b)=>a&&b?shortDate(a)+' - '+shortDate(b)+', '+String(b).slice(0,4):'N/A';
 const change=(cur,prev)=>finite(cur)&&finite(prev)&&prev!==0?(cur-prev)/Math.abs(prev):null;
 const deltaText=(cur,prev,suffix='')=>{const d=change(cur,prev);if(!finite(d))return 'Previous comparison unavailable';return (d>=0?'+':'-')+num(Math.abs(d)*100,1)+'%'+suffix;};
@@ -1710,12 +1720,13 @@ function installControls(){
     }
   });
   const g=id=>document.getElementById(id);
-  const MODES=['w2','w4','w6','w8','w10','single','range'];
-  const savedMode=localStorage.getItem('weekly_mode');
-  g('weeklyMode').value=MODES.includes(savedMode)?savedMode:'w2';
-  g('weeklyDate').value=localStorage.getItem('weekly_date')||'';
-  g('weeklyStart').value=localStorage.getItem('weekly_start')||'';
-  g('weeklyEnd').value=localStorage.getItem('weekly_end')||'';
+  /* Every new report document starts from Last 2 Weeks. Date selections are
+     intentionally session-local UI state and must not survive reload/sign-in. */
+  g('weeklyMode').value='w2';
+  g('weeklyDate').value='';
+  g('weeklyStart').value='';
+  g('weeklyEnd').value='';
+  ['weekly_mode','weekly_date','weekly_start','weekly_end'].forEach(k=>localStorage.removeItem(k));
   function syncMode(){
     const m=g('weeklyMode').value;
     box.classList.toggle('single',m==='single');
@@ -1723,7 +1734,10 @@ function installControls(){
   }
   g('weeklyMode').addEventListener('change',()=>{syncMode();const m=g('weeklyMode').value;if(m!=='single'&&m!=='range')loadLive(false);});
   g('weeklyLoad').addEventListener('click',()=>loadLive(false));
-  g('weeklyRefresh').addEventListener('click',()=>loadLive(false));
+  /* Refresh is the deliberate "the sheets moved, go and look again" action, so
+     it drops every remembered range rather than just the one on screen - a
+     stale preset served instantly is worse than a slow accurate one. */
+  g('weeklyRefresh').addEventListener('click',()=>{payloadCache.clear();loadLive(false,true);});
   syncMode();
 }
 
@@ -2026,15 +2040,98 @@ function numberTables(){
   });
 }
 
+/* ── Payload cache ────────────────────────────────────────────────────────────
+   ua_report.html feels instant on every filter change because one request hands
+   it every raw row and each change is pure in-memory work. Weekly cannot copy
+   that shape: Apps Script returns a payload already aggregated for the range
+   that was asked for - eCPM, ARPPU, retention, cohort D0/D7/D27 and the WoW
+   pairs are ratios derived from rows the browser never receives - so carving a
+   wide payload down to a narrower range would print numbers that are simply
+   wrong.
+   What is both safe and fast is remembering each range's own payload. A range
+   costs one round trip the first time and renders straight from memory every
+   time after, which is the same instant response without inventing any figure
+   the server did not compute. warmPresets() then fetches the remaining presets
+   in the background, so in practice the first click on each is already warm. */
+const PAYLOAD_TTL_MS=15*60*1000;   // the sheets keep changing; never serve a range forever
+const payloadCache=new Map();      // canonical params key -> {at, json}
+const inflight=new Map();          // canonical params key -> in-progress request
+const cacheKey=params=>JSON.stringify(Object.keys(params).sort().map(k=>[k,params[k]]));
+/* Every render gets its own copy. renderAll() runs trimTrend(), which rewrites
+   data.trend in place, so handing out the stored object would let one render
+   edit what the next one reads. */
+function clonePayload(json){try{return structuredClone(json)}catch(e){return JSON.parse(JSON.stringify(json))}}
+
 async function requestPayload(opts){
-  const {mode='latest',date='',start='',end='',trend='90',selfStart='',selfEnd=''}=opts||{};
+  const {mode='latest',date='',start='',end='',trend='90',selfStart='',selfEnd='',force=false}=opts||{};
   const params = { trendDays: trend || 90 };
   if(mode==='week'){ if(date) params.week=date; }
   else if(mode==='single'){ if(date){ params.start=date; params.end=date; } }
   else if(mode==='range'){ if(start&&end){ params.start=start; params.end=end; } }
   else if(mode==='all'){ params.all='1'; }
   if(selfStart&&selfEnd){ params.selfBenchStart=selfStart; params.selfBenchEnd=selfEnd; }
-  const json=(await API.call('payload', params)).data;if(json.error)throw new Error(json.error);if(!json.meta||!json.iOS||!json.Android)throw new Error('Unexpected payload: required live report fields are missing');if(!json.benchmark)throw new Error('Live Benchmark payload is missing; redeploy the current Apps Script project');return json;
+  const key=cacheKey(params),cached=payloadCache.get(key);
+  if(force)payloadCache.delete(key);
+  else if(cached&&Date.now()-cached.at<PAYLOAD_TTL_MS){STATE.fromCache=true;return clonePayload(cached.json);}
+  STATE.fromCache=false;
+  /* Clicking a preset that the background warm-up is already fetching should
+     join that request, not open a second identical Apps Script execution. */
+  if(!force&&inflight.has(key))return clonePayload(await inflight.get(key));
+  const pending=(async()=>{
+    const json=(await API.call('payload', params)).data;if(json.error)throw new Error(json.error);if(!json.meta||!json.iOS||!json.Android)throw new Error('Unexpected payload: required live report fields are missing');if(!json.benchmark)throw new Error('Live Benchmark payload is missing; redeploy the current Apps Script project');
+    payloadCache.set(key,{at:Date.now(),json});
+    return json;
+  })();
+  inflight.set(key,pending);
+  try{ return clonePayload(await pending); }
+  finally{ inflight.delete(key); }
+}
+
+/* Fetch the preset windows the user has not opened yet, one at a time, so that
+   switching between them later is a memory read rather than a round trip. */
+const PRESET_MODES=['w2','w4','w6','w8','w10'];
+let warming=false;
+function presetRequest(mode){
+  const wk=/^w(\d+)$/.exec(mode); if(!wk)return null;
+  const w=weekWindow(Number(wk[1]), weekAnchor());
+  return {mode:'range',start:isoDay(w.start),end:isoDay(w.end),trend:'90'};
+}
+/* A custom payload contains correct totals for the whole selected range, but
+   some backend deployments return that range as one overview bar. Build the
+   chart series with the same Monday-Sunday buckets used by presets. Boundary
+   weeks are clipped to the exact custom dates, so no out-of-range revenue is
+   introduced into the first or last bar. */
+async function customWeeklySeries(start,end,trend,force){
+  const parse=s=>{const p=String(s).split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
+  const first=parse(start),last=parse(end);
+  if(Number.isNaN(first.getTime())||Number.isNaN(last.getTime())||first>last)return[];
+  const buckets=[];
+  for(let cursor=new Date(first);cursor<=last;){
+    const daysToSunday=(7-cursor.getDay())%7;
+    const sunday=new Date(cursor);sunday.setDate(sunday.getDate()+daysToSunday);
+    const bucketEnd=sunday<last?sunday:last;
+    buckets.push({start:isoDay(cursor.getTime()),end:isoDay(bucketEnd.getTime())});
+    cursor=new Date(bucketEnd);cursor.setDate(cursor.getDate()+1);
+  }
+  return Promise.all(buckets.map(b=>requestPayload({mode:'range',start:b.start,end:b.end,trend,force})));
+}
+async function warmPresets(){
+  if(warming)return; warming=true;
+  try{
+    for(const mode of PRESET_MODES){
+      /* A user-initiated load owns the connection. Wait it out rather than
+         adding a parallel Apps Script execution that would slow it down.
+         Bounded, so a request that never settles cannot pin this loop. */
+      for(let waited=0;STATE.loading&&waited<60000;waited+=1000)await new Promise(r=>setTimeout(r,1000));
+      if(STATE.loading)break;
+      const req=presetRequest(mode); if(!req)continue;
+      if(payloadCache.has(cacheKey({trendDays:req.trend,start:req.start,end:req.end})))continue;
+      /* Warming is invisible: it never writes the status line, the spinner or
+         the error banner. One failure means the backend or the session is
+         unhappy, so stop instead of firing three more doomed requests. */
+      try{ await requestPayload(req); }catch(e){ break; }
+    }
+  }finally{ warming=false; }
 }
 function probeLastDataDate(probe){
   const tl=(probe.trend&&probe.trend.labels)||[];
@@ -2048,7 +2145,7 @@ function probeLastDataDate(probe){
   for(let i=tl.length-1;i>=0;i--){ if(series.some(v=>v&&v[i]!=null&&isFinite(v[i])))return tl[i]; }
   return (probe.meta&&(probe.meta.dataEnd||probe.meta.asOf))||tl[tl.length-1]||'';
 }
-async function loadLive(auto){
+async function loadLive(auto,force){
   if(STATE.loading)return;STATE.loading=true;const button=document.getElementById('weeklyLoad'),refreshButton=document.getElementById('weeklyRefresh');if(button)button.disabled=true;if(refreshButton)refreshButton.disabled=true;document.body.classList.remove('live-error');document.body.classList.add('live-busy');if(!STATE.data)document.body.classList.remove('live-ready');
   clearLiveError();
   const g=id=>document.getElementById(id);
@@ -2064,7 +2161,6 @@ async function loadLive(auto){
   if(mode==='single'&&!date)return stop('Choose a date for this filter mode');
   if(mode==='range'&&(!start||!end))return stop('Choose both From and To dates');
   if(mode==='range'&&start>end)return stop('From date must be on or before To date');
-  localStorage.setItem('weekly_mode',mode);localStorage.setItem('weekly_date',date);localStorage.setItem('weekly_start',start);localStorage.setItem('weekly_end',end);
   setStatus('Loading...');
   try{
     let data;
@@ -2074,14 +2170,17 @@ async function loadLive(auto){
       // The backend returns all overview bars in weeklySeries from this one
       // execution, using the same already-loaded raw arrays.
       const w=weekWindow(Number(wk[1]), weekAnchor());
-      data=await requestPayload({mode:'range',start:isoDay(w.start),end:isoDay(w.end),trend});
+      data=await requestPayload({mode:'range',start:isoDay(w.start),end:isoDay(w.end),trend,force});
       if(!Array.isArray(data.weeklySeries)||!data.weeklySeries.length){
         throw new Error('Weekly payload is missing weeklySeries; deploy the current Weekly backend files');
       }
       STATE.asOf=data.meta.asOf||STATE.asOf;
     } else {
-      data=await requestPayload({mode,date,start,end,trend});
-      if(mode==='latest'&&data.meta?.asOf&&data.meta?.curEnd&&data.meta.asOf<data.meta.curEnd){const d=new Date(data.meta.curStart+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-1);const latestComplete=d.toISOString().slice(0,10);data=await requestPayload({mode:'week',date:latestComplete,trend});}
+      data=await requestPayload({mode,date,start,end,trend,force});
+      if(mode==='range'){
+        data.weeklySeries=await customWeeklySeries(start,end,trend,force);
+      }
+      if(mode==='latest'&&data.meta?.asOf&&data.meta?.curEnd&&data.meta.asOf<data.meta.curEnd){const d=new Date(data.meta.curStart+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-1);const latestComplete=d.toISOString().slice(0,10);data=await requestPayload({mode:'week',date:latestComplete,trend,force});}
     }
     renderAll(data);
     clearLiveError();
@@ -2089,8 +2188,15 @@ async function loadLive(auto){
     /* Label the picker with the range the server actually returned, not the one
        requested - if the payload is short of the window, the dates say so. */
     setRangeSpan(data.meta.curStart,data.meta.curEnd);
-    setStatus('Loaded - '+new Date().toLocaleTimeString());
+    /* Cached and freshly fetched renders report identically - where the payload
+       came from is an implementation detail, not something the reader needs.
+       window.__weeklyDebug exposes it for checking from the console. */
+    setStatus('Loaded - '+clockTime(Date.now()));
     try{window.parent.postMessage({type:'mss3d:report-ready',report:'weekly'},location.origin)}catch(e){}
+    /* Warm the remaining presets once this render has settled, so the next
+       filter change is a memory read. Deliberately after the paint - it must
+       never compete with the load the user is actually watching. */
+    setTimeout(warmPresets,2500);
   }catch(err){console.error(err);document.body.classList.add('live-error');setStatus('Error: '+(err.message||String(err)),true);showLiveError(err);}
   finally{STATE.loading=false;clearBusy();if(button)button.disabled=false;if(refreshButton)refreshButton.disabled=false;}
 }
@@ -2144,6 +2250,17 @@ function selectSub(tab,cat){
   // charts rendered while a slide was hidden have 0 size; nudge them to resize
   requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
 }
+
+/* STATE and payloadCache are IIFE-scoped and unreachable from the console, so
+   there is otherwise no way to confirm from a running page which build is live
+   or whether a render was served from memory. build reads back the ?v= the hub
+   loaded this file with, so it can never drift out of step with index.html. */
+window.__weeklyDebug={
+  get build(){return new URLSearchParams(location.search).get('v')||'(no ?v= - opened directly)'},
+  get cachedRanges(){return [...payloadCache.keys()]},
+  get lastRenderFromCache(){return STATE.fromCache},
+  state:STATE
+};
 
 installControls();
 setupSubnav();
