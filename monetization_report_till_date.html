@@ -56,7 +56,7 @@
     .btn[disabled]{opacity:.45;cursor:not-allowed}
     .connect{margin-left:auto;display:flex;align-items:center;gap:6px}
     .connect input{width:225px;background:var(--card2);color:var(--t1);border:1px solid var(--borderB);border-radius:8px;padding:7px 9px;font:10px 'DM Mono',monospace}
-    .status{font:10px 'DM Mono',monospace;color:var(--t3);max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .status{font:500 10px 'DM Mono',monospace;color:var(--t3);max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .link{font:10px 'DM Mono',monospace;color:var(--t3);text-decoration:underline;cursor:pointer}
 
     /* ── global control strip ── */
@@ -1882,6 +1882,11 @@ function setDataStatus(msg){
   if(el) el.textContent=msg;
 }
 
+/* Pinned to en-US 12-hour rather than left to toLocaleTimeString()'s default,
+   which follows the browser locale and prints 23:52:41 on a 24-hour machine.
+   The three reports state the load time identically. */
+const clockTime=d=>new Date(d).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true});
+
 // Pull the Sheet ID out of a full Google Sheets URL, or accept a bare ID typed directly.
 
 // Google Sheets' gviz endpoint returns any single tab in either CSV or JSON,
@@ -2047,9 +2052,9 @@ async function refreshData(){
     const now=new Date();
     const totalRecords = Object.values(diagnostics).reduce((s,d)=>s+(d.recordsBuilt||0),0);
     if(errors.length){
-      setDataStatus(`Loaded - ${now.toLocaleTimeString()}`);
+      setDataStatus(`Loaded - ${clockTime(now)}`);
     } else {
-      setDataStatus(`Loaded - ${now.toLocaleTimeString()}`);
+      setDataStatus(`Loaded - ${clockTime(now)}`);
     }
     try{window.parent.postMessage({type:'mss3d:report-ready',report:'tilldate'},location.origin)}catch(e){}
   }catch(e){
