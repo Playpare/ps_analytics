@@ -26,7 +26,7 @@
     .pie-row{display:flex;gap:18px;align-items:flex-start}
     .pie-row>.piebox{flex:1 1 58%;min-width:0}
     .pie-row>.pie-legend{flex:1 1 42%;min-width:0}
-    .pie-legend{display:grid;grid-template-columns:1fr;gap:3px 20px;font:600 10px 'DM Mono',monospace;padding:8px 2px 0;align-content:start}
+    .pie-legend{display:grid;grid-template-columns:1fr;gap:3px 20px;font:400 12.5px Poppins,system-ui,sans-serif;padding:8px 2px 0;align-content:start;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
     .pie-legend.two-col{grid-template-columns:1fr 1fr}
     .pl-row{display:grid;grid-template-columns:auto 10px minmax(0,1fr) auto;align-items:center;gap:7px;min-width:0}
     .pl-n{color:#7589a8;text-align:right;min-width:15px}
@@ -60,19 +60,42 @@
     .chan-filter option{background:#0b0c0f;color:#edf2ff}
     td.wk{font-family:'DM Mono';color:var(--t2);white-space:nowrap;letter-spacing:.02em}
     tr.wk-break td{border-top:2px solid rgba(0,229,195,.35)}
+    tr.channel-break td{border-top:2px solid rgba(0,229,195,.62)}
     /* compact the IAA vs IAP share table so Channel / Ad Share / IAP Share sit close */
-    .share-table table{width:100%;min-width:0}
+    .share-table{height:calc(100% - 30px);max-height:none;display:flex}
+    .share-table table{width:100%;min-width:0;height:100%}
+    .share-table tbody tr{height:1%}
     .share-table th,.share-table td{padding-left:10px;padding-right:40px}
     .share-table th:last-child,.share-table td:last-child{padding-right:14px}
+    .share-chart{height:500px;max-height:none;position:relative;padding:14px 12px;overflow:hidden}
     /* row-number column for conditionally formatted tables */
     th.idx,td.idx{width:34px;min-width:34px;text-align:right;color:var(--t3);background:#11151b}
     /* Spend Share / IAP Revenue Share pies: side legend needs more height */
     .piebox.pie-side{height:500px;min-height:500px}
+    .piebox.pie-side + .pie-legend{font-size:12.5px;gap:6px 20px}
+    .piebox.pie-side + .pie-legend .pl-sw{width:12px;height:12px}
+    .pie-row:has(canvas[id$="CurrentWeekPie"]) .pie-legend{font-size:12.5px;gap:6px 20px}
+    .pie-row:has(canvas[id$="CurrentWeekPie"]) .pl-sw{width:12px;height:12px}
+    .campaign-controls{display:flex;align-items:center;gap:8px}
     /* Give the full-width platform DxD chart a longer vertical plotting area. */
     .platform-network .chartbox.dxd-chart{height:360px;min-height:360px}
     /* Show the complete six-week cohort table instead of hiding later weeks
        behind the generic table wrapper's vertical scrollbar. */
     .platform-network .cohort-table{max-height:none;overflow-x:auto;overflow-y:visible}
+    /* Larger type and softer heat fills make dense performance tables easier
+       to scan on both dashboard themes. */
+    .tablewrap td.num{font-size:11.5px}
+    .tablewrap th.num{font-size:10.5px}
+    .platform-network table{font-size:11.5px}
+    .platform-network th{font-size:10.5px;padding:10px 9px;color:#b8c5d9}
+    .platform-network td{padding:9px;color:#d7deea;font-weight:400}
+    .platform-network td.num{font-family:Poppins,system-ui,sans-serif;font-size:12.5px;font-weight:400;letter-spacing:.01em}
+    .platform-network th.num{font-family:Poppins,system-ui,sans-serif;font-size:11.5px;font-weight:400;letter-spacing:.01em}
+    .kpi .v{font-family:Poppins,system-ui,sans-serif;font-weight:400}
+    .platform-network td.wk{color:#b8c5d9}
+    body.lt .platform-network th{color:#52627a}
+    body.lt .platform-network td{color:#27364b}
+    .platform-network select[id$="CohortChannel"]{display:none}
   </style>
 <style>
 /* light theme — same tokens, inverted surfaces */
@@ -208,7 +231,12 @@ const API = {
     let lastError;
     for(let attempt=1;attempt<=4;attempt++){
       const controller=new AbortController();
-      const timer=setTimeout(()=>controller.abort(),60000);
+      /* A cold UA Apps Script execution (all datasets rebuilt after a sync)
+         can exceed one minute. Aborting at 60s leaves that server execution
+         running and immediately starts a duplicate retry, increasing
+         contention instead of helping - same 300s ceiling as the other
+         reports. */
+      const timer=setTimeout(()=>controller.abort(),300000);
       try{
         const res = await fetch(API.url, {
           method: 'POST',
@@ -226,9 +254,15 @@ const API = {
           err.retryable=res.status===404||res.status===429||res.status>=500;
           throw err;
         }
+        /* Google intermittently answers a perfectly valid request with an HTML
+           page (a throttling interstitial) after 20-40 seconds. It hits even a
+           no-op ping, so it is transient infrastructure behaviour rather than a
+           misconfiguration - retry it instead of failing outright. */
         if(body.charAt(0)==='<'){
-          const err=new Error('Apps Script returned a Google sign-in page instead of data');
-          err.retryable=false;
+          const err=new Error(attempt<4
+            ?'Apps Script returned an HTML page instead of data - retrying.'
+            :'Apps Script returned a Google sign-in page instead of data. Redeploy it with "Execute as: Me" and "Who has access: Anyone".');
+          err.retryable=attempt<4;
           throw err;
         }
         let data;
@@ -237,7 +271,15 @@ const API = {
           err.retryable=false;
           throw err;
         }
-        if(data.code === 401||/^Unauthorized\b/i.test(String(data.error||''))){
+        /* A bare {error:'Unauthorized'} with no code is Apps Script's legacy
+           key-gated doGet answering a redirect-downgraded POST - a transient
+           routing quirk, NOT a session problem. Retry it; never sign out. */
+        if(data.code===undefined&&String(data.error||'')==='Unauthorized'){
+          const err=new Error('Apps Script routed the request to its GET endpoint - retrying.');
+          err.retryable=true;
+          throw err;
+        }
+        if(data.code === 401||/^Unauthorized:/i.test(String(data.error||''))){
           if(attempt<4){
             try{window.parent.postMessage({type:'mss3d:need-token'},location.origin)}catch(e){}
           }else{
@@ -274,9 +316,13 @@ const COLORS={blue:'#4d9fff',teal:'#00e5c3',pink:'#ec0a9b',line:'#a6b8d4',green:
 const PIE=['#4d9fff','#00e5c3','#ec0a9b','#ff7a00','#ffb800','#78b84b','#7656d6','#19a6d8','#f06292','#a6b8d4'];
 const SIDE_PIE={legend:'right',legendFont:12,legendPadding:8,radius:'99%',padding:{top:14,right:6,bottom:14,left:8}};
 const charts={}; let DATA={}; let DATE_FILTER='w2',SINGLE_DATE='',RANGE_START='',RANGE_END='',GLOBAL_MAX_DATE=null;
-Chart.defaults.color='#a6b8d4'; Chart.defaults.borderColor='rgba(255,255,255,.08)'; Chart.defaults.font.family='DM Mono'; Chart.defaults.font.size=9;
+Chart.defaults.color='#a6b8d4'; Chart.defaults.borderColor='rgba(255,255,255,.08)'; Chart.defaults.font.family='Poppins'; Chart.defaults.font.weight='400'; Chart.defaults.font.size=11;
+Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
+Chart.defaults.plugins.legend.labels.padding=16;
+Chart.defaults.plugins.title.font={family:'Poppins',size:12.5,weight:'400'};
 const $=id=>document.getElementById(id), num=v=>Number(v)||0, sum=(a,k)=>a.reduce((s,r)=>s+num(r[k]),0);
 const money=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',notation:Math.abs(v)>=100000?'compact':'standard',maximumFractionDigits:1}).format(v||0);
+const tableMoney=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',notation:'standard',maximumFractionDigits:1}).format(v||0);
 const moneyK=v=>{const n=Number(v||0);return(n<0?'-$':'$')+(Math.abs(n)/1000).toLocaleString('en-US',{maximumFractionDigits:1})+'K'};
 const compact=v=>new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(v||0);
 const pct=v=>`${(num(v)*(Math.abs(num(v))<=1?100:1)).toFixed(1)}%`;
@@ -459,7 +505,7 @@ const uaPiePercentLabels={
       if(share<3)return;
       const text=share.toFixed(1)+'%';
       ctx.save();
-      ctx.font='700 11px "DM Mono",monospace';
+      ctx.font='500 14px Poppins,system-ui,sans-serif';
       const w=ctx.measureText(text).width;
       if((arc.endAngle-arc.startAngle)*arc.outerRadius<w+10){ctx.restore();return}
       const ang=(arc.startAngle+arc.endAngle)/2;
@@ -557,7 +603,7 @@ function visibleShareEntries(entries,valueAt){
 function table(target,rows,columns){const el=$(target);if(!el)return;if(!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const cols=columns||Object.keys(rows[0]),numericCols=new Set(cols.filter(c=>rows.some(r=>typeof r[c]==='number')));el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th class="${numericCols.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>`<td class="${numericCols.has(c)?'num ':''}${heat(c)}">${formatCell(c,r[c])}</td>`).join('')+'</tr>').join('')+'</tbody></table>'}
 function label(s){return String(s).replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}
 function heat(c){c=String(c);if(/cost|spend/.test(c))return'heat-blue';if(/install/.test(c))return'heat-teal';if(/ad_revenue/.test(c))return'heat-pink';if(/^revenue|all_revenue|iap/.test(c))return'heat-amber';if(/roi|roas/.test(c))return'heat-green';return''}
-function formatCell(k,v){if(v==null||v==='')return'-';const key=String(k).toLowerCase();if(typeof v!=='number'){if(/week|date|day/.test(key)&&dateVal(v))return shortDate(v);return String(v)}if(key==='roi')return v.toFixed(2)+'x';if(/roas|retention|share|rate/.test(key))return (v*100).toFixed(1)+'%';if(/cost|revenue|spend/.test(key))return money(v);return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v)}
+function formatCell(k,v){if(v==null||v==='')return'-';const key=String(k).toLowerCase();if(typeof v!=='number'){if(/week|date|day/.test(key)&&dateVal(v))return shortDate(v);return String(v)}if(key==='roi')return v.toFixed(2)+'x';if(/roas|retention|share|rate/.test(key))return (v*100).toFixed(1)+'%';if(/cost|revenue|spend/.test(key))return tableMoney(v);return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v)}
 function field(row,name){const wanted=name.toLowerCase().replace(/[^a-z0-9]/g,'');const key=Object.keys(row||{}).find(k=>k.toLowerCase().replace(/[^a-z0-9]/g,'')===wanted);return key==null?null:row[key]}
 function firstField(row,names){for(const name of names){const value=field(row,name);if(value!==null&&value!=='')return value}return 0}
 function analysisRoi(platform){const rows=filterRows(DATA.rev_cost_analysis?.rows||[]);let revenueGroups,costGroups;if(platform==='android'){revenueGroups=[['And_Revenue','And_Reveue']];costGroups=[['And_Cost']]}else if(platform==='ios'){revenueGroups=[['IOS_Revenue','IOS_Reveue']];costGroups=[['IOS_Cost']]}else{revenueGroups=[['And_Revenue','And_Reveue'],['IOS_Revenue','IOS_Reveue']];costGroups=[['And_Cost'],['IOS_Cost']]}const revenue=rows.reduce((s,r)=>s+revenueGroups.reduce((x,names)=>x+num(firstField(r,names)),0),0),cost=rows.reduce((s,r)=>s+costGroups.reduce((x,names)=>x+num(firstField(r,names)),0),0);return cost?revenue/cost:0}
@@ -714,7 +760,18 @@ function render(){syncCardTitles();const overall=filterRows(DATA.overall_data?.r
   renderGoogleAds(filterRows(DATA.campaigns_data?.rows||[]));renderLegacy();renderPrimaryKpiDeltas();renderSupplementalKpiDeltas();updateDates([...overall,...daily]);}
 function renderGoogleAds(campaigns){const rows=campaigns.filter(googleAds);const weekly=grouped(rows,'week',14);combo('googleAdsTrend',weekly);combo('googleAdsCost',weekly);const cost=sum(rows,'cost'),revenue=sum(rows,'all_revenue')||sum(rows,'revenue');$('googleCost').textContent=money(cost);$('googleRevenue').textContent=money(revenue);$('googleInstalls').textContent=compact(sum(rows,'installs'));$('googleRoas').textContent=cost?(revenue/cost).toFixed(2)+'x':'-';table('googleCampaignTable',rows)}
 function installPlatformNetworkSections(){const androidIap=$('androidIap');if(androidIap)androidIap.closest('.kpi')?.remove();['android','ios'].forEach(p=>{const body=document.querySelector(`#${p} .sb`);if(!body||$(`${p}NetworkTable`))return;const title=p==='android'?'Android':'iOS';const section=document.createElement('section');section.className='platform-network mt';section.innerHTML=`<article class="card"><div class="card-head"><h2>${title} Network Overview · 35% Deduction</h2><select id="${p}OverviewChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}NetworkTable" class="tablewrap"></div></article><div class="two mt"><article class="card"><h2>UA Network Share · IAA vs IAP</h2><div id="${p}NetworkShareTable" class="tablewrap share-table"></div></article><article class="card"><h2 id="${p}CurrentWeekTitle">${title} · Revenue Mix</h2><div class="piebox"><canvas id="${p}CurrentWeekPie"></canvas></div></article></div><article class="card mt"><div class="card-head"><h2>DxD Spend & D0 ROAS</h2><select id="${p}DxdChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div class="chartbox dxd-chart"><canvas id="${p}RoasDaily"></canvas></div></article><article class="card mt"><div class="card-head"><h2>Weekly Campaign Performance</h2><select id="${p}CampaignChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}CampaignTable" class="tablewrap"></div></article><article class="card mt"><div class="card-head"><h2 id="${p}CohortTitle">ROAS Cohorts · Latest 6 Available Weeks</h2><select id="${p}CohortChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}CohortTable" class="tablewrap cohort-table"></div></article>`;body.appendChild(section);$(`${p}OverviewChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].overview=e.target.value;refreshPlatform(p)});$(`${p}DxdChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)});$(`${p}CampaignChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)});$(`${p}CohortChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)})})}
-const PLATFORM_FILTER={android:{overview:'all',dxd:'all'},ios:{overview:'all',dxd:'all'}};
+const PLATFORM_FILTER={android:{overview:'all',dxd:'all',campaignSort:'desc'},ios:{overview:'all',dxd:'all',campaignSort:'desc'}};
+function installCampaignSortControls(){
+  ['android','ios'].forEach(p=>{
+    const channel=$(`${p}CampaignChannel`);if(!channel||$(`${p}CampaignSort`))return;
+    const controls=document.createElement('div');controls.className='campaign-controls';
+    channel.parentNode.insertBefore(controls,channel);controls.appendChild(channel);
+    const sort=document.createElement('select');sort.id=`${p}CampaignSort`;sort.className='chan-filter';sort.title='Sort campaigns by spend';
+    sort.innerHTML='<option value="desc">Spend: High to low</option><option value="asc">Spend: Low to high</option>';
+    controls.appendChild(sort);sort.value=PLATFORM_FILTER[p].campaignSort;
+    sort.addEventListener('change',e=>{PLATFORM_FILTER[p].campaignSort=e.target.value;refreshPlatform(p)});
+  })
+}
 const EXCLUDED_PLATFORM_CHANNELS={
   ios:new Set(['ironsource','untrusted device','untrusted devices','organic','nativax','natiavax','google ads','liftoff','inmobi']),
   android:new Set(['ironsource','untrusted device','untrusted devices','xiaomi global','unknown device','unknown devices','unity ads','organic','oppo','nativax','google ads','moloco','liftoff','google organic search','apple'])
@@ -751,7 +808,63 @@ function populateChannelSelect(id,channels,current){const sel=$(id);if(!sel)retu
 function colHue(c){c=String(c).toLowerCase().replace(/[^a-z0-9]/g,'');if(/adrevenue|adshare/.test(c))return[236,10,155];if(/cost|spend|cpi/.test(c))return[77,159,255];if(/install/.test(c))return[0,229,195];if(/iap|revenue/.test(c))return[255,184,0];if(/roi|roas/.test(c))return[0,196,122];if(/retention|rate|d1|d7/.test(c))return[120,86,214];return[166,184,212]}
 function weekValue(row){const k=Object.keys(row||{}).find(k=>/^weeks?$/.test(String(k).toLowerCase().replace(/[^a-z0-9]/g,'')));return k==null?null:row[k]}
 function weekSorter(rows){const keys=Object.keys(rows[0]||{}),ck=keys.find(k=>/cost|spend/i.test(k)&&rows.some(r=>typeof r[k]==='number'))||null;return(a,b)=>{const da=dateVal(weekValue(a)),db=dateVal(weekValue(b)),ta=da?da.getTime():null,tb=db?db.getTime():null;if(ta!==tb)return(ta??Infinity)-(tb??Infinity);return ck?num(b[ck])-num(a[ck]):0}}
-function richTable(target,rows,opts){opts=opts||{};const el=$(target);if(!el)return;if(!rows||!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');const excl=(opts.exclude||[]).map(norm);let cols=(opts.columns||Object.keys(rows[0])).filter(c=>!excl.includes(norm(c)));const wcol=cols.find(c=>/^weeks?$/.test(norm(c)))||null;if(wcol)cols=[wcol,...cols.filter(c=>c!==wcol)];const numericCols=cols.filter(c=>c!==wcol&&rows.some(r=>typeof r[c]==='number'));const numSet=new Set(numericCols);let sortCol=(opts.sortBy&&cols.includes(opts.sortBy))?opts.sortBy:null;if(!sortCol){const pri=[/spend|cost/,/allrevenue|^revenue|iaprevenue/,/roas|roi/,/install/];for(const rx of pri){const f=numericCols.find(c=>rx.test(norm(c)));if(f){sortCol=f;break}}if(!sortCol)sortCol=numericCols[0]}const data=rows.slice();if(typeof opts.sort==='function')data.sort(opts.sort);else if(sortCol)data.sort((a,b)=>num(b[sortCol])-num(a[sortCol]));const ranges={};numericCols.forEach(c=>{let mn=Infinity,mx=-Infinity;data.forEach(r=>{const v=Number(r[c]);if(Number.isFinite(v)){if(v<mn)mn=v;if(v>mx)mx=v}});ranges[c]=[mn,mx]});const bg=(c,v)=>{if(!numSet.has(c))return'';const val=Number(v);if(!Number.isFinite(val))return'';const[mn,mx]=ranges[c];const t=mx>mn?(val-mn)/(mx-mn):0;const[r,g,b]=colHue(c);return`background:rgba(${r},${g},${b},${(0.84-0.72*t).toFixed(3)})`};const showNum=opts.number!==false;const head='<tr>'+(showNum?'<th class="idx">#</th>':'')+cols.map(c=>`<th class="${numSet.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr>';let prevWeek=null;const bodyHtml=data.map((r,i)=>{const wk=wcol?String(r[wcol]??''):null;const brk=wcol&&i>0&&wk!==prevWeek;prevWeek=wk;return `<tr class="${brk?'wk-break':''}">`+(showNum?`<td class="idx">${i+1}</td>`:'')+cols.map(c=>`<td class="${numSet.has(c)?'num':''}${c===wcol?' wk':''}" style="${bg(c,r[c])}">${formatCell(c,r[c])}</td>`).join('')+'</tr>'}).join('');el.innerHTML=`<table><thead>${head}</thead><tbody>${bodyHtml}</tbody></table>`}
+function aggregateCampaignRows(rows){
+  if(!rows.length)return[];
+  const keys=[...new Set(rows.flatMap(Object.keys))],norm=k=>String(k).toLowerCase().replace(/[^a-z0-9]/g,'');
+  const channelKeyName=keys.find(k=>norm(k)==='channel'),campaignKey=keys.find(k=>/campaign.*network|campaign/.test(norm(k)));
+  const costKey=keys.find(k=>/^(cost|spend)$|networkcost/.test(norm(k))),installKey=keys.find(k=>/^installs?$/.test(norm(k)));
+  const additive=k=>/cost|spend|adrevenue|^revenue$|allrevenue|^installs?$/.test(norm(k));
+  const groups=new Map;
+  rows.forEach(r=>{
+    const id=channelKey(r[channelKeyName])+'\u0000'+String(r[campaignKey]||'').trim();let g=groups.get(id);
+    if(!g){g={row:{},counts:{}};keys.forEach(k=>{if(typeof r[k]!=='number'&&r[k]!=null)g.row[k]=r[k]});groups.set(id,g)}
+    keys.forEach(k=>{const v=r[k];if(typeof v!=='number'||!Number.isFinite(v))return;g.row[k]=(g.row[k]||0)+v;g.counts[k]=(g.counts[k]||0)+1})
+  });
+  return [...groups.values()].map(g=>{
+    keys.forEach(k=>{if(g.counts[k]&&!additive(k))g.row[k]/=g.counts[k]});
+    keys.filter(k=>/ecpi|cpi/.test(norm(k))).forEach(k=>{g.row[k]=num(g.row[installKey])?num(g.row[costKey])/num(g.row[installKey]):0});
+    return g.row
+  })
+}
+/* Keep each network's campaigns together. Networks are ranked by their best
+   spending row; campaigns inside a network are then ranked by spend. */
+function campaignNetworkSorter(rows,direction){
+  const keys=Object.keys(rows[0]||{}),costKey=keys.find(k=>/cost|spend/i.test(k)&&rows.some(r=>typeof r[k]==='number'));
+  const channelKeyName=keys.find(k=>/^channel$|network/i.test(k));
+  const maxima=new Map;
+  rows.forEach(r=>{const c=String(r[channelKeyName]||'').trim();maxima.set(c,Math.max(maxima.get(c)||0,num(r[costKey]))) });
+  const sign=direction==='asc'?-1:1;
+  return(a,b)=>{const ac=String(a[channelKeyName]||'').trim(),bc=String(b[channelKeyName]||'').trim();return sign*((maxima.get(bc)||0)-(maxima.get(ac)||0))||ac.localeCompare(bc)||sign*(num(b[costKey])-num(a[costKey]))}
+}
+function addCampaignSeparators(id,rows){
+  const trs=document.querySelectorAll(`#${id} tbody tr`);let previous='';
+  rows.forEach((r,i)=>{const current=channelKey(field(r,'channel'));if(i&&current!==previous)trs[i]?.classList.add('channel-break');previous=current})
+}
+const shareBarLabels={
+  id:'shareBarLabels',
+  afterDatasetsDraw(chart){
+    const ctx=chart.ctx;ctx.save();ctx.font='500 12.5px Poppins,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    chart.data.datasets.forEach((ds,di)=>chart.getDatasetMeta(di).data.forEach((bar,i)=>{const value=Number(ds.data[i])||0;if(value<.08)return;const p=bar.getProps(['x','base','y'],true);ctx.fillStyle=di===0?'#fff':'#06201d';ctx.fillText((value*100).toFixed(1)+'%',(p.x+p.base)/2,p.y)}));
+    ctx.restore()
+  }
+};
+function renderNetworkShareBar(id,rows){
+  const el=$(id);if(!el)return;const chartId=id+'Chart';destroy(chartId);
+  el.classList.remove('share-table');el.classList.add('share-chart');el.innerHTML=`<canvas id="${chartId}"></canvas>`;
+  const sorted=rows.slice().sort((a,b)=>b.IAP_Share-a.IAP_Share),textColor=cssVar('--t1','#edf2ff'),gridColor=cssVar('--border','rgba(255,255,255,.08)');
+  charts[chartId]=new Chart($(chartId),{type:'bar',data:{labels:sorted.map(x=>x.channel),datasets:[{label:'Ad Share',data:sorted.map(x=>x.Ad_Share),backgroundColor:'rgba(236,10,155,.68)',borderColor:'rgba(236,10,155,.92)',borderWidth:1},{label:'IAP Share',data:sorted.map(x=>x.IAP_Share),backgroundColor:'rgba(255,184,0,.68)',borderColor:'rgba(255,184,0,.92)',borderWidth:1}]},options:{indexAxis:'y',maintainAspectRatio:false,interaction:{mode:'index',axis:'y',intersect:true},plugins:{legend:{position:'top',align:'start',labels:{color:textColor}},tooltip:{mode:'index',axis:'y',intersect:true,position:'nearest',xAlign:'left',yAlign:'center',caretPadding:10,callbacks:{label:ctx=>`${ctx.dataset.label}: ${(Number(ctx.raw)*100).toFixed(1)}%`}}},scales:{x:{stacked:true,min:0,max:1,ticks:{color:textColor,callback:v=>(v*100).toFixed(0)+'%'},grid:{color:gridColor}},y:{stacked:true,ticks:{color:textColor,autoSkip:false},grid:{display:false}}}},plugins:[shareBarLabels]})
+}
+/* Collapse channel-level cohorts into one row per week. Currency/count metrics
+   are additive; ROAS, ROI, rates, shares and CPI-style metrics are averaged. */
+function aggregateCohortsByWeek(rows){
+  if(!rows.length)return[];
+  const keys=[...new Set(rows.flatMap(Object.keys))],weekKey=keys.find(k=>/^weeks?$/.test(String(k).toLowerCase().replace(/[^a-z0-9]/g,'')));
+  const channelKeys=new Set(keys.filter(k=>/^channel$|network/i.test(k))),groups=new Map;
+  rows.forEach(r=>{const wk=r[weekKey],id=String(wk??'');let g=groups.get(id);if(!g){g={row:{[weekKey]:wk},counts:{}};groups.set(id,g)}keys.forEach(k=>{if(k===weekKey||channelKeys.has(k)||/^app$/i.test(k))return;const v=r[k];if(typeof v==='number'&&Number.isFinite(v)){g.row[k]=(g.row[k]||0)+v;g.counts[k]=(g.counts[k]||0)+1}else if(g.row[k]==null&&v!=null&&v!=='')g.row[k]=v})});
+  const averageMetric=k=>/roas|roi|rate|retention|share|cpi|ecpi|ratio|percent/i.test(k);
+  return [...groups.values()].map(g=>{Object.keys(g.counts).forEach(k=>{if(averageMetric(k))g.row[k]/=g.counts[k]});return g.row}).sort((a,b)=>(dateVal(weekValue(a))||0)-(dateVal(weekValue(b))||0))
+}
+function richTable(target,rows,opts){opts=opts||{};const el=$(target);if(!el)return;if(!rows||!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');const excl=(opts.exclude||[]).map(norm);let cols=(opts.columns||Object.keys(rows[0])).filter(c=>!excl.includes(norm(c)));const wcol=cols.find(c=>/^weeks?$/.test(norm(c)))||null;if(wcol)cols=[wcol,...cols.filter(c=>c!==wcol)];const numericCols=cols.filter(c=>c!==wcol&&rows.some(r=>typeof r[c]==='number'));const numSet=new Set(numericCols);let sortCol=(opts.sortBy&&cols.includes(opts.sortBy))?opts.sortBy:null;if(!sortCol){const pri=[/spend|cost/,/allrevenue|^revenue|iaprevenue/,/roas|roi/,/install/];for(const rx of pri){const f=numericCols.find(c=>rx.test(norm(c)));if(f){sortCol=f;break}}if(!sortCol)sortCol=numericCols[0]}const data=rows.slice();if(typeof opts.sort==='function')data.sort(opts.sort);else if(sortCol)data.sort((a,b)=>num(b[sortCol])-num(a[sortCol]));const ranges={};numericCols.forEach(c=>{let mn=Infinity,mx=-Infinity;data.forEach(r=>{const v=Number(r[c]);if(Number.isFinite(v)){if(v<mn)mn=v;if(v>mx)mx=v}});ranges[c]=[mn,mx]});const bg=(c,v)=>{if(!numSet.has(c))return'';const val=Number(v);if(!Number.isFinite(val))return'';const[mn,mx]=ranges[c];const t=mx>mn?(val-mn)/(mx-mn):0;const[r,g,b]=colHue(c);return`background:rgba(${r},${g},${b},${(0.16+0.20*t).toFixed(3)})`};const showNum=opts.number!==false;const head='<tr>'+(showNum?'<th class="idx">#</th>':'')+cols.map(c=>`<th class="${numSet.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr>';let prevWeek=null;const bodyHtml=data.map((r,i)=>{const wk=wcol?String(r[wcol]??''):null;const brk=wcol&&i>0&&wk!==prevWeek;prevWeek=wk;return `<tr class="${brk?'wk-break':''}">`+(showNum?`<td class="idx">${i+1}</td>`:'')+cols.map(c=>`<td class="${numSet.has(c)?'num':''}${c===wcol?' wk':''}" style="${bg(c,r[c])}">${formatCell(c,r[c])}</td>`).join('')+'</tr>'}).join('');el.innerHTML=`<table><thead>${head}</thead><tbody>${bodyHtml}</tbody></table>`}
 function aggregateOverviewRows(rows){
   const groups=new Map;
   rows.forEach(r=>{
@@ -777,10 +890,10 @@ function renderPlatformNetwork(p,overallRows,dailyRows){
   richTable(p+'NetworkTable',overviewRows,{columns:['channel','Spend','Installs','Ad_Revenue','IAP_Revenue','All_Revenue','CPI','ROI','ROAS_D0','Retention_D1','Retention_D7'],number:true,sortBy:'Spend'});
   const channelTotals={};allowedOverviewAll.forEach(r=>{const c=r.channel||'Unknown',x=channelTotals[c]||(channelTotals[c]={channel:c,Ad_Revenue:0,IAP_Revenue:0});x.Ad_Revenue+=r.Ad_Revenue;x.IAP_Revenue+=r.IAP_Revenue});
   const shares=Object.values(channelTotals).map(r=>{const total=r.Ad_Revenue+r.IAP_Revenue;return{channel:r.channel,Ad_Share:total?r.Ad_Revenue/total:0,IAP_Share:total?r.IAP_Revenue/total:0,IAP_Revenue:r.IAP_Revenue}});
-  richTable(p+'NetworkShareTable',shares,{columns:['channel','Ad_Share','IAP_Share'],number:true,sortBy:'IAP_Share'});
+  renderNetworkShareBar(p+'NetworkShareTable',shares);
   const sByIap=visibleShareEntries(shares,x=>x.IAP_Revenue).sort((a,b)=>b.IAP_Revenue-a.IAP_Revenue);pie(p+'IapNetworkShare',sByIap.map(x=>x.channel),sByIap.map(x=>x.IAP_Revenue),'IAP Revenue Share',SIDE_PIE);
   const dxSource=dailyRows&&dailyRows.length?dailyRows:allowedOverallRows;
-  let campaigns=filterRows(DATA.campaigns_data?.rows||[]).filter(r=>appIs(r,p)&&campaignChannelAllowed(p,field(r,'channel')));
+  let campaigns=aggregateCampaignRows(filterRows(DATA.campaigns_data?.rows||[]).filter(r=>appIs(r,p)&&campaignChannelAllowed(p,field(r,'channel'))));
   let cohorts=latestSixCohortWeeks((DATA.weekly_network?.rows||[]).filter(r=>appIs(r,p)&&campaignChannelAllowed(p,field(r,'channel'))));
   const cohortDates=cohorts.map(r=>dateVal(weekValue(r))).filter(Boolean).sort((a,b)=>a-b);
   const cohortTitle=$(p+'CohortTitle');
@@ -788,11 +901,13 @@ function renderPlatformNetwork(p,overallRows,dailyRows){
   const dxChannels=[...new Set(dxSource.map(r=>r.channel).filter(Boolean).map(String))].sort();
   const tableChannels=[...new Set([...campaigns,...cohorts].map(r=>field(r,'channel')).filter(Boolean).map(String))].sort();
   const sharedChannels=[...new Set([...dxChannels,...tableChannels])].sort();
-  populateChannelSelect(p+'DxdChannel',sharedChannels,fDx);populateChannelSelect(p+'CampaignChannel',sharedChannels,fDx);populateChannelSelect(p+'CohortChannel',sharedChannels,fDx);
+  populateChannelSelect(p+'DxdChannel',sharedChannels,fDx);populateChannelSelect(p+'CampaignChannel',sharedChannels,fDx);
   const roasRows=fDx==='all'?dxSource:dxSource.filter(r=>channelKey(r.channel)===channelKey(fDx));renderPlatformRoas(p+'RoasDaily',roasRows);
-  if(fDx!=='all'){campaigns=campaigns.filter(r=>channelKey(field(r,'channel'))===channelKey(fDx));cohorts=cohorts.filter(r=>channelKey(field(r,'channel'))===channelKey(fDx))}
-  richTable(p+'CampaignTable',campaigns,{exclude:['app','Network Cost Diff'],number:true,sort:weekSorter(campaigns)});
-  richTable(p+'CohortTable',cohorts,{exclude:['app'],number:true,sort:weekSorter(cohorts)});
+  if(fDx!=='all')campaigns=campaigns.filter(r=>channelKey(field(r,'channel'))===channelKey(fDx));
+  const campaignSorter=campaignNetworkSorter(campaigns,PLATFORM_FILTER[p].campaignSort),orderedCampaigns=campaigns.slice().sort(campaignSorter);
+  richTable(p+'CampaignTable',campaigns,{exclude:['app','Week','Weeks','Network Cost Diff'],number:true,sort:campaignSorter});
+  addCampaignSeparators(p+'CampaignTable',orderedCampaigns);
+  richTable(p+'CohortTable',aggregateCohortsByWeek(cohorts),{exclude:['app','channel','network'],number:true,sort:weekSorter(cohorts)});
 }/* "DxD" is day-by-day, but this grouped on the week column, so a two-week
    window produced two bars. Bucket by day where the rows carry one, and fall
    back to the week column for datasets that only have weekly granularity. */
@@ -837,7 +952,7 @@ async function connect(){
 function setStatus(s,error){$('status').textContent=s;$('status').classList.toggle('error',!!error)}
 function promotePieSections(){document.querySelectorAll('.view').forEach(view=>{if(view.id==='android'||view.id==='ios')return;const body=view.querySelector('.sb');if(!body)return;const pieCards=[...view.querySelectorAll('canvas')].filter(canvas=>/pie|share/i.test(canvas.id)).map(canvas=>canvas.closest('.card')).filter((card,index,all)=>card&&all.indexOf(card)===index);if(!pieCards.length)return;const row=document.createElement('section');row.className='page-pies';pieCards.forEach(card=>row.appendChild(card));body.prepend(row);view.querySelectorAll('.piegrid,.two,.stack').forEach(container=>{if(!container.children.length)container.remove()})})}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===b.dataset.view));Object.values(charts).forEach(c=>c.resize())});
-installPlatformNetworkSections();promotePieSections();$('connectBtn').onclick=connect;try{localStorage.removeItem('ua_api_url');localStorage.removeItem('ua_api_key');}catch(e){}connect();
+installPlatformNetworkSections();installCampaignSortControls();promotePieSections();$('connectBtn').onclick=connect;try{localStorage.removeItem('ua_api_url');localStorage.removeItem('ua_api_key');}catch(e){}connect();
 
   </script>
 </body>
