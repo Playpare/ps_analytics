@@ -484,7 +484,52 @@ function initDateFilters(){const allRows=Object.values(DATA).flatMap(ds=>ds?.row
    looked like a working report. Now the window is fixed by today, so a tab
    that has not been updated shows up as a missing week rather than hiding
    itself. lastClosedInstant() keeps the in-progress week out. */
-GLOBAL_MAX_DATE=new Date(lastClosedInstant());logDateSpans();if(!SINGLE_DATE)SINGLE_DATE=max;if(!RANGE_START)RANGE_START=min;if(!RANGE_END)RANGE_END=max;document.querySelectorAll('[data-date-range]').forEach(el=>{const box=document.createElement('div');box.className='date-controls';box.innerHTML='<span class="date-span" title="Dates covered by the current filter"></span><select class="date"><option value="w2">Last 2 weeks</option><option value="w4">Last 4 weeks</option><option value="w6">Last 6 weeks</option><option value="w8">Last 8 weeks</option><option value="w10">Last 10 weeks</option><option value="single">Single date</option><option value="custom">Custom date</option></select><input class="single-date" type="date"><input class="range-date range-start" type="date" title="From date"><input class="range-date range-end" type="date" title="To date"><button type="button" class="date-confirm">Apply</button>';const select=box.querySelector('select');select.value=DATE_FILTER;const single=box.querySelector('.single-date'),start=box.querySelector('.range-start'),end=box.querySelector('.range-end'),confirm=box.querySelector('.date-confirm');[single,start,end].forEach(input=>{input.min=min;input.max=max});select.onchange=()=>{DATE_FILTER=select.value;syncDateControls();if(DATE_FILTER!=='single'&&DATE_FILTER!=='custom'){setStatus('Applying filter\u2026');withFilterLoader(()=>{render();const lbl=weekWindowLabel();setStatus(select.options[select.selectedIndex].text+(lbl?' \u00b7 '+lbl:''))})}};single.onchange=()=>{SINGLE_DATE=single.value};start.onchange=()=>{RANGE_START=start.value};end.onchange=()=>{RANGE_END=end.value};confirm.onclick=()=>{if(DATE_FILTER==='single'&&!SINGLE_DATE){setStatus('Choose a date before applying',true);return}if(DATE_FILTER==='custom'&&(!RANGE_START||!RANGE_END)){setStatus('Choose both From and To dates',true);return}if(DATE_FILTER==='custom'&&RANGE_START&&RANGE_END&&RANGE_START>RANGE_END){const _t=RANGE_START;RANGE_START=RANGE_END;RANGE_END=_t}syncDateControls();setStatus('Applying filter…');withFilterLoader(()=>{render();setStatus('Date filter applied'+(activeRangeLabel()?' · '+activeRangeLabel():''))})};el.replaceWith(box)});syncDateControls()}
+GLOBAL_MAX_DATE=new Date(lastClosedInstant());
+logDateSpans();
+if(!SINGLE_DATE)SINGLE_DATE=max;
+if(!RANGE_START)RANGE_START=min;
+if(!RANGE_END)RANGE_END=max;
+document.querySelectorAll('[data-date-range]').forEach(el=>{
+  const box=document.createElement('div');
+  box.className='date-controls';
+  box.innerHTML='<span class="date-span" title="Dates covered by the current filter"></span><select class="date"><option value="w2">Last 2 weeks</option><option value="w4">Last 4 weeks</option><option value="w6">Last 6 weeks</option><option value="w8">Last 8 weeks</option><option value="w10">Last 10 weeks</option><option value="single">Single date</option><option value="custom">Custom date</option></select><input class="single-date" type="date"><input class="range-date range-start" type="date" title="From date"><input class="range-date range-end" type="date" title="To date"><button type="button" class="date-confirm">Apply</button>';
+  const select=box.querySelector('select');
+  select.value=DATE_FILTER;
+  const single=box.querySelector('.single-date'),start=box.querySelector('.range-start'),
+    end=box.querySelector('.range-end'),confirm=box.querySelector('.date-confirm');
+  [single,start,end].forEach(input=>{input.min=min;input.max=max});
+  select.onchange=()=>{
+    DATE_FILTER=select.value;
+    syncDateControls();
+    if(DATE_FILTER!=='single'&&DATE_FILTER!=='custom'){
+      setStatus('Applying filter…');
+      withFilterLoader(()=>{
+        render();
+        const lbl=weekWindowLabel();
+        setStatus(select.options[select.selectedIndex].text+(lbl?' · '+lbl:''));
+      });
+    }
+  };
+  single.onchange=()=>{SINGLE_DATE=single.value};
+  start.onchange=()=>{RANGE_START=start.value};
+  end.onchange=()=>{RANGE_END=end.value};
+  confirm.onclick=()=>{
+    if(DATE_FILTER==='single'&&!SINGLE_DATE){setStatus('Choose a date before applying',true);return}
+    if(DATE_FILTER==='custom'&&(!RANGE_START||!RANGE_END)){setStatus('Choose both From and To dates',true);return}
+    if(DATE_FILTER==='custom'&&RANGE_START>RANGE_END){
+      const swap=RANGE_START;RANGE_START=RANGE_END;RANGE_END=swap;
+    }
+    syncDateControls();
+    setStatus('Applying filter…');
+    withFilterLoader(()=>{
+      render();
+      setStatus('Date filter applied'+(activeRangeLabel()?' · '+activeRangeLabel():''));
+    });
+  };
+  el.replaceWith(box);
+});
+syncDateControls();
+}
 /* Reads a themed colour so charts stay legible in both light and dark mode. */
 function cssVar(name,fallback){
   try{const v=getComputedStyle(document.body).getPropertyValue(name).trim();return v||fallback}
