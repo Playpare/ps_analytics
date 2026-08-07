@@ -276,8 +276,8 @@ html,body{transition:background-color .18s linear,color .18s linear}
         <button class="pill" onclick="ovFilter('per','2024',this)">2024</button>
         <button class="pill" onclick="ovFilter('per','2025',this)">2025</button>
         <button class="pill" onclick="ovFilter('per','2026',this)">2026</button>
-        <button class="pill" onclick="ovFilter('per','30d',this)">Last 30d</button>
-        <button class="pill active" onclick="ovFilter('per','90d',this)">Last 90d</button>
+        <button class="pill active" onclick="ovFilter('per','30d',this)">Last 30d</button>
+        <button class="pill" onclick="ovFilter('per','90d',this)">Last 90d</button>
       </div>
       <input type="date" id="ov-range-start"><input type="date" id="ov-range-end">
       <button onclick="ovRangeApply()">Apply</button><button onclick="ovRangeClear()">Clear</button>
@@ -414,8 +414,8 @@ html,body{transition:background-color .18s linear,color .18s linear}
         <button class="pill" onclick="iapPeriod('2024',this)">2024</button>
         <button class="pill" onclick="iapPeriod('2025',this)">2025</button>
         <button class="pill" onclick="iapPeriod('2026',this)">2026</button>
-        <button class="pill" onclick="iapPeriod('30d',this)">Last 30d</button>
-        <button class="pill active" onclick="iapPeriod('90d',this)">Last 90d</button>
+        <button class="pill active" onclick="iapPeriod('30d',this)">Last 30d</button>
+        <button class="pill" onclick="iapPeriod('90d',this)">Last 90d</button>
       </div>
       <input type="date" id="iap-range-start"><input type="date" id="iap-range-end">
       <button onclick="iapRangeApply()">Apply</button><button onclick="iapRangeClear()">Clear</button>
@@ -492,8 +492,8 @@ html,body{transition:background-color .18s linear,color .18s linear}
         <button class="pill" onclick="adsFilter('per','2024',this)">2024</button>
         <button class="pill" onclick="adsFilter('per','2025',this)">2025</button>
         <button class="pill" onclick="adsFilter('per','2026',this)">2026</button>
-        <button class="pill" onclick="adsFilter('per','30d',this)">Last 30d</button>
-        <button class="pill active" onclick="adsFilter('per','90d',this)">Last 90d</button>
+        <button class="pill active" onclick="adsFilter('per','30d',this)">Last 30d</button>
+        <button class="pill" onclick="adsFilter('per','90d',this)">Last 90d</button>
       </div>
       <input type="date" id="ads-range-start"><input type="date" id="ads-range-end">
       <button onclick="adsRangeApply()">Apply</button><button onclick="adsRangeClear()">Clear</button>
@@ -587,8 +587,8 @@ html,body{transition:background-color .18s linear,color .18s linear}
         <button class="pill" onclick="netRevFilter('per','2024',this)">2024</button>
         <button class="pill" onclick="netRevFilter('per','2025',this)">2025</button>
         <button class="pill" onclick="netRevFilter('per','2026',this)">2026</button>
-        <button class="pill" onclick="netRevFilter('per','30d',this)">Last 30d</button>
-        <button class="pill active" onclick="netRevFilter('per','90d',this)">Last 90d</button>
+        <button class="pill active" onclick="netRevFilter('per','30d',this)">Last 30d</button>
+        <button class="pill" onclick="netRevFilter('per','90d',this)">Last 90d</button>
       </div>
       <input type="date" id="netrev-range-start"><input type="date" id="netrev-range-end">
       <button onclick="netRevRangeApply()">Apply</button><button onclick="netRevRangeClear()">Clear</button>
@@ -645,9 +645,15 @@ const API = {
           err.retryable=res.status===404||res.status===429||res.status>=500;
           throw err;
         }
+        /* Google intermittently answers a perfectly valid request with an HTML
+           page (a throttling interstitial) after 20-40 seconds. It hits even a
+           no-op ping, so it is transient infrastructure behaviour rather than a
+           misconfiguration - retry it instead of failing outright. */
         if(body.charAt(0)==='<'){
-          const err=new Error('Apps Script returned a Google sign-in page instead of data');
-          err.retryable=false;
+          const err=new Error(attempt<4
+            ?'Apps Script returned an HTML page instead of data - retrying.'
+            :'Apps Script returned a Google sign-in page instead of data. Redeploy it with "Execute as: Me" and "Who has access: Anyone".');
+          err.retryable=attempt<4;
           throw err;
         }
         let data;
@@ -656,7 +662,15 @@ const API = {
           err.retryable=false;
           throw err;
         }
-        if(data.code===401||/^Unauthorized\b/i.test(String(data.error||''))){
+        /* A bare {error:'Unauthorized'} with no code is Apps Script's legacy
+           key-gated doGet answering a redirect-downgraded POST - a transient
+           routing quirk, NOT a session problem. Retry it; never sign out. */
+        if(data.code===undefined&&String(data.error||'')==='Unauthorized'){
+          const err=new Error('Apps Script routed the request to its GET endpoint - retrying.');
+          err.retryable=true;
+          throw err;
+        }
+        if(data.code===401||/^Unauthorized:/i.test(String(data.error||''))){
           if(attempt<4){
             try{window.parent.postMessage({type:'mss3d:need-token'},location.origin)}catch(e){}
           }else{
@@ -1010,16 +1024,16 @@ function dateInPeriod(s,per){
 }
 
 // ── STATE ──
-let ovPlat='ios', ovPer='90d';
+let ovPlat='ios', ovPer='30d';
 let ltvCountry='all', ltvMetric='d0', ltvPlat='ios';
 let stickPlat='ios', stickMetric='stickiness';
 let whalePlat='ios', retPlat='ios', retMetric='all', ratioPlat='ios', ftpPlat='ios';
-let iapPlat='ios', iapPer='90d';
+let iapPlat='ios', iapPer='30d';
 let cohPlat='android', cohType='Rewarded';
-let netRevPlat='android', netRevNetwork='all', netRevPer='90d';
+let netRevPlat='android', netRevNetwork='all', netRevPer='30d';
 let purRatePlat='both';
 
-let adsPlat='ios', adsType='all', adsPer='90d';
+let adsPlat='ios', adsType='all', adsPer='30d';
 
 // ── IAP ──
 function iapFilter(v,btn){
@@ -2007,11 +2021,11 @@ function rowsToRecords(payload, headerMap){
 
 
 
-async function rebuildRawFromGoogleSheet(){
+async function rebuildRawFromGoogleSheet(windowDays){
   let sheetsLoaded=0, errors=[];
   const names = Object.keys(SHEET_TO_RAW_KEY);
   const diagnostics = {};
-  const res = await API.call('tabs');
+  const res = await API.call('tabs', windowDays>0?{days:windowDays}:undefined);
   names.forEach(sheetName=>{
     const payload = res.tabs[sheetName];
     if(!payload || payload.missing){ errors.push(sheetName); diagnostics[sheetName]={error:'tab not found'}; return; }
@@ -2042,25 +2056,82 @@ async function rebuildRawFromGoogleSheet(){
   return {sheetsLoaded, errors, diagnostics};
 }
 
+/* ── Staged load ────────────────────────────────────────────────────────────
+   Stage 1 asks the backend for only the last 30 days of every tab - a small
+   payload the server slices out of its own cache, so it arrives and parses
+   in a fraction of the full-history time - and paints the report from that.
+   Stage 2 widens to 90 days in the background. Full history is deliberately
+   not downloaded during startup. The generation counter stops a stale
+   background fetch from clobbering a newer Refresh. */
+const LOAD_STAGES = [30, 90];
+let loadGeneration = 0;
+
 async function refreshData(){
   // No sheet to connect to any more - the API is always the source.
+  const generation = ++loadGeneration;
   setDataStatus('Loading...');
   try{
-    const loaded=await rebuildRawFromGoogleSheet();
-    const {sheetsLoaded, errors, diagnostics}=loaded;
+    await rebuildRawFromGoogleSheet(LOAD_STAGES[0]);
+    if(generation!==loadGeneration) return;
     renderActive();
-    const now=new Date();
-    const totalRecords = Object.values(diagnostics).reduce((s,d)=>s+(d.recordsBuilt||0),0);
-    if(errors.length){
-      setDataStatus(`Loaded - ${clockTime(now)}`);
-    } else {
-      setDataStatus(`Loaded - ${clockTime(now)}`);
-    }
+    setDataStatus(`Loaded last ${LOAD_STAGES[0]} days - ${clockTime(new Date())} · loading more…`);
     try{window.parent.postMessage({type:'mss3d:report-ready',report:'tilldate'},location.origin)}catch(e){}
+    loadRemainingStages(generation, 1);
   }catch(e){
-    // No fallback dataset exists, so a failure means the report is showing
-    // nothing at all — say that outright instead of leaving a blank page.
-    setDataStatus('Load failed — no data is being shown. Open this report from the hub and sign in, then retry. Error: '+(e.message||e));
+    if(generation!==loadGeneration) return;
+    /* The windowed request failed - fall back to the single full request so
+       one bad slice can never take the whole report down. */
+    try{
+      await rebuildRawFromGoogleSheet(0);
+      if(generation!==loadGeneration) return;
+      renderActive();
+      setDataStatus(`Loaded - ${clockTime(new Date())}`);
+      try{window.parent.postMessage({type:'mss3d:report-ready',report:'tilldate'},location.origin)}catch(err){}
+    }catch(e2){
+      if(generation!==loadGeneration) return;
+      // No fallback dataset exists, so a failure means the report is showing
+      // nothing at all — say that outright instead of leaving a blank page.
+      setDataStatus('Load failed — no data is being shown. Open this report from the hub and sign in, then retry. Error: '+(e2.message||e2));
+    }
+  }
+}
+
+/* Gap before each background stage.
+
+   Apps Script throttles a burst of requests to the same deployment: it
+   answers slowly and sometimes drops the connection outright, which is what
+   "request interrupted" reports. The three stages used to fire back to back,
+   which is exactly that burst. Nothing on screen waits for a background
+   stage - the report is already usable from the first paint - so spacing
+   them out costs the viewer nothing and makes a dropped stage far less
+   likely. */
+const STAGE_GAP_MS = 5000;
+
+/* Runs detached from refreshData so the loader overlay comes down after the
+   first paint instead of holding for the full transfer. Each stage swaps in
+   a strictly wider dataset and re-renders in place. */
+async function loadRemainingStages(generation, stageIndex){
+  if(stageIndex>=LOAD_STAGES.length) return;
+  const days = LOAD_STAGES[stageIndex];
+  try{
+    await new Promise(resolve=>setTimeout(resolve,STAGE_GAP_MS));
+    /* Re-checked after the wait as well as after the fetch: a Refresh during
+       the gap makes this stage's result obsolete before it is even asked for. */
+    if(generation!==loadGeneration) return;
+    await rebuildRawFromGoogleSheet(days);
+    if(generation!==loadGeneration) return;   // a newer load owns the page now
+    renderActive();
+    /* Tell the date-filter layer the dataset bounds moved, so preset windows
+       re-measure against the real earliest/latest dates. */
+    try{window.dispatchEvent(new CustomEvent('mss3d:dataset-updated'))}catch(e){}
+    setDataStatus(`Loaded last ${days} days - ${clockTime(new Date())}`);
+    loadRemainingStages(generation, stageIndex+1);
+  }catch(e){
+    if(generation!==loadGeneration) return;
+    /* Whatever stage is on screen is correct for its own window; keep it and
+       say the wider span is missing rather than erasing a working page. */
+    console.warn('[MSS3D] background stage load ('+(days||'full')+') failed:', e);
+    setDataStatus('Showing a partial window - the wider history failed to load. Refresh to retry.');
   }
 }
 
@@ -2215,7 +2286,9 @@ function weekWindow(weeks, anchor){
     [single, start, end].forEach(i=>{ i.min = min; i.max = max; });
     single.value = max; start.value = min; end.value = max;
 
-    select.value = '90';
+    /* The first server payload contains 30 days, so the visual filter must
+       match it immediately instead of showing a misleading 90-day selection. */
+    select.value = '30';
     box.classList.remove('single','custom');
 
     select.onchange = () => {
@@ -2308,6 +2381,10 @@ function weekWindow(weeks, anchor){
         return out;
       };
     }
+    /* The background full-history load lands after refreshData has settled.
+       When it swaps RAW, re-measure the date bounds and re-apply whatever
+       period each control is on, exactly as the wrapper above does. */
+    window.addEventListener('mss3d:dataset-updated', () => { refreshBounds(); applyCurrent(); });
     /* No applyCurrent() on load any more. With no bundled dataset to measure
        against, it resolved every window against an empty RAW - DATA_MAX_DATE
        is the epoch, so "Last 2 weeks" became a 1969 range that filtered out
