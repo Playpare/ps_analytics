@@ -91,6 +91,25 @@
     .chartbox.tall{height:300px}
 
     .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin-bottom:16px}
+    .kpi-row{margin-bottom:28px}
+    .mt{margin-top:28px}
+    .stack{row-gap:28px}
+    .h1,.card h2,.card-title,.subhead h2{font-family:'Segoe UI',Arial,sans-serif}
+    body{font-family:'Segoe UI',Arial,sans-serif}
+    .eyebrow,.card-sub,.kpi-label,.ctrl-label,.subhead p,.sf,.note{font-family:'Segoe UI',Arial,sans-serif}
+    .top,.top .brand,.top button{font-family:'Trebuchet MS',Arial,sans-serif}
+    .top button{font-size:12.5px;font-weight:650}
+    .date-controls,.date-controls *{font-family:'Trebuchet MS',Arial,sans-serif!important}
+    body{--t2:#c0ccdf;--t3:#b5c3d7;--tick:#c0ccdf}
+    .status,.date-span,.card-sub,.eyebrow,.sf,.mut{color:#c0ccdf!important;font-weight:600!important}
+    #refreshBtn,.date-controls select,.date-confirm{font-size:13.5px!important;font-weight:750!important}
+    .top>.brand{display:none}
+    #refreshBtn{color:var(--onGrad);border-color:transparent;background:var(--grad)}
+    .section>.slide>.sh{display:none}
+    #global-filter-controls>.date-controls{display:none;margin-left:auto}
+    body:has(#overview.active) #global-filter-controls>[data-scope="ov"],
+    body:has(#iap.active) #global-filter-controls>[data-scope="iap"],
+    body:has(#ads.active) #global-filter-controls>[data-scope="ads"]{display:flex}
     .kpi-card{padding:15px 18px;border-left:3px solid var(--teal);display:flex;flex-direction:column;justify-content:center}
     .kpi-row .kpi-card:nth-child(1){border-left-color:var(--teal)}
     .kpi-row .kpi-card:nth-child(2){border-left-color:var(--blue)}
@@ -102,7 +121,7 @@
     .kpi-row .kpi-card:nth-child(4) .kpi-sub{color:var(--coral)}
     .kpi-label{color:var(--t3);font:500 9.5px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.1em}
     .kpi-value{font:500 24px 'DM Mono',monospace;margin:5px 0;color:var(--t1)}
-    .kpi-sub{color:var(--green);font:500 10px 'DM Mono',monospace}
+    .kpi-sub{color:var(--green);font:500 11.5px 'DM Mono',monospace}
 
     /* ── filter controls ── */
     .controls{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -130,7 +149,13 @@
     table{width:100%;border-collapse:collapse;font-size:10px}
     th{position:sticky;top:0;z-index:2;background:var(--thbg);color:var(--t2);text-align:left;padding:8px 7px;font:500 9px 'DM Mono',monospace;white-space:nowrap;border-bottom:1px solid var(--borderB)}
     td{padding:7px;border-bottom:1px solid var(--border);white-space:nowrap}
-    th.num,td.num{text-align:right;font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums}
+    th.num,td.num{text-align:right;font-family:Poppins,system-ui,sans-serif;font-variant-numeric:tabular-nums;font-weight:400;letter-spacing:.01em}
+    td.num{font-size:11.5px!important}
+    th.num{font-size:10.5px!important}
+    .kpi-value{font-family:Poppins,system-ui,sans-serif;font-weight:400}
+    .kpi-sub,.kpi-sub *{font-family:Poppins,system-ui,sans-serif!important;font-weight:400}
+    table td,table td *,td.num,th.num{font-family:Poppins,system-ui,sans-serif!important}
+    .legend,.legend *{font-family:Poppins,system-ui,sans-serif!important;font-size:12.5px!important;font-weight:400!important}
     th.idx,td.idx{width:34px;min-width:34px;text-align:right;color:var(--t3);background:var(--thbg)}
     tbody tr:hover td{background:rgba(255,255,255,.035)}
     body.lt tbody tr:hover td{background:rgba(15,30,60,.04)}
@@ -157,6 +182,11 @@
     ::-webkit-scrollbar-thumb{background:var(--borderB);border-radius:3px}
   </style>
 <script>
+Chart.defaults.font.family='Poppins';
+Chart.defaults.font.size=11;
+Chart.defaults.font.weight='500';
+Chart.defaults.color='#c0ccdf';
+Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
 /* ---- shared theme, synced across the hub and every report ----
    The choice is written to localStorage, which same-origin documents share.
    A `storage` event fires in every OTHER document when one of them writes,
@@ -250,13 +280,15 @@ html,body{transition:background-color .18s linear,color .18s linear}
     <button class="pill active" onclick="globalToggle('trendline',true,this)">Yes</button>
     <button class="pill" onclick="globalToggle('trendline',false,this)">No</button>
   </div>
+  <div class="date-controls" data-scope="ov"></div>
+  <div class="date-controls" data-scope="iap"></div>
+  <div class="date-controls" data-scope="ads"></div>
 </div>
 
 <!-- OVERVIEW -->
 <main id="overview" class="section active"><section class="slide">
   <div class="sh">
     <div class="brand"><b>playspare</b> · MSS3D · Overview</div>
-    <div class="date-controls" data-scope="ov"></div>
   </div>
   <div class="sb">
     <div class="eyebrow">Combined Monetization Performance</div>
@@ -392,7 +424,6 @@ html,body{transition:background-color .18s linear,color .18s linear}
 <main id="iap" class="section"><section class="slide">
   <div class="sh">
     <div class="brand"><b>playspare</b> · MSS3D · IAP</div>
-    <div class="date-controls" data-scope="iap"></div>
   </div>
   <div class="sb">
     <div class="eyebrow">In-App Purchases &middot; iOS vs Android</div>
@@ -463,7 +494,6 @@ html,body{transition:background-color .18s linear,color .18s linear}
 <main id="ads" class="section"><section class="slide">
   <div class="sh">
     <div class="brand"><b>playspare</b> · MSS3D · Ads</div>
-    <div class="date-controls" data-scope="ads"></div>
   </div>
   <div class="sb">
     <div class="eyebrow">Ad Monetization &middot; All Networks</div>
@@ -603,7 +633,7 @@ html,body{transition:background-color .18s linear,color .18s linear}
   <div class="sf"><span>Monetization &middot; Ad Metrics</span><span>Playspare &middot; Game District</span></div>
 </section></main>
 
-<div class="loader" id="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading live Till Date data</b><div class="pulse"></div></div></div>
+<div class="loader" id="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading Data</b><div class="pulse"></div></div></div>
 
 <script>
 /* ---- API client: URL arrives via ?api= from the hub, token via sessionStorage ---- */
@@ -931,12 +961,12 @@ function dsLine(label,data,color,dash){
 const BASE_CFG = {
   responsive:true, maintainAspectRatio:false,
   plugins:{
-    legend:{labels:{color:cv('--t2'),font:{family:'Poppins',size:11}}},
+    legend:{labels:{color:cv('--t2'),font:{family:'Poppins',size:12.5,weight:'400'}}},
     tooltip:{backgroundColor:cv('--card2'),borderColor:cv('--borderB'),borderWidth:1,titleColor:cv('--t1'),bodyColor:cv('--t2'),padding:10,titleFont:{family:'Poppins'},bodyFont:{family:'DM Mono'}}
   },
   scales:{
-    x:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'DM Mono',size:9},maxTicksLimit:12}},
-    y:{grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'DM Mono',size:10}},beginAtZero:true}
+    x:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'Poppins',size:11,weight:'400'},maxTicksLimit:12}},
+    y:{grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'Poppins',size:11,weight:'400'}},beginAtZero:true}
   }
 };
 
@@ -977,18 +1007,18 @@ function mkChart(id,type,labels,datasets,yFmt,yOpts,logAnnotations){
   if(!el)return null;
   if(el._chart)el._chart.destroy();
   if(type==='line') datasets=withTrendLines(datasets);
-  const yAxis={grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'DM Mono',size:10},callback:yFmt||undefined},beginAtZero:true};
+  const yAxis={grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'Poppins',size:11,weight:'400'},callback:yFmt||undefined},beginAtZero:true};
   if(yOpts)Object.assign(yAxis,yOpts);
   const cfg={
     responsive:true, maintainAspectRatio:false,
     plugins:{
-      legend:{labels:{color:cv('--t2'),font:{family:'Poppins',size:11}}},
+      legend:{labels:{color:cv('--t2'),font:{family:'Poppins',size:12.5,weight:'400'}}},
       tooltip:{mode:'index',intersect:false,backgroundColor:cv('--card2'),borderColor:cv('--borderB'),borderWidth:1,titleColor:cv('--t1'),bodyColor:cv('--t2'),padding:10,titleFont:{family:'Poppins'},bodyFont:{family:'DM Mono'},callbacks:{label:function(ctx){var v=ctx.parsed.y;var s=(v==null)?'\u2014':(yFmt?yFmt(v):v.toLocaleString());return ctx.dataset.label+': '+s;}}},
       annotation:{annotations:logAnnotations||{}}
     },
     interaction:{mode:'index',intersect:false},
     scales:{
-      x:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'DM Mono',size:9},maxTicksLimit:12}},
+      x:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'Poppins',size:11,weight:'400'},maxTicksLimit:12}},
       y:yAxis
     }
   };
@@ -1573,7 +1603,7 @@ function renderNetRev(){
       const {ctx}=chart;
       const meta=chart.getDatasetMeta(0);
       ctx.save();
-      ctx.font="600 11px 'DM Mono', monospace";
+      ctx.font="400 12.5px Poppins, system-ui, sans-serif";
       ctx.fillStyle=cv('--t1');
       ctx.textBaseline='middle';
       meta.data.forEach((bar,i)=>{
@@ -1603,8 +1633,8 @@ function renderNetRev(){
         }
       },
       scales:{
-        x:{grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'DM Mono',size:10},callback:v=>v+'%'},beginAtZero:true, suggestedMax:maxShare*1.15},
-        y:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'DM Mono',size:10}}}
+        x:{grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'Poppins',size:11,weight:'400'},callback:v=>v+'%'},beginAtZero:true, suggestedMax:maxShare*1.15},
+        y:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'Poppins',size:11,weight:'400'}}}
       }
     }
   });
