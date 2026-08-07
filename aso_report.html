@@ -1,0 +1,2199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MSS3D · ASO Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Quicksand:wght@600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#000;--card:#0b0c0f;--card2:#070809;--border:rgba(255,255,255,.08);--borderB:rgba(255,255,255,.14);--t1:#edf2ff;--t2:#a6b8d4;--t3:#7589a8;--teal:#00e5c3;--blue:#4d9fff;--pink:#ec0a9b;--green:#00c47a;--amber:#ffb800;--coral:#ff4d6d;--grad:linear-gradient(135deg,#00e5c3,#4d9fff);--r:14px;--sh:0 8px 40px rgba(0,0,0,.6)}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{background:#000;overflow-x:hidden}
+    body{min-width:980px;overflow-x:hidden;background:#000;color:var(--t1);font-family:Poppins,system-ui,sans-serif;padding-bottom:35px}
+    .mono{font-family:'DM Mono',monospace}
+    .top{position:sticky;top:0;z-index:50;height:58px;padding:0 24px;display:flex;align-items:center;gap:10px;background:rgba(9,10,13,.97);border-bottom:1px solid var(--borderB)}
+    .brand{font:700 16px Quicksand,sans-serif;margin-right:10px}
+    .brand b{background:var(--grad);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .tabs{display:flex;gap:5px}
+    .tabdrop{position:relative}
+    .tabdrop-menu{display:none;position:absolute;top:calc(100% + 7px);left:0;min-width:130px;padding:6px;
+      border:1px solid var(--borderB);border-radius:11px;background:var(--card);box-shadow:var(--sh)}
+    .tabdrop:hover .tabdrop-menu,.tabdrop:focus-within .tabdrop-menu{display:grid;gap:5px}
+    .tabdrop-menu button{width:100%;text-align:left}
+    .tabs button,.btn{border:1px solid var(--borderB);border-radius:20px;background:var(--card);color:var(--t2);padding:8px 13px;font:600 11px 'DM Mono';cursor:pointer}
+    .tabs button.active,.btn.primary{color:#031018;border-color:transparent;background:var(--grad)}
+    .btn:disabled{opacity:.55;cursor:default}
+    .connect{margin-left:auto;display:flex;gap:8px;align-items:center}
+    .status{font:500 10px 'DM Mono',monospace;color:var(--t3);white-space:nowrap}
+    .view{display:none}
+    .view.active{display:block}
+    .slide{width:100%;margin:0;background:var(--bg);display:flex;flex-direction:column;min-height:0}
+    .sh{height:58px;padding:0 24px;display:flex;justify-content:space-between;align-items:center;background:rgba(9,10,13,.9);border-bottom:1px solid var(--border)}
+    .sh .date{color:#020d1a;padding:7px 16px;border-radius:20px;background:var(--grad);font:600 11px 'DM Mono'}
+    .sh .date{border:0;outline:0;cursor:pointer}.sh select.date{appearance:none;-webkit-appearance:none;padding-right:34px;background-image:linear-gradient(45deg,transparent 50%,#020d1a 50%),linear-gradient(135deg,#020d1a 50%,transparent 50%),linear-gradient(135deg,#00e5c3,#4d9fff);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%,0 0;background-size:5px 5px,5px 5px,100% 100%;background-repeat:no-repeat}.sh select.date option{background:#0b0c0f;color:#edf2ff}.date-controls{display:flex;align-items:center;gap:6px}.date-span{color:#7589a8;font:600 10px 'DM Mono',monospace;white-space:nowrap;letter-spacing:.02em}.date-span:empty{display:none}.date-controls input[type=date]{display:none;color:#020d1a;padding:7px 10px;border:0;border-radius:20px;background:linear-gradient(135deg,#00e5c3,#4d9fff);font:600 10px 'DM Mono';outline:0}.date-confirm{display:none;border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:7px 13px;background:#0b0c0f;color:#edf2ff;font:600 10px 'DM Mono';cursor:pointer}.date-confirm:hover{border-color:#00e5c3;color:#00e5c3}.date-controls.single .single-date,.date-controls.custom .range-date,.date-controls.single .date-confirm,.date-controls.custom .date-confirm{display:block}
+    .sb{flex:1;padding:18px 24px 22px}
+    .eyebrow{color:var(--t3);font:500 11px 'DM Mono';letter-spacing:.16em;text-transform:uppercase}
+    .h1{font:800 27px Syne;margin:4px 0 15px}
+    .h2s{font:800 17px Syne;margin:22px 0 12px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .h2s span.tag{font:600 9px 'DM Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--t3);border:1px solid var(--borderB);border-radius:20px;padding:4px 10px}
+    .weekbar{display:flex;gap:10px;align-items:center;margin:0 0 16px;flex-wrap:wrap}
+    .wk-pill{display:flex;align-items:center;gap:9px;border:1px solid var(--borderB);border-radius:20px;padding:7px 15px;font:600 10px 'DM Mono';color:var(--t2)}
+    .wk-pill i{width:9px;height:9px;border-radius:3px;display:inline-block}
+    .wk-pill b{color:var(--t1);font-weight:500}
+    .wk-arrow{color:var(--t3);font:600 11px 'DM Mono'}
+    .card,.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh)}
+    .card{padding:15px 17px}
+    .card h2{font:700 15px Syne;margin-bottom:9px}
+    .card h2 em{font:500 10px 'DM Mono';font-style:normal;color:var(--t3);margin-left:8px;letter-spacing:.04em}
+    .kpi{padding:16px 20px;border-left:3px solid var(--teal);display:flex;flex-direction:column;justify-content:center}
+    .kpi .l{color:var(--t3);font:500 9.5px 'DM Mono';text-transform:uppercase;letter-spacing:.06em}
+    .kpi .v{font:500 26px 'DM Mono';margin:6px 0 4px}
+    .kpi .d{color:var(--green);font:500 10px 'DM Mono'}
+    .kpi .p{color:var(--t3);font:500 9px 'DM Mono';margin-top:4px}
+    .duo{display:flex;align-items:flex-end;gap:11px;margin:8px 0 6px}
+    .wcol{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .wl{color:var(--t3);font:500 8.5px 'DM Mono';text-transform:uppercase;letter-spacing:.11em}
+    .wv{font:500 15px 'DM Mono';color:var(--t2);line-height:1.05}
+    .wv.big{font-size:22px;color:var(--t1)}
+    .sep{color:var(--t3);font:600 13px 'DM Mono';padding-bottom:2px}
+    .chartbox{height:250px;position:relative}
+    .chartbox.tall{height:330px}
+    .chartbox.xtall{height:390px}
+    .mt{margin-top:14px}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .sf{height:32px;padding:0 24px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);color:var(--t3);font:9.5px 'DM Mono'}
+    .tablewrap{overflow:auto;max-height:620px;border:1px solid var(--border);border-radius:8px}
+    table{width:100%;border-collapse:collapse;font-size:10px}
+    th{position:sticky;top:0;z-index:2;background:#11151b;color:var(--t2);text-align:left;padding:8px 7px;font:500 9px 'DM Mono';white-space:nowrap;border-bottom:1px solid var(--borderB)}
+    td{padding:7px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:10px}
+    td.num,th.num{text-align:right;font-family:'DM Mono';font-variant-numeric:tabular-nums}
+    td.wk{font-family:'DM Mono';color:var(--t2);letter-spacing:.02em}
+    tbody tr:hover td{background:rgba(255,255,255,.045)}
+    tr.wk-break td{border-top:2px solid rgba(0,229,195,.45)}
+    tfoot td{position:sticky;bottom:0;background:#11151b;font:500 10px 'DM Mono';color:var(--t1);border-top:1px solid var(--borderB)}
+    #tblAnRatings,#tblIoRatings{max-height:none;width:100%}
+    #tblAnRatings table,#tblIoRatings table{table-layout:fixed;width:100%}
+    #tblAnRatings th,#tblAnRatings td,#tblIoRatings th,#tblIoRatings td{padding:10px 14px;font-size:10.5px}
+    #tblAnRatings th:first-child,#tblAnRatings td:first-child{width:18%;text-align:left}
+    #tblAnRatings th:not(:first-child),#tblAnRatings td:not(:first-child){width:20.5%}
+    .up{color:var(--green)}.dn{color:var(--coral)}.flat{color:var(--t3)}
+    .view{opacity:0;transform:translateY(8px)}
+    .view.active{animation:viewIn .3s ease forwards}
+    @keyframes viewIn{to{opacity:1;transform:none}}
+    .view.active > .slide > .sh{position:sticky;top:58px;z-index:49;box-shadow:0 8px 20px rgba(0,0,0,.28);backdrop-filter:blur(10px)}
+    .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .kpi-row.three{grid-template-columns:repeat(3,1fr)}
+    .kpi-row.four{grid-template-columns:repeat(4,1fr)}
+    .kpi-row.five{grid-template-columns:repeat(5,1fr)}
+    .kpi .v.neg{color:var(--coral)}
+    .kpi .v.pos{color:var(--green)}
+    .kpi .d.neg{color:var(--coral)}
+    .kpi .d.mut{color:var(--t3)}
+    .kpi.a-teal{border-left-color:var(--teal)}
+    .kpi.a-blue{border-left-color:var(--blue)}
+    .kpi.a-pink{border-left-color:var(--pink)}
+    .kpi.a-amber{border-left-color:var(--amber)}
+    .kpi.a-green{border-left-color:var(--green)}
+    .kpi.a-coral{border-left-color:var(--coral)}
+    .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:9px;font:500 9.5px 'DM Mono';color:var(--t2)}
+    .legend i{display:inline-block;width:11px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+    .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;font:500 10px 'DM Mono'}
+    .statgrid>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+    .statgrid span:first-child{color:var(--t3)}
+    .statgrid span:last-child{color:var(--t1);font-variant-numeric:tabular-nums}
+  </style>
+  <style>
+    body.lt{--bg:#eef1f7;--card:#ffffff;--card2:#f5f7fc;
+      --border:rgba(15,30,60,.09);--borderB:rgba(15,30,60,.16);
+      --t1:#0d1b2e;--t2:#56657f;--t3:#8394ad;
+      --teal:#00b39a;--blue:#2f7fe0;--pink:#c2077f;--green:#00a065;
+      --amber:#d99400;--coral:#e23a59;
+      --grad:linear-gradient(135deg,#00b39a,#2f7fe0);
+      --sh:0 8px 30px rgba(30,50,90,.12)}
+    html[data-theme=light]{background:#eef1f7}
+    body.lt{background:#eef1f7;color:#0d1b2e}
+    body.lt .top,body.lt .sh{background:rgba(255,255,255,.95)}
+    body.lt th,body.lt tfoot td{background:#e7ecf6;color:#56657f}
+    body.lt tfoot td{color:#0d1b2e}
+    body.lt tbody tr:hover td{background:rgba(15,30,60,.05)}
+    html,body{transition:background-color .18s linear,color .18s linear}
+    .top,.sh,.card,.slide,.kpi{transition:background-color .18s linear,border-color .18s linear}
+    @media (prefers-reduced-motion: reduce){html,body,.top,.sh,.card,.slide,.kpi{transition:none}
+      .view.active{animation:none;opacity:1;transform:none}}
+  </style>
+  <style>
+    /* ---- live-data chrome ---- */
+    .loader{position:fixed;inset:58px 0 0;z-index:200;display:none;place-items:center;background:rgba(0,0,0,.82);backdrop-filter:blur(8px)}
+    .loader.show{display:grid}
+    .loader-in{text-align:center;color:var(--t2);font:600 11px 'DM Mono'}
+    .spin{width:54px;height:54px;margin:0 auto 14px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--teal);border-right-color:var(--blue);border-radius:50%;animation:sp .75s linear infinite}
+    .loader-pulse{width:120px;height:3px;margin:12px auto 0;border-radius:3px;background:linear-gradient(90deg,transparent,var(--teal),var(--blue),transparent);background-size:200% 100%;animation:loaderFlow 1.1s linear infinite}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    @keyframes loaderFlow{to{background-position:-200% 0}}
+    body.lt .loader{background:rgba(238,241,247,.72)}
+    .status.error{color:var(--coral)}
+    .status.stale{color:var(--amber)}
+    .note{border:1px solid var(--borderB);border-left-width:3px;border-radius:10px;padding:9px 13px;margin:0 0 9px;
+      font:500 10px 'DM Mono';color:var(--t2);line-height:1.6}
+    .note.info{border-left-color:var(--blue)}
+    .note.warn{border-left-color:var(--amber)}
+    .note.error{border-left-color:var(--coral);color:var(--coral)}
+    .pill{display:inline-block;padding:2px 8px;border-radius:20px;font:600 8.5px 'DM Mono';letter-spacing:.05em;text-transform:uppercase}
+    .pill.green{background:rgba(0,196,122,.16);color:var(--green)}
+    .pill.amber{background:rgba(255,184,0,.16);color:var(--amber)}
+    .pill.coral{background:rgba(255,77,109,.16);color:var(--coral)}
+    .pill.blue{background:rgba(77,159,255,.16);color:var(--blue)}
+    .chip{display:inline-block;padding:2px 7px;border-radius:6px;background:rgba(117,137,168,.14);
+      color:var(--t3);font:500 8.5px 'DM Mono';margin-right:3px}
+    .chip.main{background:rgba(77,159,255,.2);color:var(--t1)}
+    td.txt{white-space:normal;max-width:520px;min-width:280px;line-height:1.55;color:var(--t2)}
+    #tblOvDaily{max-height:none}
+    /* ---- filter bars ---- */
+    .filterbar{display:flex;flex-wrap:wrap;gap:9px;align-items:flex-end;margin:0 0 14px;
+      padding:13px 15px;background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+    .fgroup{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .fgroup.hide{display:none}
+    .fgroup>span{color:var(--t3);font:500 8.5px 'DM Mono';text-transform:uppercase;letter-spacing:.11em}
+    .filterbar select,.filterbar input{background:var(--card2);color:var(--t1);border:1px solid var(--borderB);
+      border-radius:8px;padding:7px 9px;font:500 10px 'DM Mono';outline:0;max-width:190px}
+    .filterbar select:focus,.filterbar input:focus{border-color:var(--teal)}
+    .filterbar input[type=search]{min-width:210px}
+    .filterbar .btn{align-self:flex-end}
+    .fcount{margin-left:auto;align-self:flex-end;color:var(--t2);font:600 10px 'DM Mono';white-space:nowrap}
+    .fcount b{color:var(--t1)}
+    #tblReviews{max-height:none}
+    #tblReviews th{cursor:pointer;user-select:none}
+    #tblReviews th:hover{color:var(--t1)}
+    #tblReviews td:first-child,#tblReviews th:first-child{text-align:left;padding-left:10px}
+    .sortmark{color:var(--teal);margin-left:5px}
+    .sect{border:1px solid var(--borderB);border-radius:18px;padding:6px 18px 20px;margin:22px 0 0;
+      background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,0) 160px)}
+    .sect+.sect{margin-top:26px}
+    .secth{display:flex;align-items:center;gap:11px;margin:0 -18px 15px;padding:15px 18px 13px;
+      border-bottom:1px solid var(--borderB)}
+    .secth h3{font:800 19px Syne;margin:0}
+    .secth .tag{font:600 9px 'DM Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--t3);
+      border:1px solid var(--borderB);border-radius:20px;padding:4px 10px}
+    .sect.s-coral .secth h3{color:var(--coral)}
+    .sect.s-teal  .secth h3{color:var(--teal)}
+    .sect.s-blue  .secth h3{color:var(--blue)}
+    .sect.s-pink  .secth h3{color:var(--pink)}
+    body.lt .sect{background:linear-gradient(180deg,rgba(15,30,60,.03),rgba(15,30,60,0) 160px)}
+    .srcbar{display:flex;align-items:flex-end;gap:12px;padding:12px 15px;background:var(--card);
+      border:1px solid var(--border);border-radius:var(--r)}
+    .srcbar select{background:var(--card2);color:var(--t1);border:1px solid var(--borderB);
+      border-radius:8px;padding:7px 9px;font:500 10px 'DM Mono';outline:0;min-width:210px}
+    .stars{letter-spacing:1px;font-size:11px;white-space:nowrap}
+    .star1,.star2{color:var(--coral)}
+    .star3{color:var(--amber)}
+    .star4,.star5{color:var(--green)}
+
+    /* ---- platform comparison card: reuses .duo but reads as "vs", not a sequence ---- */
+    .sep.vs{font:600 9px 'DM Mono';letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding-bottom:4px}
+    .wv.win{color:var(--teal)}
+    .wl i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+    /* ---- review table paging ---- */
+    .morebar{display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 0 2px;
+      font:500 10px 'DM Mono';color:var(--t3)}
+    .skel{height:330px;border-radius:8px;background:linear-gradient(100deg,
+      rgba(140,160,190,.05) 30%,rgba(140,160,190,.13) 50%,rgba(140,160,190,.05) 70%);
+      background-size:220% 100%;animation:sh 1.3s ease-in-out infinite}
+    @keyframes sh{to{background-position:-220% 0}}
+    @media (prefers-reduced-motion: reduce){.skel{animation:none}.spin{animation-duration:2.4s}}
+  </style>
+  <script>
+  /* Keep the ASO report in lockstep with the hub and the UA report. */
+  (function(){
+    var KEY='mss3d_theme',dirty=false;
+    function paint(mode){
+      var light=mode==='light';
+      if(document.body)document.body.classList.toggle('lt',light);
+      document.documentElement.setAttribute('data-theme',light?'light':'dark');
+    }
+    function flush(){
+      if(!dirty||typeof window.__themeRerender!=='function'||!document.documentElement.clientWidth)return;
+      dirty=false;try{window.__themeRerender()}catch(e){}
+    }
+    function apply(mode,initial){paint(mode);if(initial)return;dirty=true;requestAnimationFrame(function(){setTimeout(flush,0)})}
+    window.getTheme=function(){try{return localStorage.getItem(KEY)||'dark'}catch(e){return'dark'}};
+    window.addEventListener('storage',function(ev){if(ev.key===KEY)apply(ev.newValue||'dark',false)});
+    window.addEventListener('resize',flush);
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){apply(window.getTheme(),false)});
+    else apply(window.getTheme(),true);
+  })();
+  </script>
+</head>
+<body>
+  <div id="loader" class="loader"><div class="loader-in"><div class="spin"></div><b id="loaderMsg">Loading live ASO data</b><div class="loader-pulse"></div></div></div>
+
+  <header class="top">
+    <div class="brand"><b>playspare</b> · ASO</div>
+    <nav class="tabs">
+      <button class="active" data-view="overview">Overview</button>
+      <button data-view="android">Android</button>
+      <button data-view="ios">iOS</button>
+      <span class="tabdrop"><button type="button" id="reviewMenuBtn">Reviews &#9662;</button><span class="tabdrop-menu">
+        <button type="button" data-review-platform="ios">iOS</button>
+        <button type="button" data-review-platform="android">Android</button>
+      </span></span>
+    </nav>
+    <div class="connect">
+      <button id="refreshBtn" class="btn primary">&#8635; Refresh</button>
+      <span id="status" class="status">Not connected</span>
+    </div>
+  </header>
+
+  <!-- ============================ OVERVIEW ============================ -->
+  <main id="overview" class="view active"><section class="slide">
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Android + iOS</div><div class="date" id="ovDateChip">—</div></div>
+    <div class="sb">
+      <div class="eyebrow">Both platforms · live from Google Sheets</div>
+      <div class="h1">ASO Report</div>
+      <div class="weekbar" id="ovRangeBar"></div>
+      <div id="ovWarnings"></div>
+
+      <div class="h2s">Android vs iOS <span class="tag">same window, same definitions</span></div>
+      <div class="kpi-row four" id="ovRow1"></div>
+
+      <div class="h2s">Where They Differ <span class="tag">shape of the feedback, not just the totals</span></div>
+      <div class="two">
+        <article class="card"><h2>Star Rating Mix<em>share of written reviews at each star</em></h2>
+          <div class="chartbox tall"><canvas id="ovDist"></canvas></div>
+          <div class="legend"><span style="color:var(--t3)">bars are the share of that platform's own written reviews, so the two are comparable even at different volumes</span></div>
+        </article>
+        <article class="card"><h2>Review Volume by Day<em>written reviews landing each day</em></h2>
+          <div class="chartbox tall"><canvas id="ovVolume"></canvas></div>
+          <div class="legend"><span><i style="background:#00c47a"></i>Android</span><span><i style="background:#4d9fff"></i>iOS</span></div>
+        </article>
+      </div>
+    </div>
+    <div class="sf"><span>ASO · Overview</span><span>Playspare · Game District</span></div>
+  </section></main>
+
+  <!-- ============================ ANDROID ============================ -->
+  <main id="android" class="view"><section class="slide">
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Android</div><div class="date" id="anDateChip">—</div></div>
+    <div class="sb">
+      <div class="eyebrow">Platform: Android · Google Play</div>
+      <div class="h1">Android Quality, Ratings &amp; Conversion</div>
+      <div class="weekbar" id="anRangeBar"></div>
+      <div id="anWarnings"></div>
+
+      <!-- ======================= STABILITY ======================= -->
+      <section class="sect s-coral">
+        <div class="secth"><h3>Stability</h3><span class="tag">crash &amp; ANR · latest day vs the day before</span></div>
+        <div class="kpi-row four" id="anRow2"></div>
+        <div class="two mt">
+          <article class="card"><h2>Crash Rate<em>daily, against the Play Store limit</em></h2>
+            <div class="chartbox tall"><canvas id="anCrash"></canvas></div>
+            <div class="legend"><span><i style="background:#ff4d6d"></i>Daily crash %</span><span><i style="background:#7589a8"></i>Limit 1.09%</span></div></article>
+          <article class="card"><h2>ANR Rate<em>daily, against the Play Store limit</em></h2>
+            <div class="chartbox tall"><canvas id="anAnr"></canvas></div>
+            <div class="legend"><span><i style="background:#ffb800"></i>Daily ANR %</span><span><i style="background:#7589a8"></i>Limit 0.47%</span></div></article>
+        </div>
+        <article class="card mt"><h2>Crash vs ANR · Daily<em>both metrics on one axis</em></h2>
+          <div class="chartbox tall"><canvas id="anCrashAnr"></canvas></div></article>
+        <article class="card mt"><h2>Stability by Day<em>crash and ANR stacked, one bar per day</em></h2>
+          <div class="chartbox tall"><canvas id="anStabilityDay"></canvas></div></article>
+        <article class="card mt"><h2>Stability · Daily</h2><div class="tablewrap" id="tblAnStability"></div></article>
+      </section>
+
+      <!-- ======================= RATINGS ======================= -->
+      <section class="sect s-teal">
+        <div class="secth"><h3>Ratings</h3><span class="tag">Google Play star ratings</span></div>
+        <div class="kpi-row four" id="anRow3"></div>
+        <article class="card mt"><h2>Daily Rating Performance<em>store rating and written-review activity</em></h2><div class="tablewrap" id="tblAnRatings"></div></article>
+      </section>
+
+      <!-- ======================= REVIEWS ======================= -->
+      <section class="sect s-blue">
+        <div class="secth"><h3>Reviews</h3><span class="tag">written reviews · translated to English</span></div>
+        <div class="kpi-row four" id="anRow4"></div>
+        <article class="card mt"><h2>Review Volume &amp; Rating · Daily<em>bars are volume, line is average rating</em></h2>
+          <div class="chartbox tall"><canvas id="anReviewVol"></canvas></div></article>
+        <div class="two mt">
+          <article class="card"><h2>What Reviews Are About<em>one theme per review · split by sentiment</em></h2>
+            <div class="chartbox xtall"><canvas id="anThemes"></canvas></div>
+            <div class="legend"><span><i style="background:#00c47a"></i>4★–5★</span><span><i style="background:#ffb800"></i>3★</span><span><i style="background:#ff4d6d"></i>1★–2★</span></div></article>
+          <article class="card"><h2>Theme Detail<em>Mixed = also raised something else</em></h2>
+            <div class="tablewrap" id="tblAnThemes"></div></article>
+        </div>
+        <article class="card mt"><h2>Top Devices<em>handsets leaving the most reviews</em></h2>
+          <div class="chartbox xtall"><canvas id="anDevice"></canvas></div></article>
+      </section>
+
+      <!-- ======================= CONVERSION ======================= -->
+      <section class="sect s-pink">
+        <div class="secth"><h3>Store Conversion</h3><span class="tag">visitors → acquisitions</span></div>
+        <div class="kpi-row four" id="anRow5"></div>
+        <div class="srcbar mt">
+          <label class="fgroup"><span>Traffic source</span><select id="cvSource"></select></label>
+          <span class="fcount" id="cvNote"></span>
+        </div>
+        <div class="two mt">
+          <article class="card"><h2>Conversion Rate · Daily<em id="cvTitleA">all sources</em></h2>
+            <div class="chartbox tall"><canvas id="anCvr"></canvas></div></article>
+          <article class="card"><h2>Visitors vs Acquisitions<em id="cvTitleB">bars are visitors, line is acquisitions</em></h2>
+            <div class="chartbox tall"><canvas id="anTraffic"></canvas></div></article>
+        </div>
+        <div class="two mt">
+          <article class="card"><h2>Conversion by Traffic Source<em>bar length is CVR · visitor volume in brackets</em></h2>
+            <div class="chartbox tall"><canvas id="anCvrSource"></canvas></div></article>
+          <article class="card"><h2>Traffic Source Detail</h2><div class="tablewrap" id="tblAnSource"></div></article>
+        </div>
+        <article class="card mt"><h2>Conversions · Daily by Source</h2>
+          <div class="tablewrap" id="tblAnConv"></div></article>
+      </section>
+    </div>
+    <div class="sf"><span>ASO · Android</span><span>Playspare · Game District</span></div>
+  </section></main>
+
+  <!-- ============================ iOS ============================ -->
+  <main id="ios" class="view"><section class="slide">
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · iOS</div><div class="date" id="ioDateChip">—</div></div>
+    <div class="sb">
+      <div class="eyebrow">Platform: iOS · App Store</div>
+      <div class="h1">iOS Quality, Ratings &amp; Conversion</div>
+      <div class="weekbar" id="ioRangeBar"></div>
+      <div id="ioWarnings"></div>
+
+      <!-- ======================= STABILITY ======================= -->
+      <section class="sect s-coral">
+        <div class="secth"><h3>Stability</h3><span class="tag">crashes · latest day vs the day before</span></div>
+        <div class="kpi-row four" id="ioRow2"></div>
+        <div class="two mt">
+          <article class="card"><h2>Daily Crashes<em>against the period average</em></h2>
+            <div class="chartbox tall"><canvas id="ioCrash"></canvas></div>
+            <div class="legend"><span><i style="background:#ff4d6d"></i>Crashes</span><span><i style="background:#7589a8"></i>Period average</span></div></article>
+          <article class="card"><h2>7-Day Moving Average<em>smoothed, so one bad release day is not a trend</em></h2>
+            <div class="chartbox tall"><canvas id="ioMa"></canvas></div>
+            <div class="legend"><span><i style="background:#ffb800"></i>7-day average</span></div></article>
+        </div>
+        <article class="card mt"><h2>Crashes vs 7-Day Average · Daily<em>both series on one axis</em></h2>
+          <div class="chartbox tall"><canvas id="ioCrashMa"></canvas></div></article>
+        <article class="card mt"><h2>Crashes by Day<em>one bar per day</em></h2>
+          <div class="chartbox tall"><canvas id="ioStabilityDay"></canvas></div></article>
+        <article class="card mt"><h2>Stability · Daily</h2><div class="tablewrap" id="tblIoStability"></div></article>
+      </section>
+
+      <!-- ======================= RATINGS ======================= -->
+      <section class="sect s-teal">
+        <div class="secth"><h3>Ratings</h3><span class="tag">App Store star ratings</span></div>
+        <div class="kpi-row four" id="ioRow3"></div>
+        <article class="card mt"><h2>Store Rating · Daily<em>the stored value for each day</em></h2>
+          <div class="chartbox tall"><canvas id="ioRating"></canvas></div></article>
+        <article class="card mt"><h2>Daily Rating Performance<em>store rating and written-review activity</em></h2><div class="tablewrap" id="tblIoRatings"></div></article>
+      </section>
+
+      <!-- ======================= REVIEWS ======================= -->
+      <section class="sect s-blue">
+        <div class="secth"><h3>Reviews</h3><span class="tag">written reviews · translated to English</span></div>
+        <div class="kpi-row four" id="ioRow4"></div>
+        <article class="card mt"><h2>Review Volume &amp; Rating · Daily<em>bars are volume, line is average rating</em></h2>
+          <div class="chartbox tall"><canvas id="ioReviewVol"></canvas></div></article>
+        <div class="two mt">
+          <article class="card"><h2>What Reviews Are About<em>one theme per review · split by sentiment</em></h2>
+            <div class="chartbox xtall"><canvas id="ioThemes"></canvas></div>
+            <div class="legend"><span><i style="background:#00c47a"></i>4★–5★</span><span><i style="background:#ffb800"></i>3★</span><span><i style="background:#ff4d6d"></i>1★–2★</span></div></article>
+          <article class="card"><h2>Theme Detail<em>Mixed = also raised something else</em></h2>
+            <div class="tablewrap" id="tblIoThemes"></div></article>
+        </div>
+        <article class="card mt"><h2>Top Builds<em>build IDs leaving the most reviews</em></h2>
+          <div class="chartbox xtall"><canvas id="ioBuild"></canvas></div></article>
+      </section>
+
+      <!-- ======================= CONVERSION ======================= -->
+      <section class="sect s-pink">
+        <div class="secth"><h3>Store Conversion</h3><span class="tag">impressions → product page views → converters</span></div>
+        <div class="kpi-row four" id="ioRow5"></div>
+        <div class="srcbar mt">
+          <label class="fgroup"><span>Traffic source</span><select id="ioSource"></select></label>
+          <span class="fcount" id="ioCvNote"></span>
+        </div>
+        <div class="two mt">
+          <article class="card"><h2>Conversion Rate · Daily<em id="ioTitleA">all sources</em></h2>
+            <div class="chartbox tall"><canvas id="ioCvr"></canvas></div></article>
+          <article class="card"><h2>Impressions vs Converters<em id="ioTitleB">bars are impressions, line is converters</em></h2>
+            <div class="chartbox tall"><canvas id="ioTraffic"></canvas></div></article>
+        </div>
+        <div class="two mt">
+          <article class="card"><h2>Conversion by Traffic Source<em>bar length is CVR · impression volume in brackets</em></h2>
+            <div class="chartbox tall"><canvas id="ioCvrSource"></canvas></div></article>
+          <article class="card"><h2>Traffic Source Detail</h2><div class="tablewrap" id="tblIoSource"></div></article>
+        </div>
+        <article class="card mt"><h2>Store Funnel by Day<em>impressions → product page views → converters</em></h2>
+          <div class="chartbox tall"><canvas id="ioFunnel"></canvas></div></article>
+        <article class="card mt"><h2>Conversions · Daily by Source</h2>
+          <div class="tablewrap" id="tblIoConv"></div></article>
+      </section>
+    </div>
+    <div class="sf"><span>ASO · iOS</span><span>Playspare · Game District</span></div>
+  </section></main>
+
+  <!-- ============================ REVIEWS ============================ -->
+  <main id="reviews" class="view"><section class="slide">
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Reviews</div><div class="date" id="rvDateChip">—</div></div>
+    <div class="sb">
+      <div class="eyebrow" id="rvEyebrow">Platform: Android · Google Play</div>
+      <div class="h1" id="rvTitle">Reviews</div>
+      <div class="weekbar" id="rvRangeBar"></div>
+      <div id="rvNote"></div>
+
+      <div class="filterbar">
+        <label class="fgroup"><span>Platform</span><select id="fPlatform">
+          <option value="android">Android · Google Play</option>
+          <option value="ios">iOS · App Store</option>
+        </select></label>
+        <label class="fgroup"><span>From</span><select id="fFrom"></select></label>
+        <label class="fgroup"><span>To</span><select id="fTo"></select></label>
+        <label class="fgroup" id="gVer"><span id="lVer">App Version</span><select id="fVer"></select></label>
+        <label class="fgroup"><span>Star Rating</span><select id="fStar"></select></label>
+        <label class="fgroup"><span>Theme</span><select id="fTheme"></select></label>
+        <label class="fgroup"><span>Search text</span><input id="fText" type="search" placeholder="e.g. iklan, reklam, bug…"></label>
+        <button class="btn" id="fReset">Reset</button>
+        <span class="fcount" id="fCount"></span>
+      </div>
+
+      <article class="card"><h2>All Reviews<em>one row per review · verbatim text · click a column heading to sort</em></h2>
+        <div class="tablewrap" id="tblReviews"></div>
+        <div class="morebar" id="rvMore"></div></article>
+    </div>
+    <div class="sf"><span>ASO · Reviews</span><span>Playspare · Game District</span></div>
+  </section></main>
+
+<script>
+/* ==========================================================================
+   API CONNECTION
+
+   Point this at the Apps Script web app /exec URL from aso_dashboard.gs. Both
+   values can also be supplied on the query string, which is what a hub iframe
+   would do:
+       aso_report.html?api=https://script.google.com/.../exec&token=XXXX
+   ========================================================================== */
+const API_DEFAULTS = {
+  url:   'PASTE_ASO_EXEC_URL',
+  token: ''
+};
+const QS = new URLSearchParams(location.search);
+const API = {
+  url:   QS.get('api')   || API_DEFAULTS.url,
+  token: QS.get('token') || API_DEFAULTS.token
+};
+
+/* ==========================================================================
+   HUB SESSION
+
+   The hub signs in once against the UA project and stores one HMAC-signed
+   token that every project validates locally. This report reads that token on
+   each request rather than caching it, so a sign-out in the hub takes effect
+   here on the very next call instead of one report behind.
+
+   Opened directly, outside the hub, ?token= still works - useful for testing
+   a deployment before wiring it into the nav.
+   ========================================================================== */
+const TOKEN_KEY = 'mss3d_token';
+
+function sessionToken(){
+  try{ const t = sessionStorage.getItem(TOKEN_KEY); if(t) return t; }catch(e){}
+  return API.token || '';
+}
+
+/* Same-origin messages the hub already listens for. */
+function tellHub(type){
+  try{ if(window.parent && window.parent !== window) window.parent.postMessage({type:type}, location.origin); }
+  catch(e){}
+}
+
+/* ==========================================================================
+   PERFORMANCE BUDGET
+
+   Three things keep this fast on a sheet with tens of thousands of reviews:
+
+   1. WINDOWED FETCH. The first request asks for 30 days of core data and
+      renders the default seven-day view from it. Seven-day reviews follow,
+      then 45 days of core data is prefetched in the background.
+
+   2. LAZY VIEWS. A view renders the first time it is opened, not on load.
+      Opening the dashboard builds one page of charts instead of five, and
+      switching tabs later is instant because each view renders once and is
+      then marked clean.
+
+   3. WINDOWED REVIEW TABLE. Review rows are appended a page at a time rather
+      than written in one enormous innerHTML. Filtering 40,000 reviews stays
+      responsive because only the first PAGE of the result is ever in the DOM.
+
+   Plus a localStorage copy of the core payload, shown immediately on a repeat
+   visit while the network request is still in flight.
+   ========================================================================== */
+const PERF = {
+  reviewPage:   50,       // initial rows and each View More increment
+  lsKey:        'aso_core_30d_v5',
+  lsMaxChars:   3500000,  // refuse to cache a core payload bigger than this
+  staleAfterMs: 6 * 60 * 60 * 1000,
+
+  /* The browser keeps 30 days locally and prefetches 45 days into memory. */
+  firstWindowDays: 30,
+  backgroundWindowDays: 45
+};
+
+/* Payload blocks, populated by connect(). Null until the first load lands. */
+let A = null;             // android
+let I = null;             // ios
+let ADATES = [], IDATES = [];
+let DATE_FILTER='d7', SINGLE_DATE='', RANGE_START='', RANGE_END='';
+let LAST_META = { generatedAt: null, warnings: [] };
+let REVIEWS_READY = { android: false, ios: false };
+
+/* The dashboard's own today, as reported by Apps Script in the spreadsheet's
+   timezone. Anchoring on this rather than the browser clock means a viewer in
+   Karachi and a viewer in London are shown the same reporting week - and that
+   the week rolls over when the sheet's day rolls over, not the laptop's. */
+let SERVER_TODAY = '';
+
+/* True while the payload on screen only covers the opening window. Full
+   history has not arrived yet, so wider filters would under-report. */
+let PARTIAL = true;
+let FULL_RANGE = null;   // {start, end} across all data, even while trimmed
+let CORE_WINDOW = null;  // date coverage currently held in A / I
+let REVIEW_WINDOW = null;
+let REVIEW_LOADING = null;
+
+const COLORS={blue:'#4d9fff',teal:'#00e5c3',pink:'#ec0a9b',line:'#a6b8d4',green:'#00c47a',amber:'#ffb800',coral:'#ff4d6d'};
+const RAMP={coral:'255,77,109',teal:'0,229,195',blue:'77,159,255',amber:'255,184,0',pink:'236,10,155',green:'0,196,122'};
+const charts={};
+const $=id=>document.getElementById(id);
+const cssVar=(n,f)=>{const v=getComputedStyle(document.body).getPropertyValue(n).trim();return v||f};
+const nf=(v,dg)=>(v===null||v===undefined||isNaN(v))?'—':Number(v).toLocaleString('en-US',{minimumFractionDigits:dg,maximumFractionDigits:dg});
+const pc=(v,dg)=>(v===null||v===undefined||isNaN(v))?'—':nf(v,dg===undefined?2:dg)+'%';
+const compact=v=>new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:2}).format(v||0);
+const nn=a=>(a||[]).filter(v=>v!==null&&v!==undefined&&!isNaN(v));
+const sum=a=>nn(a).reduce((s,v)=>s+v,0);
+const mean=a=>{const v=nn(a);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null};
+const minOf=a=>{const v=nn(a);return v.length?Math.min(...v):null};
+const maxOf=a=>{const v=nn(a);return v.length?Math.max(...v):null};
+const chg=(a,b)=>a?(b-a)/a*100:0;
+const arrow=v=>(v>0?'▲ ':'▼ ')+nf(Math.abs(v),Math.abs(v)<0.1?3:1)+'%';
+const esc=s=>String(s===null||s===undefined?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const p2=v=>pc(v,2), p3=v=>pc(v,3);
+const n0=v=>nf(v,0), n1=v=>nf(v,1), n2=v=>nf(v,2), cp=v=>compact(v);
+
+/* "2026-06-27" -> "Jun 27"  (parsed by hand so the label never shifts a day) */
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function shortDate(iso){
+  if(!iso)return '—';
+  const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m?MONTHS[+m[2]-1]+' '+(+m[3]):String(iso);
+}
+
+function localISO(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+/* Date maths in plain yyyy-mm-dd, done in UTC so it can never drift a day.
+   Building a local Date from an ISO string and reading it back is the classic
+   source of off-by-one windows in a dashboard viewed from another timezone. */
+function addDays(iso,n){
+  const p=String(iso).split('-');
+  const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+  d.setUTCDate(d.getUTCDate()+n);
+  return d.toISOString().slice(0,10);
+}
+function dowOf(iso){
+  const p=String(iso).split('-');
+  return new Date(Date.UTC(+p[0],+p[1]-1,+p[2])).getUTCDay();   // 0 = Sunday
+}
+function todayIso(){ return SERVER_TODAY || localISO(new Date()); }
+
+function activeDateRange(){
+  const today=todayIso();
+  if(DATE_FILTER==='single')return {start:SINGLE_DATE,end:SINGLE_DATE};
+  if(DATE_FILTER==='custom')return {start:RANGE_START,end:RANGE_END};
+  if(DATE_FILTER==='today')return {start:today,end:today};
+  /* Rolling windows always end on the most recently completed Sunday, so a
+     reporting period is stable all week and rolls forward every Monday - the
+     same morning the loader brings in the new week.
+
+       viewed Wed 5 Aug 2026  -> anchor Sun 2 Aug -> Last 7 days = 27 Jul - 2 Aug
+       viewed Mon 10 Aug 2026 -> anchor Sun 9 Aug -> Last 7 days = 3 Aug - 9 Aug
+
+     On Sunday itself that day is not yet complete, so the anchor stays on the
+     Sunday before it rather than jumping early. */
+  const dow=dowOf(today);
+  const end=addDays(today,-(dow===0?7:dow));
+  const days={today:1,d7:7,d14:14,d30:30,d45:45}[DATE_FILTER]||7;
+  return {start:addDays(end,-(days-1)),end:end};
+}
+function rollingWindow(days){
+  const today=todayIso(),dow=dowOf(today),end=addDays(today,-(dow===0?7:dow));
+  return {start:addDays(end,-(days-1)),end:end};
+}
+function rangeContains(outer,inner){
+  return !!(outer&&inner&&outer.start&&outer.end&&inner.start&&inner.end&&
+    outer.start<=inner.start&&outer.end>=inner.end);
+}
+function rangeDayCount(r){
+  if(!r||!r.start||!r.end)return 0;
+  return Math.round((new Date(r.end+'T00:00:00Z')-new Date(r.start+'T00:00:00Z'))/86400000)+1;
+}
+function dateAllowed(iso){
+  if(!iso)return false;
+  const r=activeDateRange();return (!r.start||iso>=r.start)&&(!r.end||iso<=r.end);
+}
+function activeDateLabel(){const r=activeDateRange();return r.start===r.end?shortDate(r.start):shortDate(r.start)+' – '+shortDate(r.end)}
+function setDateChip(id){
+  const el=$(id);if(!el)return;
+  const span=el.querySelector('.date-span');
+  if(span)span.textContent=activeDateLabel();else el.textContent=activeDateLabel();
+}
+function applyDateFilter(){
+  ADATES=collectDates(A);IDATES=collectDates(I);
+  /* A new dashboard period gets its own newest review date by default. */
+  RVF.from='';RVF.to='';RVSHOWN=PERF.reviewPage;
+  destroyAll();markDirty();ensureRendered(ACTIVE);prefetchViews();syncDateControls();
+
+  const wanted=activeDateRange();
+  if(!rangeContains(CORE_WINDOW,wanted)&&!CONNECTING)fetchWindowIfNeeded();
+  if(ACTIVE==='reviews')ensureReviewsForRange(wanted);
+}
+
+async function fetchWindowIfNeeded(){
+  const win=activeDateRange();
+  if(!win.start||!win.end)return;
+  try{
+    const j=await fetchPart('core',false,win);
+    applyCore(j);ensureRendered(ACTIVE);prefetchViews();
+  }catch(e){ console.error('window fetch failed',e); }
+}
+function syncDateControls(){
+  document.querySelectorAll('.date-controls').forEach(box=>{
+    box.classList.toggle('single',DATE_FILTER==='single');box.classList.toggle('custom',DATE_FILTER==='custom');
+    box.querySelector('select').value=DATE_FILTER;
+    box.querySelector('.single-date').value=SINGLE_DATE;
+    box.querySelector('.range-start').value=RANGE_START;box.querySelector('.range-end').value=RANGE_END;
+    box.querySelector('.date-span').textContent=activeDateLabel();
+  });
+}
+function initDateFilters(){
+  /* Prefer the server's fullRange. While the opening seven-day window is on
+     screen the payload itself only spans a week, and seeding the pickers from
+     it would silently cap Custom date at seven days. */
+  const dates=[...collectDatesUnfiltered(A),...collectDatesUnfiltered(I)].sort();
+  const min=(FULL_RANGE&&FULL_RANGE.start)||dates[0]||'';
+  const max=(FULL_RANGE&&FULL_RANGE.end)||dates[dates.length-1]||todayIso();
+  if(!SINGLE_DATE)SINGLE_DATE=max;if(!RANGE_START)RANGE_START=min;if(!RANGE_END)RANGE_END=max;
+  document.querySelectorAll('.sh > .date').forEach(el=>{
+    const box=document.createElement('div');box.className='date-controls';box.id=el.id;
+    box.innerHTML='<span class="date-span"></span><select class="date" aria-label="Date filter">'+
+      '<option value="d7">Last 7 days</option><option value="d14">Last 14 days</option><option value="today">Today</option>'+ 
+      '<option value="d30">Last 30 days</option><option value="d45">Last 45 days</option><option value="single">Single date</option><option value="custom">Custom date</option>'+ 
+      '</select><input class="single-date" type="date" aria-label="Date"><input class="range-date range-start" type="date" aria-label="From date">'+
+      '<input class="range-date range-end" type="date" aria-label="To date"><button type="button" class="date-confirm">Apply</button>';
+    el.replaceWith(box);
+    const sel=box.querySelector('select'),single=box.querySelector('.single-date'),from=box.querySelector('.range-start'),to=box.querySelector('.range-end');
+    sel.onchange=()=>{DATE_FILTER=sel.value;syncDateControls();if(DATE_FILTER!=='single'&&DATE_FILTER!=='custom')applyDateFilter()};
+    box.querySelector('button').onclick=()=>{
+      SINGLE_DATE=single.value;RANGE_START=from.value;RANGE_END=to.value;
+      if(DATE_FILTER==='custom'&&RANGE_START>RANGE_END){const t=RANGE_START;RANGE_START=RANGE_END;RANGE_END=t}
+      applyDateFilter();
+    };
+  });
+  syncDateControls();
+}
+
+/* ==========================================================================
+   KPI CARD BUILDERS
+   ========================================================================== */
+function kpiSingle(o){
+  return '<div class="kpi a-'+o.accent+'"><div class="l">'+o.label+'</div>'+
+    '<div class="v'+(o.tone?' '+o.tone:'')+'">'+o.value+'</div>'+
+    (o.sub?'<div class="d mut">'+o.sub+'</div>':'')+(o.note?'<div class="p">'+o.note+'</div>':'')+'</div>';
+}
+/* value with a day-over-day delta underneath */
+function kpiDelta(o){
+  let d='';
+  if(o.prev!==null&&o.prev!==undefined&&o.curr!==null&&o.curr!==undefined&&o.prev!==0){
+    const c=chg(o.prev,o.curr), good=(o.lower? c<=0 : c>=0);
+    d='<div class="d'+(good?'':' neg')+'">'+arrow(c)+' vs prev day</div>';
+  }else if(o.sub){ d='<div class="d mut">'+o.sub+'</div>'; }
+  return '<div class="kpi a-'+o.accent+'"><div class="l">'+o.label+'</div>'+
+    '<div class="v'+(o.tone?' '+o.tone:'')+'">'+o.value+'</div>'+d+
+    (o.note?'<div class="p">'+o.note+'</div>':'')+'</div>';
+}
+/**
+ * Android beside iOS.
+ *
+ * The better of the two is highlighted rather than shown as a percentage gap:
+ * "iOS is 34% better on negative share" invites a comparison the two stores do
+ * not really support, whereas marking the leader answers the question the card
+ * is actually for. `lower` flips which side wins for metrics where less is more.
+ */
+function kpiCompare(o){
+  const a=o.a, b=o.b, f=o.fmt||n2;
+  const has=v=>v!==null&&v!==undefined&&!isNaN(v);
+  let aWin=false,bWin=false;
+  if(has(a)&&has(b)&&a!==b){ const aBetter=o.lower? a<b : a>b; aWin=aBetter; bWin=!aBetter; }
+  return '<div class="kpi a-'+o.accent+'"><div class="l">'+o.label+'</div>'+
+    '<div class="duo">'+
+      '<div class="wcol"><span class="wl"><i style="background:'+COLORS.green+'"></i>Android</span>'+
+        '<span class="wv big'+(aWin?' win':'')+'">'+(has(a)?f(a):'—')+'</span></div>'+
+      '<span class="sep vs">vs</span>'+
+      '<div class="wcol"><span class="wl"><i style="background:'+COLORS.blue+'"></i>iOS</span>'+
+        '<span class="wv big'+(bWin?' win':'')+'">'+(has(b)?f(b):'—')+'</span></div>'+
+    '</div>'+
+    (o.sub?'<div class="d mut">'+o.sub+'</div>':'')+
+    (o.note?'<div class="p">'+o.note+'</div>':'')+'</div>';
+}
+const row=(host,cards)=>{if($(host))$(host).innerHTML=cards.join('')};
+
+/* ==========================================================================
+   CHARTS
+
+   Every builder takes its own `dates` array. The two platforms cover different
+   day ranges - iOS is typed in by hand and usually lags - so nothing here may
+   assume a single shared x-axis.
+   ========================================================================== */
+Chart.defaults.font.family="'DM Mono', monospace";
+Chart.defaults.font.size=9;
+
+/* Chart.js label padding only spaces legend items from each other. This
+   reserves a gap below the legend so it does not crowd the top y-axis tick. */
+const legendAxisGap={
+  id:'legendAxisGap',
+  beforeUpdate(chart){
+    if(!chart.legend||chart.legend._axisGapApplied)return;
+    const fit=chart.legend.fit;
+    chart.legend.fit=function(){ fit.call(this); if(this.options.display!==false)this.height+=14; };
+    chart.legend._axisGapApplied=true;
+  }
+};
+Chart.register(legendAxisGap);
+
+function destroy(id){if(charts[id]){try{charts[id].destroy()}catch(e){}delete charts[id]}}
+function destroyAll(){Object.keys(charts).forEach(destroy)}
+
+function baseX(dates){
+  const grid=cssVar('--border','rgba(255,255,255,.08)'), tick=cssVar('--t2','#a6b8d4');
+  return {maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    animation:{duration:dates.length>60?0:420},
+    plugins:{legend:{position:'top',align:'start',labels:{color:tick,boxWidth:11,boxHeight:11,padding:12}},
+      tooltip:{backgroundColor:cssVar('--card2','#070809'),borderColor:cssVar('--borderB','rgba(255,255,255,.14)'),borderWidth:1,
+        titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:10,cornerRadius:8,
+        callbacks:{title:it=>shortDate(dates[it[0].dataIndex])}}},
+    scales:{x:{ticks:{color:tick,autoSkip:dates.length>18,maxRotation:0},grid:{color:grid}},
+            y:{ticks:{color:tick},grid:{color:grid}}}};
+}
+const labelsOf=dates=>dates.map(shortDate);
+
+function lineX(id,dates,ds,yOpts,extra){
+  destroy(id); if(!$(id))return;
+  const o=baseX(dates); Object.assign(o.scales.y,yOpts||{});
+  if(extra)Object.assign(o.scales,extra);
+  charts[id]=new Chart($(id),{type:'line',data:{labels:labelsOf(dates),datasets:ds},options:o});
+}
+function mixedX(id,dates,ds,yOpts,extra){
+  destroy(id); if(!$(id))return;
+  const o=baseX(dates); Object.assign(o.scales.y,yOpts||{});
+  if(extra)Object.assign(o.scales,extra);
+  charts[id]=new Chart($(id),{type:'bar',data:{labels:labelsOf(dates),datasets:ds},options:o});
+}
+/* horizontal ranked bars — themes, devices, builds, per-source CVR */
+function hbar(id,labels,datasets,fmt,stacked){
+  destroy(id); if(!$(id))return;
+  const grid=cssVar('--border','rgba(255,255,255,.08)'), tick=cssVar('--t2','#a6b8d4');
+  charts[id]=new Chart($(id),{type:'bar',
+    data:{labels,datasets},
+    options:{indexAxis:'y',maintainAspectRatio:false,animation:{duration:420},
+      interaction:stacked?{mode:'index',intersect:false}:undefined,
+      plugins:{legend:{display:datasets.length>1,position:'top',align:'start',labels:{color:tick,boxWidth:11,boxHeight:11,padding:10}},
+        tooltip:{backgroundColor:cssVar('--card2','#070809'),borderColor:cssVar('--borderB','#333'),borderWidth:1,
+          titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:10,cornerRadius:8,
+          callbacks:{label:c=>' '+c.dataset.label+': '+(fmt?fmt(c.raw):nf(c.raw,0))}}},
+      scales:{x:{stacked:!!stacked,beginAtZero:true,ticks:{color:tick,callback:v=>fmt?fmt(v):nf(v,0)},grid:{color:grid}},
+              y:{stacked:!!stacked,ticks:{color:tick},grid:{display:false}}}}});
+}
+/* grouped vertical bars — used by the two Overview comparisons */
+function groupBar(id,labels,datasets,fmt){
+  destroy(id); if(!$(id))return;
+  const grid=cssVar('--border','rgba(255,255,255,.08)'), tick=cssVar('--t2','#a6b8d4');
+  charts[id]=new Chart($(id),{type:'bar',data:{labels,datasets},
+    options:{maintainAspectRatio:false,animation:{duration:labels.length>60?0:420},
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',align:'start',labels:{color:tick,boxWidth:11,boxHeight:11,padding:12}},
+        tooltip:{backgroundColor:cssVar('--card2','#070809'),borderColor:cssVar('--borderB','#333'),borderWidth:1,
+          titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:10,cornerRadius:8,
+          callbacks:{label:c=>' '+c.dataset.label+': '+(fmt?fmt(c.raw):nf(c.raw,0))}}},
+      scales:{x:{ticks:{color:tick,autoSkip:labels.length>18,maxRotation:0},grid:{color:grid}},
+              y:{beginAtZero:true,ticks:{color:tick,callback:v=>fmt?fmt(v):nf(v,0)},grid:{color:grid}}}}});
+}
+/* a flat reference line, e.g. the Play Store threshold or a period average */
+const refLine=(label,value,n)=>({label:label,data:new Array(n).fill(value),borderColor:cssVar('--t3','#7589a8'),
+  borderDash:[5,4],borderWidth:1.4,pointRadius:0,fill:false,tension:0});
+
+/* ==========================================================================
+   TABLES
+   ========================================================================== */
+function table(host,cols,rows,foot,breakAt){
+  if(!$(host))return;
+  const th=cols.map(c=>'<th'+(c.num?' class="num"':'')+(c.w?' style="width:'+c.w+'"':'')+'>'+c.label+'</th>').join('');
+  const tb=rows.map((r,ri)=>'<tr'+(breakAt!==undefined&&ri===breakAt?' class="wk-break"':'')+'>'+r.map((cell,i)=>{
+      const c=cols[i], o=(cell&&typeof cell==='object')?cell:{v:cell};
+      const cls=[c.num?'num':(i===0?'wk':''),c.txt?'txt':'',o.cls||''].filter(Boolean).join(' ');
+      const st=o.bg?' style="'+o.bg+'"':'';
+      const val=o.v;
+      return '<td'+(cls?' class="'+cls+'"':'')+st+'>'+(val===null||val===undefined||val===''?'<span style="color:var(--t3)">—</span>':val)+'</td>';
+    }).join('')+'</tr>').join('');
+  const tf=foot?'<tfoot><tr>'+foot.map((f,i)=>'<td'+(cols[i].num?' class="num"':'')+'>'+(f===null?'':f)+'</td>').join('')+'</tr></tfoot>':'';
+  $(host).innerHTML='<table><thead><tr>'+th+'</tr></thead><tbody>'+(tb||'<tr><td colspan="'+cols.length+'" style="color:var(--t3);text-align:center;padding:18px">no rows</td></tr>')+'</tbody>'+tf+'</table>';
+}
+/* graded cell shading: where this value sits within its own column's range */
+function hm(v,arr,ramp,invert,fmt){
+  if(v===null||v===undefined)return null;
+  const lo=minOf(arr),hi=maxOf(arr);
+  if(lo===null)return {v:fmt?fmt(v):v};
+  let t=(hi===lo)?0.5:(v-lo)/(hi-lo);
+  if(invert)t=1-t;
+  const a=(0.06+t*0.30).toFixed(3);
+  return {v:fmt?fmt(v):v,bg:'background:rgba('+RAMP[ramp]+','+a+')'};
+}
+function statRows(host,pairs){if($(host))$(host).innerHTML=pairs.map(p=>'<div><span>'+p[0]+'</span><span>'+p[1]+'</span></div>').join('');}
+
+/* ==========================================================================
+   SHARED RENDER UTILITIES
+   ========================================================================== */
+
+/* Pulls one field out of a date-keyed array and lines it up with `dates`, so
+   every chart on a page shares one x-axis even though the four tabs behind it
+   cover different days. */
+function align(arr,field,dates){
+  const m={}; (arr||[]).forEach(o=>{ m[o.date]=o[field]; });
+  return dates.map(d=>(m[d]===undefined?null:m[d]));
+}
+function collectDatesUnfiltered(B){
+  if(!B)return [];
+  const s={};
+  const push=arr=>(arr||[]).forEach(o=>{if(o&&o.date)s[o.date]=1});
+  if(B.stability)   push(B.stability.series);
+  if(B.ratings)     push(B.ratings.series);
+  if(B.reviews)     push(B.reviews.volumeByDate);
+  if(B.conversions) push(B.conversions.series);
+  return Object.keys(s).sort();
+}
+function datesInActiveRange(){
+  const r=activeDateRange();if(!r.start||!r.end)return [];
+  const out=[],d=new Date(r.start+'T00:00:00'),end=new Date(r.end+'T00:00:00');
+  while(d<=end){out.push(localISO(d));d.setDate(d.getDate()+1)}
+  return out;
+}
+/* Use the complete calendar window rather than only dates present in a tab.
+   align() will supply null for absent rows, so Chart.js leaves a visible gap
+   while the x-axis still reaches the selected period end. */
+function collectDates(B){return datesInActiveRange()}
+function statusPill(st){
+  const map={healthy:['green','healthy'],warning:['amber','approaching limit'],breach:['coral','over threshold'],unknown:['blue','no data']};
+  const m=map[st]||map.unknown;
+  return '<span class="pill '+m[0]+'">'+m[1]+'</span>';
+}
+function banner(host,warnings){
+  if(!$(host))return;
+  if(!warnings||!warnings.length){$(host).innerHTML='';return}
+  $(host).innerHTML=warnings.map(w=>'<div class="note '+(w.level||'info')+'">'+esc(w.message)+'</div>').join('');
+}
+function rangeBar(host,range,tailNote){
+  if(!$(host))return;
+  const selected=activeDateRange();
+  const chip=shortDate(selected.start)+' – '+shortDate(selected.end);
+  const days=selected.start&&selected.end?Math.round((new Date(selected.end+'T00:00:00')-new Date(selected.start+'T00:00:00'))/86400000)+1:0;
+  $(host).innerHTML='<span class="wk-pill"><i style="background:#00e5c3"></i>Period · <b>'+chip+'</b></span>'+
+    '<span class="wk-arrow">'+days+' day'+(days===1?'':'s')+' · '+tailNote+'</span>';
+}
+
+const inWindow=o=>o&&dateAllowed(o.date||'');
+function scopedStability(raw,ios){
+  const S=Object.assign({},raw||{}),series=(S.series||[]).filter(inWindow),vals=series.map(x=>ios?x.crashes:x.crashRate),latest=series.at(-1)||null;
+  S.series=series;S.latest=latest;S.previous=series.length>1?series.at(-2):null;
+  if(ios){
+    const total=sum(vals),av=mean(vals),sorted=series.slice().sort((a,b)=>(b.crashes||0)-(a.crashes||0));
+    S.totals={crashes:total};S.averages={crashesPerDay:av,crashTrendPct:null};
+    S.peak=sorted[0]||{};S.low=sorted.at(-1)||{};S.daysAboveAverage=av===null?0:vals.filter(v=>v>av*1.25).length;
+    S.ma7=series.map((x,i)=>({date:x.date,ma:mean(vals.slice(Math.max(0,i-6),i+1))}));
+  }else{
+    const crash=series.map(x=>x.crashRate),anr=series.map(x=>x.anrRate),th=S.thresholds||{crashRatePct:1.09,anrRatePct:.47};
+    S.averages={crashRate:mean(crash),anrRate:mean(anr)};
+    S.peak={crashRate:maxOf(crash),anrRate:maxOf(anr)};
+    S.daysOverThreshold={crash:crash.filter(v=>v>th.crashRatePct).length,anr:anr.filter(v=>v>th.anrRatePct).length};
+    const crashAvg=mean(crash),anrAvg=mean(anr);
+    S.status={crash:crashAvg===null?'unknown':(crashAvg>th.crashRatePct?'breach':(crashAvg>th.crashRatePct*.75?'warning':'healthy')),
+      anr:anrAvg===null?'unknown':(anrAvg>th.anrRatePct?'breach':(anrAvg>th.anrRatePct*.75?'warning':'healthy'))};
+  }
+  return S;
+}
+function scopedRatings(raw){
+  const R=Object.assign({},raw||{}),series=(R.series||[]).filter(inWindow),values=series.map(x=>x.rating);
+  R.series=series;R.current=series.at(-1)||null;R.previous=series.length>1?series.at(-2):null;
+  R.storedMean=mean(values);R.storedRows=series.length;R.perDay=(R.perDay||[]).filter(inWindow);
+  R.changePts=series.length>1?series.at(-1).rating-series[0].rating:null;
+  return R;
+}
+function scopedReviews(raw){
+  const RV=Object.assign({},raw||{}),volume=(RV.volumeByDate||[]).filter(inWindow),all=(RV.all||[]).filter(inWindow);
+  RV.volumeByDate=volume;
+  const count=sum(volume.map(x=>x.count)),weighted=sum(volume.map(x=>(x.count||0)*(x.avgRating||0)));
+  RV.counts=Object.assign({},RV.counts||{},{withText:count});RV.averageRatingWithText=count?weighted/count:null;
+  if(all.length||RV.allOmitted===false){
+    const dist={},labels={};(RV.themes||[]).forEach(t=>labels[t.key]=t.label);
+    all.forEach(r=>{const star=Math.round(r.rating||0);if(star)dist[star]=(dist[star]||0)+1});
+    const pos=all.filter(r=>r.rating>=4),neg=all.filter(r=>r.rating<=2),themeRows=(rows)=>{
+      const m={};rows.forEach(r=>{const k=r.primary||'other';m[k]=(m[k]||0)+1});
+      return Object.keys(m).map(k=>({key:k,label:labels[k]||k,count:m[k],sharePct:rows.length?m[k]/rows.length*100:0,mixed:0})).sort((a,b)=>b.count-a.count);
+    };
+    RV.all=all;RV.distribution=dist;RV.positiveCount=pos.length;RV.negativeCount=neg.length;
+    RV.positiveSharePct=all.length?pos.length/all.length*100:null;RV.negativeSharePct=all.length?neg.length/all.length*100:null;
+    RV.themes=themeRows(all);RV.positiveThemes=themeRows(pos);RV.negativeThemes=themeRows(neg);
+    const grouped=field=>{const m={};all.forEach(r=>{const k=r[field]||'(unknown)';m[k]=(m[k]||0)+1});return Object.keys(m).map(k=>({key:k,count:m[k]})).sort((a,b)=>b.count-a.count)};
+    RV.byDevice=grouped('device');RV.byVersion=grouped('version');
+  }else{
+    /* The core response deliberately omits individual reviews. Do not show
+       full-period sentiment/star aggregates while the filtered rows are still
+       downloading; phase two will populate and rerender these cards. */
+    RV.distribution={};RV.positiveCount=null;RV.negativeCount=null;
+    RV.positiveSharePct=null;RV.negativeSharePct=null;
+    RV.themes=[];RV.positiveThemes=[];RV.negativeThemes=[];
+  }
+  return RV;
+}
+function scopedConversions(raw,ios){
+  const C=Object.assign({},raw||{}),rows=(C.rows||[]).filter(inWindow),by={};
+  rows.forEach(r=>{const k=r.source||'(unattributed)',g=by[k]||(by[k]=ios?{source:k,impressions:0,pageViews:0,converters:0}:{source:k,visitors:0,acquisition:0});if(ios){g.impressions+=r.impressions||0;g.pageViews+=r.pageViews||0;g.converters+=r.converters||0}else{g.visitors+=r.visitors||0;g.acquisition+=r.acquisition||0}});
+  const sources=Object.values(by);
+  sources.forEach(g=>{if(ios){g.conversionRate=g.impressions?g.converters/g.impressions*100:null;g.viewRate=g.impressions?g.pageViews/g.impressions*100:null;g.pageRate=g.pageViews?g.converters/g.pageViews*100:null}else g.conversionRate=g.visitors?g.acquisition/g.visitors*100:null});
+  C.rows=rows;C.series=(C.series||[]).filter(inWindow);C.bySource=sources.sort((a,b)=>(ios?b.impressions-a.impressions:b.visitors-a.visitors));
+  if(ios){const impressions=sum(rows.map(x=>x.impressions)),pageViews=sum(rows.map(x=>x.pageViews)),converters=sum(rows.map(x=>x.converters));C.totals={impressions,pageViews,converters,conversionRate:impressions?converters/impressions*100:null,viewRate:impressions?pageViews/impressions*100:null,pageRate:pageViews?converters/pageViews*100:null}}
+  else{const visitors=sum(rows.map(x=>x.visitors)),acquisition=sum(rows.map(x=>x.acquisition));C.totals={visitors,acquisition,conversionRate:visitors?acquisition/visitors*100:null};C.recent=C.totals}
+  C.bestSource=sources.filter(x=>(ios?x.impressions:x.visitors)>0).sort((a,b)=>(b.conversionRate||0)-(a.conversionRate||0))[0]||null;
+  return C;
+}
+
+/* ==========================================================================
+   ANDROID  ·  LIVE RENDER
+   ========================================================================== */
+let CVSRC='';
+
+function renderAndroid(){
+  if(!A)return;
+  const S=scopedStability(A.stability,false), R=scopedRatings(A.ratings), RV=scopedReviews(A.reviews), C=scopedConversions(A.conversions,false);
+  ADATES=collectDates(A);
+  const D=ADATES;
+
+  const range=A.dateRange||{};
+  setDateChip('anDateChip');
+  rangeBar('anRangeBar',range,'daily granularity · live from Google Sheets');
+  banner('anWarnings',(LAST_META.warnings||[]).filter(w=>!/^iOS |IOS_/.test(w.message||'')));
+
+  /* ---------------- STABILITY ---------------- */
+  const crash=align(S.series,'crashRate',D), anr=align(S.series,'anrRate',D);
+  const th=(S.thresholds||{crashRatePct:1.09,anrRatePct:0.47});
+  const avg=S.averages||{}, peak=S.peak||{}, over=S.daysOverThreshold||{};
+
+  row('anRow2',[
+    kpiSingle({label:'Average Crash Rate',accent:'coral',value:p2(avg.crashRate),
+      sub:activeDateLabel(),note:'daily mean across the selected period · '+statusPill((S.status||{}).crash)}),
+    kpiSingle({label:'Average ANR Rate',accent:'amber',value:p2(avg.anrRate),
+      sub:activeDateLabel(),note:'daily mean across the selected period · '+statusPill((S.status||{}).anr)}),
+    kpiSingle({label:'Peak Crash Rate',accent:'coral',value:p2(peak.crashRate),
+      sub:D[crash.indexOf(peak.crashRate)]?shortDate(D[crash.indexOf(peak.crashRate)]):'—',
+      note:over.crash?over.crash+' day(s) above 1.09%':'never above threshold'}),
+    kpiSingle({label:'Peak ANR Rate',accent:'amber',value:p2(peak.anrRate),
+      sub:D[anr.indexOf(peak.anrRate)]?shortDate(D[anr.indexOf(peak.anrRate)]):'—',
+      note:over.anr?over.anr+' day(s) above 0.47%':'never above threshold'})]);
+
+  lineX('anCrash',D,[
+    {label:'Daily crash %',data:crash,borderColor:COLORS.coral,backgroundColor:'rgba(255,77,109,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
+    refLine('Threshold 1.09%',th.crashRatePct,D.length)],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,2)+'%'}});
+  lineX('anAnr',D,[
+    {label:'Daily ANR %',data:anr,borderColor:COLORS.amber,backgroundColor:'rgba(255,184,0,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
+    refLine('Threshold 0.47%',th.anrRatePct,D.length)],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,2)+'%'}});
+  lineX('anCrashAnr',D,[
+    {label:'Crash %',data:crash,borderColor:COLORS.coral,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
+    {label:'ANR %',data:anr,borderColor:COLORS.amber,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false}],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,2)+'%'}});
+
+  /* one stacked bar per day: crash sits under ANR so the full height reads as
+     total instability for that day */
+  mixedX('anStabilityDay',D,[
+    {type:'bar',label:'Crash %',data:crash,backgroundColor:'rgba(255,77,109,.85)',borderRadius:{topLeft:0,topRight:0,bottomLeft:4,bottomRight:4},stack:'st'},
+    {type:'bar',label:'ANR %',data:anr,backgroundColor:'rgba(255,184,0,.85)',borderRadius:{topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},stack:'st'}],
+    {stacked:true,beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,2)+'%'}},
+    {x:{stacked:true,ticks:{color:cssVar('--t2','#a6b8d4'),autoSkip:D.length>18,maxRotation:0},
+        grid:{color:cssVar('--border','rgba(255,255,255,.08)')}}});
+
+  table('tblAnStability',
+    [{label:'Date'},{label:'Crash %',num:true},{label:'ANR %',num:true},
+     {label:'% of crash limit',num:true},{label:'% of ANR limit',num:true}],
+    D.map((d,i)=>{
+      if(crash[i]===null&&anr[i]===null)return null;
+      return [shortDate(d),
+        hm(crash[i],crash,'coral',false,p2),
+        hm(anr[i],anr,'amber',false,p2),
+        crash[i]===null?null:{v:nf(crash[i]/th.crashRatePct*100,0)+'%',cls:crash[i]>th.crashRatePct?'dn':'up'},
+        anr[i]===null?null:{v:nf(anr[i]/th.anrRatePct*100,0)+'%',cls:anr[i]>th.anrRatePct?'dn':'up'}];
+    }).filter(Boolean),
+    ['Average',p2(avg.crashRate),p2(avg.anrRate),'','']);
+
+  /* ---------------- RATINGS ---------------- */
+  const vers=(R.byVersion||[]).filter(v=>v.days>0);
+  const cur=R.current||null;
+  const dist0=(RV.distribution||{}), tw=(RV.counts||{}).withText||0;
+  const share=k=>tw?(dist0[k]||0)/tw*100:null;
+  const daysCovered=D.length||1;
+  row('anRow3',[
+    kpiSingle({label:'Average Rating',accent:'teal',value:n2(R.storedMean),
+      sub:R.storedRows+' rows in '+activeDateLabel(),
+      note:'mean of rating rows inside the selected period'}),
+    kpiSingle({label:'Ratings per Day',accent:'blue',value:n0(tw/daysCovered),
+      sub:n0(tw)+' over '+daysCovered+' day'+(daysCovered===1?'':'s'),note:'written reviews per day'}),
+    kpiSingle({label:'5★ Share',accent:'green',value:pc(share(5),2),
+      sub:n0(dist0[5]||0)+' of '+n0(tw)+' reviews',note:'share of written reviews'}),
+    kpiSingle({label:'1★ Share',accent:'coral',value:pc(share(1),2),
+      sub:n0(dist0[1]||0)+' of '+n0(tw)+' reviews',note:'share of written reviews'})]);
+
+  /* ---------------- REVIEWS ---------------- */
+  const cnt=RV.counts||{}, themes=RV.themes||[], negT=RV.negativeThemes||[], posT=RV.positiveThemes||[];
+  const volume=align(RV.volumeByDate,'count',D), volAvg=align(RV.volumeByDate,'avgRating',D);
+
+  row('anRow4',[
+    kpiSingle({label:'Average Rating · Written',accent:'teal',value:n2(RV.averageRatingWithText),
+      sub:'across '+n0(cnt.withText)+' written reviews',note:'across written reviews only'}),
+    kpiSingle({label:'Positive Share',accent:'green',value:pc(RV.positiveSharePct,1),
+      sub:n0(RV.positiveCount)+' reviews at 4★–5★',note:'higher is better'}),
+    kpiSingle({label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
+      sub:n0(RV.negativeCount)+' reviews at 1★–2★',note:'lower is better'}),
+    kpiSingle({label:'Top Complaint',accent:'amber',value:negT.length?esc(negT[0].label):'—',
+      sub:negT.length?(n0(negT[0].count)+' of '+n0(RV.negativeCount)+' negative'):'—',
+      note:'most common 1★–2★ theme'})]);
+
+  mixedX('anReviewVol',D,[
+    {type:'bar',label:'Reviews',data:volume,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
+    {type:'line',label:'Avg rating',data:volAvg,borderColor:COLORS.teal,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false,yAxisID:'y2',order:1}],
+    {beginAtZero:true,title:{display:true,text:'Reviews',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,0)}},
+    {y2:{position:'right',suggestedMin:1,suggestedMax:5,grid:{drawOnChartArea:false},
+      title:{display:true,text:'Avg rating',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,1)}}});
+
+  drawThemes('anThemes','tblAnThemes',themes,negT,posT);
+
+  const devs=(RV.byDevice||[]).slice(0,18);
+  hbar('anDevice',devs.map(d=>d.key),
+    [{label:'Reviews',data:devs.map(d=>d.count),backgroundColor:'rgba(0,229,195,.65)',borderRadius:4}],n0);
+
+  const perDay=R.perDay||[];
+  const pdMean=align(perDay,'mean',D), pdVers=align(perDay,'versions',D);
+  table('tblAnRatings',
+    [{label:'Date'},{label:'Overall Store Rating',num:true},{label:'Active Versions',num:true},
+     {label:'Written Reviews',num:true},{label:'Average Review Rating',num:true}],
+    D.map((d,i)=>{
+      if(pdMean[i]===null&&volume[i]===null)return null;
+      return [shortDate(d),
+        hm(pdMean[i],pdMean,'teal',false,n2),
+        pdVers[i]===null?null:n0(pdVers[i]),
+        hm(volume[i],volume,'blue',false,n0),
+        hm(volAvg[i],volAvg,'teal',false,n2)];
+    }).filter(Boolean),
+    ['Period Summary',n2(R.storedMean),'',n0(sum(volume)),n2(RV.averageRatingWithText)]);
+
+  /* ---------------- CONVERSION ---------------- */
+  const tot=C.totals||{}, rec=C.recent||{}, best=C.bestSource;
+
+  row('anRow5',[
+    kpiDelta({label:'Conversion Rate',accent:'pink',value:pc(rec.conversionRate,2),
+      curr:rec.conversionRate,prev:null,sub:'period total',
+      note:'acquisitions ÷ visitors, re-divided from totals'}),
+    kpiSingle({label:'Store Visitors',accent:'blue',value:cp(tot.visitors),
+      sub:n0(tot.visitors)+' total',note:'across all traffic sources'}),
+    kpiSingle({label:'Acquisitions',accent:'green',value:cp(tot.acquisition),
+      sub:n0(tot.acquisition)+' total',note:'store listing acquisitions'}),
+    kpiSingle({label:'Best Converting Source',accent:'teal',
+      value:best?('<span style="font-size:19px">'+esc(best.source)+'</span>'):'—',
+      sub:best?(pc(best.conversionRate,2)+' CVR · '+cp(best.visitors)+' visitors → '+cp(best.acquisition)+' installs'):'—',
+      note:'highest conversion rate of any traffic source'})]);
+
+  buildSourceFilter(C);
+  drawConversionCharts(C);
+
+  const srcs=(C.bySource||[]).slice(0,12);
+  hbar('anCvrSource',srcs.map(s=>s.source+'  ('+compact(s.visitors)+')'),
+    [{label:'Conversion rate',data:srcs.map(s=>s.conversionRate),
+      /* the source named on the KPI card is highlighted so the chart and the
+         card visibly agree on which one is best */
+      backgroundColor:srcs.map(s=>(best&&s.source===best.source)?'rgba(0,229,195,.85)':'rgba(236,10,155,.7)'),
+      borderRadius:4}],
+    v=>nf(v,2)+'%');
+
+  table('tblAnSource',
+    [{label:'Traffic Source'},{label:'Visitors',num:true},{label:'Acquisitions',num:true},{label:'CVR',num:true},{label:'Share of traffic',num:true}],
+    (C.bySource||[]).map(s=>[esc(s.source),
+      hm(s.visitors,(C.bySource||[]).map(x=>x.visitors),'blue',false,n0),
+      hm(s.acquisition,(C.bySource||[]).map(x=>x.acquisition),'green',false,n0),
+      hm(s.conversionRate,(C.bySource||[]).map(x=>x.conversionRate),'pink',false,v=>pc(v,2)),
+      pc(tot.visitors?s.visitors/tot.visitors*100:0,1)]),
+    ['Total',n0(tot.visitors),n0(tot.acquisition),pc(tot.conversionRate,2),'100.0%']);
+
+  const crows=C.rows||[];
+  table('tblAnConv',
+    [{label:'Date'},{label:'Traffic Source'},{label:'Visitors',num:true},{label:'Acquisitions',num:true},{label:'CVR',num:true}],
+    crows.map(r=>[shortDate(r.date),esc(r.source),
+      hm(r.visitors,crows.map(x=>x.visitors),'blue',false,n0),
+      hm(r.acquisition,crows.map(x=>x.acquisition),'green',false,n0),
+      hm(r.conversionRate,crows.map(x=>x.conversionRate),'pink',false,v=>pc(v,2))]));
+}
+
+/* Shared by both platforms: the stacked theme chart plus its detail table. */
+function drawThemes(chartId,tableId,themes,negT,posT){
+  const negMap={}; (negT||[]).forEach(t=>negMap[t.key]=t.count);
+  const posMap={}; (posT||[]).forEach(t=>posMap[t.key]=t.count);
+  /* neutral = whatever is left once positive and negative are accounted for */
+  const midOf=t=>Math.max(0,(t.count||0)-(posMap[t.key]||0)-(negMap[t.key]||0));
+
+  hbar(chartId,themes.map(t=>t.label),[
+    {label:'4★–5★',data:themes.map(t=>posMap[t.key]||0),backgroundColor:'rgba(0,196,122,.75)',borderRadius:4,stack:'s'},
+    {label:'3★',data:themes.map(midOf),backgroundColor:'rgba(255,184,0,.7)',borderRadius:4,stack:'s'},
+    {label:'1★–2★',data:themes.map(t=>negMap[t.key]||0),backgroundColor:'rgba(255,77,109,.8)',borderRadius:4,stack:'s'}],n0,true);
+
+  table(tableId,
+    [{label:'Theme'},{label:'Reviews',num:true},{label:'Share',num:true},{label:'Mixed',num:true},
+     {label:'4★–5★',num:true},{label:'1★–2★',num:true},{label:'Sentiment',num:true}],
+    themes.map(t=>{
+      const pos=posMap[t.key]||0, neg=negMap[t.key]||0;
+      const net=t.count?(pos-neg)/t.count*100:null;
+      return ['<b>'+esc(t.label)+'</b>',
+        hm(t.count,themes.map(x=>x.count),'blue',false,n0),
+        pc(t.sharePct,1),
+        t.mixed?{v:n0(t.mixed),cls:'flat'}:null,
+        hm(pos,themes.map(x=>posMap[x.key]||0),'green',false,n0),
+        hm(neg,themes.map(x=>negMap[x.key]||0),'coral',false,n0),
+        net===null?null:{v:(net>0?'+':'')+nf(net,0)+'%',cls:net>15?'up':(net<-15?'dn':'flat')}];
+    }),
+    ['All themes',n0(sum(themes.map(t=>t.count))),'100.0%',
+     n0(sum(themes.map(t=>t.mixed||0))),
+     n0(sum(themes.map(t=>posMap[t.key]||0))),
+     n0(sum(themes.map(t=>negMap[t.key]||0))),'']);
+}
+
+function buildSourceFilter(C){
+  const el=$('cvSource'); if(!el)return;
+  const srcs=(C.bySource||[]).map(x=>x.source);
+  if(srcs.indexOf(CVSRC)===-1)CVSRC='';
+  el.innerHTML='<option value="">All sources</option>'+
+    srcs.map(x=>'<option value="'+esc(x)+'"'+(x===CVSRC?' selected':'')+'>'+esc(x)+'</option>').join('');
+  el.onchange=()=>{CVSRC=el.value;drawConversionCharts(C)};
+}
+function drawConversionCharts(C){
+  const D=ADATES;
+  const rows=(C.rows||[]).filter(r=>!CVSRC||r.source===CVSRC);
+
+  /* With a source picked each date has one row, so its stored rate is used
+     as-is. Under "All sources" a day spans several rows, and a rate covering
+     the whole day only exists if it is re-divided from that day's totals. */
+  const byDate={};
+  rows.forEach(r=>{
+    if(!r.date)return;
+    if(!byDate[r.date])byDate[r.date]={v:0,a:0,n:0,stored:null};
+    byDate[r.date].v+=r.visitors||0;
+    byDate[r.date].a+=r.acquisition||0;
+    byDate[r.date].n++;
+    byDate[r.date].stored=r.conversionRate;
+  });
+  const vis=D.map(d=>byDate[d]?byDate[d].v:null);
+  const acq=D.map(d=>byDate[d]?byDate[d].a:null);
+  const cvr=D.map(d=>{
+    const g=byDate[d]; if(!g)return null;
+    if(g.n===1&&g.stored!==null&&g.stored!==undefined)return g.stored;
+    return g.v?Math.round(g.a/g.v*10000)/100:null;
+  });
+
+  const label=CVSRC||'all sources';
+  if($('cvTitleA'))$('cvTitleA').textContent=label;
+  if($('cvTitleB'))$('cvTitleB').textContent='bars are visitors, line is acquisitions · '+label;
+  if($('cvNote')){
+    const tv=sum(vis), ta=sum(acq);
+    $('cvNote').innerHTML='<b>'+compact(tv)+'</b> visitors · <b>'+compact(ta)+'</b> acquisitions · <b>'+
+      (tv?nf(ta/tv*100,2):'—')+'%</b> CVR';
+  }
+
+  lineX('anCvr',D,[
+    {label:'Conversion rate',data:cvr,borderColor:COLORS.pink,backgroundColor:'rgba(236,10,155,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false}],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,2)+'%'}});
+
+  mixedX('anTraffic',D,[
+    {type:'bar',label:'Visitors',data:vis,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
+    {type:'line',label:'Acquisitions',data:acq,borderColor:COLORS.green,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false,yAxisID:'y2',order:1}],
+    {beginAtZero:true,title:{display:true,text:'Visitors',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}},
+    {y2:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},
+      title:{display:true,text:'Acquisitions',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}}});
+}
+
+/* ==========================================================================
+   iOS  ·  LIVE RENDER
+
+   Section for section, the same page as Android. Where App Store Connect gives
+   a different measurement, the closest honest equivalent is shown and labelled
+   as what it is rather than dressed up to match:
+
+     Android crash RATE   ->  iOS crash COUNT. IOS_Stability has no session
+                              column, so a rate cannot be derived and none is
+                              invented. The comparison is against the app's own
+                              period average instead of a Play Store threshold,
+                              because Apple publishes no equivalent limit.
+
+     Android version      ->  iOS Build ID.
+     Android device       ->  nothing. App Store reviews carry no device.
+     Android visitors     ->  iOS impressions, with product page views as the
+                              middle step of the funnel that Android does not
+                              report at all.
+   ========================================================================== */
+let IOSRC='';
+
+function renderIos(){
+  if(!I)return;
+  const S=scopedStability(I.stability,true), R=scopedRatings(I.ratings), RV=scopedReviews(I.reviews), C=scopedConversions(I.conversions,true);
+  IDATES=collectDates(I);
+  const D=IDATES;
+
+  const range=I.dateRange||{};
+  setDateChip('ioDateChip');
+  rangeBar('ioRangeBar',range,'daily granularity · live from Google Sheets');
+  banner('ioWarnings',(LAST_META.warnings||[]).filter(w=>/^iOS |IOS_/.test(w.message||'')));
+
+  /* ---------------- STABILITY ---------------- */
+  const crashes=align(S.series,'crashes',D);
+  const ma=align(S.ma7,'ma',D);
+  const avg=S.averages||{}, peak=S.peak||{}, low=S.low||{}, tot=S.totals||{};
+  const avgPerDay=avg.crashesPerDay;
+
+  row('ioRow2',[
+    kpiSingle({label:'Average Crashes per Day',accent:'coral',value:n1(avgPerDay),
+      sub:activeDateLabel(),note:'daily mean across the selected period'}),
+    kpiSingle({label:'Total Crashes',accent:'blue',value:cp(tot.crashes),
+      sub:n0(tot.crashes)+' across '+D.length+' selected days',note:'sum across the selected period'}),
+    kpiSingle({label:'Peak Daily Crashes',accent:'coral',value:n0(peak.crashes),
+      sub:peak.date?shortDate(peak.date):'—',
+      note:(S.daysAboveAverage||0)+' day(s) more than 25% above average'}),
+    kpiSingle({label:'Days With Crash Data',accent:'amber',value:n0(S.series.length),
+      sub:n0(S.series.length)+' of '+D.length+' selected days',
+      note:low.date?'lowest day '+n0(low.crashes)+' on '+shortDate(low.date):'no rows in selected period'})]);
+
+  lineX('ioCrash',D,[
+    {label:'Crashes',data:crashes,borderColor:COLORS.coral,backgroundColor:'rgba(255,77,109,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
+    refLine('Period average',avgPerDay,D.length)],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}});
+
+  lineX('ioMa',D,[
+    {label:'7-day average',data:ma,borderColor:COLORS.amber,backgroundColor:'rgba(255,184,0,.10)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:false}],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}});
+
+  lineX('ioCrashMa',D,[
+    {label:'Crashes',data:crashes,borderColor:COLORS.coral,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
+    {label:'7-day average',data:ma,borderColor:COLORS.amber,borderDash:[5,4],tension:.3,pointRadius:0,borderWidth:2,spanGaps:false}],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}});
+
+  /* Bars carry a colour cue rather than a second series: a day is coral once it
+     sits a quarter above the period average, which is the same "is this day a
+     problem" question the Android stacked chart answers with height. */
+  mixedX('ioStabilityDay',D,[
+    {type:'bar',label:'Crashes',data:crashes,borderRadius:4,
+      backgroundColor:crashes.map(v=>(v!==null&&avgPerDay&&v>avgPerDay*1.25)?'rgba(255,77,109,.85)':'rgba(77,159,255,.6)')}],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}});
+
+  table('tblIoStability',
+    [{label:'Date'},{label:'Crashes',num:true},{label:'7-day avg',num:true},
+     {label:'vs average',num:true},{label:'Share of period',num:true}],
+    D.map((d,i)=>{
+      if(crashes[i]===null)return null;
+      const rel=avgPerDay?crashes[i]/avgPerDay*100:null;
+      return [shortDate(d),
+        hm(crashes[i],crashes,'coral',false,n0),
+        ma[i]===null?null:n0(ma[i]),
+        rel===null?null:{v:nf(rel,0)+'%',cls:rel>125?'dn':(rel<80?'up':'flat')},
+        tot.crashes?pc(crashes[i]/tot.crashes*100,2):null];
+    }).filter(Boolean),
+    ['Average',n0(avgPerDay),'','',n0(tot.crashes)+' total']);
+
+  /* ---------------- RATINGS ---------------- */
+  const ratings=align(R.series,'rating',D);
+  const rAvg=R.averages||{};
+  const dist0=(RV.distribution||{}), tw=(RV.counts||{}).withText||0;
+  const share=k=>tw?(dist0[k]||0)/tw*100:null;
+  const daysCovered=D.length||1;
+
+  row('ioRow3',[
+    kpiSingle({label:'Average Store Rating',accent:'teal',value:n2(R.storedMean),
+      sub:activeDateLabel(),note:'daily mean across the selected period'}),
+    kpiSingle({label:'Rating Days Reported',accent:'blue',value:n0(R.storedRows),
+      sub:R.storedRows+' stored day'+(R.storedRows===1?'':'s')+
+        ((R.changePts===null||R.changePts===undefined)?'':' · '+(R.changePts>0?'+':'')+n2(R.changePts)+' over the period'),
+      note:'days with a rating row inside the selected period'}),
+    kpiSingle({label:'5★ Share',accent:'green',value:pc(share(5),2),
+      sub:n0(dist0[5]||0)+' of '+n0(tw)+' reviews',note:'share of written reviews'}),
+    kpiSingle({label:'1★ Share',accent:'coral',value:pc(share(1),2),
+      sub:n0(dist0[1]||0)+' of '+n0(tw)+' reviews',note:'share of written reviews'})]);
+
+  lineX('ioRating',D,[
+    {label:'Store rating',data:ratings,borderColor:COLORS.teal,backgroundColor:'rgba(0,229,195,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false}],
+    /* Not zero-based on purpose. Store ratings live in a narrow band near the
+       top of the scale, and a 0-5 axis flattens every real movement into a
+       straight line. */
+    {suggestedMin:Math.max(0,(minOf(ratings)||4)-0.25),suggestedMax:Math.min(5,(maxOf(ratings)||5)+0.15),
+     ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,2)}});
+
+  /* ---------------- REVIEWS ---------------- */
+  const cnt=RV.counts||{}, themes=RV.themes||[], negT=RV.negativeThemes||[], posT=RV.positiveThemes||[];
+  const volume=align(RV.volumeByDate,'count',D), volAvg=align(RV.volumeByDate,'avgRating',D);
+
+  row('ioRow4',[
+    kpiSingle({label:'Average Rating · Written',accent:'teal',value:n2(RV.averageRatingWithText),
+      sub:'across '+n0(cnt.withText)+' written reviews',note:'across written reviews only'}),
+    kpiSingle({label:'Positive Share',accent:'green',value:pc(RV.positiveSharePct,1),
+      sub:n0(RV.positiveCount)+' reviews at 4★–5★',note:'higher is better'}),
+    kpiSingle({label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
+      sub:n0(RV.negativeCount)+' reviews at 1★–2★',note:'lower is better'}),
+    kpiSingle({label:'Top Complaint',accent:'amber',value:negT.length?esc(negT[0].label):'—',
+      sub:negT.length?(n0(negT[0].count)+' of '+n0(RV.negativeCount)+' negative'):'—',
+      note:'most common 1★–2★ theme'})]);
+
+  mixedX('ioReviewVol',D,[
+    {type:'bar',label:'Reviews',data:volume,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
+    {type:'line',label:'Avg rating',data:volAvg,borderColor:COLORS.teal,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false,yAxisID:'y2',order:1}],
+    {beginAtZero:true,title:{display:true,text:'Reviews',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,0)}},
+    {y2:{position:'right',suggestedMin:1,suggestedMax:5,grid:{drawOnChartArea:false},
+      title:{display:true,text:'Avg rating',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,1)}}});
+
+  drawThemes('ioThemes','tblIoThemes',themes,negT,posT);
+
+  const builds=(RV.byVersion||[]).slice(0,18);
+  hbar('ioBuild',builds.map(b=>b.key),
+    [{label:'Reviews',data:builds.map(b=>b.count),backgroundColor:'rgba(0,229,195,.65)',borderRadius:4}],n0);
+
+  table('tblIoRatings',
+    [{label:'Date'},{label:'Store Rating',num:true},{label:'Written Reviews',num:true},
+     {label:'Average Review Rating',num:true},{label:'Crashes',num:true}],
+    D.map((d,i)=>{
+      if(ratings[i]===null&&volume[i]===null&&crashes[i]===null)return null;
+      return [shortDate(d),
+        hm(ratings[i],ratings,'teal',false,n2),
+        hm(volume[i],volume,'blue',false,n0),
+        hm(volAvg[i],volAvg,'teal',false,n2),
+        hm(crashes[i],crashes,'coral',false,n0)];
+    }).filter(Boolean),
+    ['Period Summary',n2(R.storedMean),n0(sum(volume)),n2(RV.averageRatingWithText),n0(tot.crashes)]);
+
+  /* ---------------- CONVERSION ---------------- */
+  const cTot=C.totals||{}, rec=C.recent||{}, best=C.bestSource;
+
+  row('ioRow5',[
+    kpiDelta({label:'Conversion Rate',accent:'pink',value:pc(cTot.conversionRate,2),
+      curr:cTot.conversionRate,prev:null,sub:'period total · converters ÷ impressions',
+      note:'App Store Connect definition, re-divided from totals'}),
+    kpiSingle({label:'Impressions',accent:'blue',value:cp(cTot.impressions),
+      sub:n0(cTot.impressions)+' total',
+      note:pc(cTot.viewRate,2)+' went on to open the listing'}),
+    kpiSingle({label:'Product Page Views',accent:'amber',value:cp(cTot.pageViews),
+      sub:n0(cTot.pageViews)+' total',
+      note:pc(cTot.pageRate,2)+' of those installed'}),
+    kpiSingle({label:'Best Converting Source',accent:'teal',
+      value:best?('<span style="font-size:19px">'+esc(best.source)+'</span>'):'—',
+      sub:best?(pc(best.conversionRate,2)+' CVR · '+cp(best.impressions)+' impressions → '+cp(best.converters)+' installs'):'—',
+      note:'highest conversion rate of any traffic source'})]);
+
+  buildIosSourceFilter(C);
+  drawIosConversionCharts(C);
+
+  const srcs=(C.bySource||[]).slice(0,12);
+  hbar('ioCvrSource',srcs.map(s=>s.source+'  ('+compact(s.impressions)+')'),
+    [{label:'Conversion rate',data:srcs.map(s=>s.conversionRate),
+      backgroundColor:srcs.map(s=>(best&&s.source===best.source)?'rgba(0,229,195,.85)':'rgba(236,10,155,.7)'),
+      borderRadius:4}],
+    v=>nf(v,2)+'%');
+
+  const all=C.bySource||[];
+  table('tblIoSource',
+    [{label:'Traffic Source'},{label:'Impressions',num:true},{label:'Page Views',num:true},
+     {label:'Converters',num:true},{label:'CVR',num:true},{label:'Page → Install',num:true},
+     {label:'Share of impressions',num:true}],
+    all.map(s=>[esc(s.source),
+      hm(s.impressions,all.map(x=>x.impressions),'blue',false,n0),
+      hm(s.pageViews,all.map(x=>x.pageViews),'amber',false,n0),
+      hm(s.converters,all.map(x=>x.converters),'green',false,n0),
+      hm(s.conversionRate,all.map(x=>x.conversionRate),'pink',false,v=>pc(v,2)),
+      hm(s.pageRate,all.map(x=>x.pageRate),'teal',false,v=>pc(v,2)),
+      pc(cTot.impressions?s.impressions/cTot.impressions*100:0,1)]),
+    ['Total',n0(cTot.impressions),n0(cTot.pageViews),n0(cTot.converters),
+     pc(cTot.conversionRate,2),pc(cTot.pageRate,2),'100.0%']);
+
+  /* The funnel chart is the one thing iOS has that Android does not: App Store
+     Connect reports the middle step, so impressions, page views and converters
+     can be read side by side and the leaky stage identified. */
+  const fImp=align(C.series,'impressions',D), fPpv=align(C.series,'pageViews',D), fCnv=align(C.series,'converters',D);
+  mixedX('ioFunnel',D,[
+    {type:'bar',label:'Impressions',data:fImp,backgroundColor:'rgba(77,159,255,.45)',borderRadius:4,yAxisID:'y',order:3},
+    {type:'bar',label:'Product page views',data:fPpv,backgroundColor:'rgba(255,184,0,.65)',borderRadius:4,yAxisID:'y',order:2},
+    {type:'line',label:'Converters',data:fCnv,borderColor:COLORS.green,tension:.25,pointRadius:2,borderWidth:2,spanGaps:false,yAxisID:'y2',order:1}],
+    {beginAtZero:true,title:{display:true,text:'Impressions / page views',color:cssVar('--t3','#7589a8')},
+     ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}},
+    {y2:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},
+      title:{display:true,text:'Converters',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}}});
+
+  const crows=C.rows||[];
+  table('tblIoConv',
+    [{label:'Date'},{label:'Traffic Source'},{label:'Impressions',num:true},{label:'Page Views',num:true},
+     {label:'Converters',num:true},{label:'CVR',num:true}],
+    crows.map(r=>[shortDate(r.date),esc(r.source),
+      hm(r.impressions,crows.map(x=>x.impressions),'blue',false,n0),
+      hm(r.pageViews,crows.map(x=>x.pageViews),'amber',false,n0),
+      hm(r.converters,crows.map(x=>x.converters),'green',false,n0),
+      hm(r.conversionRate,crows.map(x=>x.conversionRate),'pink',false,v=>pc(v,2))]));
+}
+
+function buildIosSourceFilter(C){
+  const el=$('ioSource'); if(!el)return;
+  const srcs=(C.bySource||[]).map(x=>x.source);
+  if(srcs.indexOf(IOSRC)===-1)IOSRC='';
+  el.innerHTML='<option value="">All sources</option>'+
+    srcs.map(x=>'<option value="'+esc(x)+'"'+(x===IOSRC?' selected':'')+'>'+esc(x)+'</option>').join('');
+  el.onchange=()=>{IOSRC=el.value;drawIosConversionCharts(C)};
+}
+function drawIosConversionCharts(C){
+  const D=IDATES;
+  const rows=(C.rows||[]).filter(r=>!IOSRC||r.source===IOSRC);
+
+  const byDate={};
+  rows.forEach(r=>{
+    if(!r.date)return;
+    if(!byDate[r.date])byDate[r.date]={imp:0,ppv:0,cnv:0,n:0,stored:null};
+    byDate[r.date].imp+=r.impressions||0;
+    byDate[r.date].ppv+=r.pageViews||0;
+    byDate[r.date].cnv+=r.converters||0;
+    byDate[r.date].n++;
+    byDate[r.date].stored=r.conversionRate;
+  });
+  const imp=D.map(d=>byDate[d]?byDate[d].imp:null);
+  const cnv=D.map(d=>byDate[d]?byDate[d].cnv:null);
+  /* One source picked means one row per date, so the stored rate describes the
+     whole day and is quoted as-is. All sources means several rows, and only a
+     figure re-divided from that day's totals covers the day. */
+  const cvr=D.map(d=>{
+    const g=byDate[d]; if(!g)return null;
+    if(g.n===1&&g.stored!==null&&g.stored!==undefined)return g.stored;
+    return g.imp?Math.round(g.cnv/g.imp*10000)/100:null;
+  });
+
+  const label=IOSRC||'all sources';
+  if($('ioTitleA'))$('ioTitleA').textContent=label;
+  if($('ioTitleB'))$('ioTitleB').textContent='bars are impressions, line is converters · '+label;
+  if($('ioCvNote')){
+    const ti=sum(imp), tc=sum(cnv), tp=sum(D.map(d=>byDate[d]?byDate[d].ppv:null));
+    $('ioCvNote').innerHTML='<b>'+compact(ti)+'</b> impressions · <b>'+compact(tp)+'</b> page views · <b>'+
+      compact(tc)+'</b> converters · <b>'+(ti?nf(tc/ti*100,2):'—')+'%</b> CVR';
+  }
+
+  lineX('ioCvr',D,[
+    {label:'Conversion rate',data:cvr,borderColor:COLORS.pink,backgroundColor:'rgba(236,10,155,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false}],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,2)+'%'}});
+
+  mixedX('ioTraffic',D,[
+    {type:'bar',label:'Impressions',data:imp,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
+    {type:'line',label:'Converters',data:cnv,borderColor:COLORS.green,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false,yAxisID:'y2',order:1}],
+    {beginAtZero:true,title:{display:true,text:'Impressions',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}},
+    {y2:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},
+      title:{display:true,text:'Converters',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}}});
+}
+
+/* ==========================================================================
+   OVERVIEW  ·  ANDROID vs iOS
+
+   Four cards and two charts, and nothing that needs a footnote to be read
+   correctly. Store metrics are not automatically comparable across platforms,
+   so only measures that mean the same thing on both sides earn a card:
+
+     Average rating over written reviews  same definition, both stores
+     Written review volume                same definition
+     Negative share                       1-2 stars over written reviews, both
+     Conversion rate                      DIFFERENT denominators - Play counts
+                                          store-listing visitors, App Store
+                                          counts impressions. Kept because it
+                                          is the number everybody asks for, and
+                                          labelled on the card so the gap is
+                                          not read as a performance difference.
+   ========================================================================== */
+function renderOverview(){
+  const AR=scopedReviews(A&&A.reviews), IR=scopedReviews(I&&I.reviews);
+  const AC=scopedConversions(A&&A.conversions,false), IC=scopedConversions(I&&I.conversions,true);
+  const aRange=(A&&A.dateRange)||{}, iRange=(I&&I.dateRange)||{};
+  const selectedDays=datesInActiveRange().length||1;
+
+  /* One chip per platform: the two windows genuinely differ, and averaging them
+     into a single "period" would misstate both. */
+  const chip=(a,b)=>shortDate(a)+' – '+shortDate(b);
+  setDateChip('ovDateChip');
+  if($('ovRangeBar')){
+    const selected=activeDateLabel();
+    $('ovRangeBar').innerHTML=
+      (A?'<span class="wk-pill"><i style="background:'+COLORS.green+'"></i>Android · <b>'+selected+'</b></span>':'')+
+      (I?'<span class="wk-pill"><i style="background:'+COLORS.blue+'"></i>iOS · <b>'+selected+'</b></span>':'')+
+      '<span class="wk-arrow">live from Google Sheets</span>';
+  }
+  banner('ovWarnings',LAST_META.warnings||[]);
+
+  const aCvr=(AC.totals||{}).conversionRate, iCvr=(IC.totals||{}).conversionRate;
+
+  row('ovRow1',[
+    kpiCompare({label:'Average Rating · Written',accent:'teal',
+      a:AR.averageRatingWithText,b:IR.averageRatingWithText,fmt:n2,lower:false,
+      sub:n0((AR.counts||{}).withText)+' vs '+n0((IR.counts||{}).withText)+' written reviews',
+      note:'mean star rating of reviews that carry text'}),
+
+    kpiCompare({label:'Written Reviews',accent:'blue',
+      a:(AR.counts||{}).withText,b:(IR.counts||{}).withText,fmt:cp,lower:false,
+      sub:n1(((AR.counts||{}).withText||0)/selectedDays)+' vs '+
+          n1(((IR.counts||{}).withText||0)/selectedDays)+' per day',
+      note:'one row per review, both stores'}),
+
+    kpiCompare({label:'Negative Share',accent:'coral',
+      a:AR.negativeSharePct,b:IR.negativeSharePct,fmt:v=>pc(v,1),lower:true,
+      sub:n0(AR.negativeCount)+' vs '+n0(IR.negativeCount)+' reviews at 1★–2★',
+      note:'lower is better · share of each platform\u2019s own written reviews'}),
+
+    kpiCompare({label:'Store Conversion Rate',accent:'pink',
+      a:aCvr,b:iCvr,fmt:v=>pc(v,2),lower:false,
+      sub:cp((AC.totals||{}).visitors)+' visitors vs '+cp((IC.totals||{}).impressions)+' impressions',
+      note:'different denominators: Play counts listing visitors, App Store counts impressions'})]);
+
+  /* ---- chart 1: star mix, as a share so volume does not decide the shape ---- */
+  const aTot=(AR.counts||{}).withText||0, iTot=(IR.counts||{}).withText||0;
+  const aDist=AR.distribution||{}, iDist=IR.distribution||{};
+  const stars=[1,2,3,4,5];
+  groupBar('ovDist',stars.map(s=>s+'★'),[
+    {label:'Android',data:stars.map(s=>aTot?(aDist[s]||0)/aTot*100:null),backgroundColor:'rgba(0,196,122,.75)',borderRadius:4},
+    {label:'iOS',data:stars.map(s=>iTot?(iDist[s]||0)/iTot*100:null),backgroundColor:'rgba(77,159,255,.75)',borderRadius:4}],
+    v=>nf(v,1)+'%');
+
+  /* ---- chart 2: daily written-review volume over the union of both windows ---- */
+  const days=datesInActiveRange();
+  groupBar('ovVolume',days.map(shortDate),[
+    {label:'Android',data:align(AR.volumeByDate,'count',days),backgroundColor:'rgba(0,196,122,.7)',borderRadius:3},
+    {label:'iOS',data:align(IR.volumeByDate,'count',days),backgroundColor:'rgba(77,159,255,.7)',borderRadius:3}],
+    n0);
+}
+
+/* ==========================================================================
+   REVIEWS PAGE  ·  both platforms behind one dropdown
+
+   Android and iOS reviews do not carry the same columns. Rather than showing
+   empty Device and Language dropdowns on iOS, the payload states which fields
+   it has (reviews.fields) and the filter bar hides the rest. The version
+   dropdown relabels itself, because "App Version 1.34.0" and "Build ID 4821"
+   are not the same thing and a shared label would be wrong for one of them.
+   ========================================================================== */
+const RVF={from:'',to:'',ver:'',dev:'',lang:'',star:'',theme:'',text:''};
+let RVPLAT='android';
+let RVSORT={key:'date',dir:-1};
+let RVBUILT=false;
+let RVSHOWN=PERF.reviewPage;
+let RVROWS=[];
+
+const rvBlock=()=>(RVPLAT==='ios'?I:A);
+const rvFields=()=>{
+  const b=rvBlock();
+  const f=(b&&b.reviews&&b.reviews.fields)||{};
+  return {device:f.device!==false,language:f.language!==false,versionLabel:f.versionLabel||'App Version'};
+};
+
+function fillSelect(id,label,values,current){
+  const el=$(id); if(!el)return;
+  el.innerHTML='<option value="">'+label+'</option>'+
+    values.map(v=>'<option value="'+esc(v.value)+'"'+(v.value===current?' selected':'')+'>'+esc(v.label)+'</option>').join('');
+}
+/* Placeholders the loader substitutes for empty cells. They still count in
+   every total; they are only kept out of the dropdowns, where an
+   "All devices → (unknown)" option is noise rather than a filter. */
+const BLANKS=['(unspecified)','(unknown)','(unattributed)',''];
+const isBlank_=v=>BLANKS.indexOf(String(v===null||v===undefined?'':v))!==-1;
+const blankable_=(v,prefix)=>isBlank_(v)?null:esc((prefix||'')+v);
+const STARS=n=>{const k=Math.round(n||0);return '★'.repeat(k)+'☆'.repeat(Math.max(0,5-k))};
+
+/* distinct values with their review counts, most common first */
+function facet(rows,field,fmt){
+  const c={};
+  rows.forEach(r=>{const k=r[field]; if(isBlank_(k))return; c[k]=(c[k]||0)+1});
+  return Object.keys(c).sort((a,b)=>c[b]-c[a]||String(a).localeCompare(String(b)))
+    .map(k=>({value:k,label:(fmt?fmt(k):k)+'  ('+c[k]+')'}));
+}
+function buildReviewFilters(all){
+  const F=rvFields();
+  const days=[...new Set(all.map(r=>r.date))].filter(Boolean).sort();
+  const dateOptions=days.slice().reverse().map(d=>({value:d,label:shortDate(d)}));
+  fillSelect('fFrom','From date',dateOptions,RVF.from);
+  fillSelect('fTo','To date',dateOptions,RVF.to);
+
+  if($('lVer'))$('lVer').textContent=F.versionLabel;
+  fillSelect('fVer','All '+F.versionLabel.toLowerCase()+'s',
+    facet(all,'version',v=>(F.versionLabel==='App Version'?'v':'')+v),RVF.ver);
+
+  if($('gDev'))$('gDev').classList.toggle('hide',!F.device);
+  if($('gLang'))$('gLang').classList.toggle('hide',!F.language);
+  if(F.device)   fillSelect('fDev','All devices',facet(all,'device'),RVF.dev);
+  if(F.language) fillSelect('fLang','All languages',facet(all,'language',v=>String(v).toUpperCase()),RVF.lang);
+
+  fillSelect('fStar','All ratings',[5,4,3,2,1].map(n=>({value:String(n),label:n+'★'})),RVF.star);
+
+  const themes={};
+  all.forEach(r=>{const k=r.primary||'other';themes[k]=(themes[k]||0)+1});
+  const b=rvBlock();
+  const labels={}; ((b&&b.reviews&&b.reviews.themes)||[]).forEach(t=>labels[t.key]=t.label);
+  fillSelect('fTheme','All themes',Object.keys(themes).sort((a,b2)=>themes[b2]-themes[a])
+    .map(k=>({value:k,label:(labels[k]||k)+'  ('+themes[k]+')'})),RVF.theme);
+}
+function applyReviewFilters(all){
+  const q=RVF.text.trim().toLowerCase();
+  return all.filter(r=>
+    dateAllowed(r.date||'') &&
+    (!RVF.from  || (r.date||'')>=RVF.from) &&
+    (!RVF.to    || (r.date||'')<=RVF.to) &&
+    (!RVF.ver   || r.version===RVF.ver) &&
+    (!RVF.dev   || r.device===RVF.dev) &&
+    (!RVF.lang  || r.language===RVF.lang) &&
+    (!RVF.star  || Math.round(r.rating)===+RVF.star) &&
+    (!RVF.theme || r.primary===RVF.theme) &&
+    (!q         || String(r.text).toLowerCase().indexOf(q)!==-1)
+  );
+}
+function sortReviews(rows){
+  const k=RVSORT.key, d=RVSORT.dir;
+  return rows.slice().sort((a,b)=>{
+    let x=a[k], y=b[k];
+    if(k==='rating'){ x=x||0; y=y||0; return (x-y)*d; }
+    x=String(x||''); y=String(y||'');
+    return x.localeCompare(y)*d;
+  });
+}
+function rvCols(){
+  const F=rvFields();
+  const cols=[{key:'rating',label:'Rating',num:true},{key:'date',label:'Date'},
+              {key:'version',label:F.versionLabel==='Build ID'?'Build':'Version'}];
+  if(F.device)   cols.push({key:'device',label:'Device'});
+  if(F.language) cols.push({key:'language',label:'Lang'});
+  cols.push({key:'themes',label:'Themes'},{key:'text',label:'Review',txt:true});
+  return cols;
+}
+function reviewRowCells(r,COLS,F){
+  const cells=[
+    {v:'<span class="stars star'+Math.round(r.rating||0)+'">'+STARS(r.rating)+'</span>'},
+    shortDate(r.date),
+    blankable_(r.version,F.versionLabel==='App Version'?'v':'')];
+  if(F.device)   cells.push(blankable_(r.device));
+  if(F.language) cells.push(esc(r.language).toUpperCase());
+  cells.push('<span class="chip main">'+esc(r.primary||'other')+'</span>'+
+    (r.themes||[]).filter(t=>t!==r.primary).map(t=>'<span class="chip">'+esc(t)+'</span>').join(''));
+  /* New payloads expose the resolved English value explicitly. `text` remains
+     the backward-compatible fallback for older deployments. */
+  cells.push(esc(r.textEnglish||r.textEn||r.text));
+  return cells;
+}
+
+/**
+ * Renders the first RVSHOWN rows and offers the rest on demand.
+ *
+ * The whole filtered set is never written to the DOM at once. On a catalogue
+ * with tens of thousands of reviews that single innerHTML assignment is the
+ * slowest thing on the page by a wide margin, and it happens again on every
+ * keystroke in the search box. Capping it keeps filtering instant no matter how
+ * large the result, and the count line still reports the true total so nothing
+ * about the data is hidden.
+ */
+function renderReviewTable(){
+  const b=rvBlock();
+  if(!b||!b.reviews){ table('tblReviews',[{label:'Review'}],[]); return; }
+  const all=b.reviews.all||[];
+  const F=rvFields();
+
+  RVROWS=sortReviews(applyReviewFilters(all));
+  const shown=RVROWS.slice(0,RVSHOWN);
+
+  if($('fCount')){
+    const pending=!REVIEWS_READY[RVPLAT];
+    $('fCount').innerHTML='<b>'+nf(RVROWS.length,0)+'</b> of '+nf(all.length,0)+' reviews'+
+      (RVROWS.length?' · avg <b>'+nf(mean(RVROWS.map(r=>r.rating)),2)+'★</b>':'')+
+      (pending?' · <span style="color:var(--amber)">still loading…</span>':'');
+  }
+
+  const COLS=rvCols();
+  const cols=COLS.map(c=>({label:c.label+(RVSORT.key===c.key?'<span class="sortmark">'+(RVSORT.dir>0?'▲':'▼')+'</span>':''),
+    num:c.num,txt:c.txt}));
+  table('tblReviews',cols,shown.map(r=>reviewRowCells(r,COLS,F)));
+
+  if($('rvMore')){
+    if(RVROWS.length>shown.length){
+      $('rvMore').innerHTML='<button class="btn" id="rvMoreBtn">View More ('+
+        Math.min(PERF.reviewPage,RVROWS.length-shown.length)+')</button>'+ 
+        '<span>showing '+nf(shown.length,0)+' of '+nf(RVROWS.length,0)+'</span>';
+      $('rvMoreBtn').onclick=()=>{RVSHOWN+=PERF.reviewPage;renderReviewTable()};
+    }else{
+      $('rvMore').innerHTML=RVROWS.length?'<span>all '+nf(RVROWS.length,0)+' rows shown</span>':'';
+    }
+  }
+
+  /* header sorting is wired after each build because table() replaces the DOM */
+  document.querySelectorAll('#tblReviews th').forEach((th,i)=>{th.onclick=()=>{
+    const key=COLS[i].key;
+    if(RVSORT.key===key)RVSORT.dir=-RVSORT.dir;
+    else {RVSORT.key=key;RVSORT.dir=(key==='date'||key==='rating')?-1:1}
+    RVSHOWN=PERF.reviewPage;
+    renderReviewTable();
+  }});
+}
+
+function renderReviews(){
+  const b=rvBlock();
+  const all=(b&&b.reviews&&b.reviews.all)||[];
+  const dated=all.filter(r=>dateAllowed(r.date||''));
+  const range=(b&&b.dateRange)||{};
+  const isIos=RVPLAT==='ios';
+
+  /* On first open, include the full active dashboard window (seven days by
+     default). From/To use the actual earliest/latest review dates found inside
+     that window, so absent boundary dates do not create invalid selections. */
+  if(dated.length&&!RVF.from&&!RVF.to){
+    const reviewDates=dated.map(r=>r.date||'').filter(Boolean).sort();
+    if(reviewDates.length){RVF.from=reviewDates[0];RVF.to=reviewDates.at(-1)}
+  }
+
+  if($('fPlatform'))$('fPlatform').value=RVPLAT;
+  if($('rvEyebrow'))$('rvEyebrow').textContent=isIos?'Platform: iOS · App Store':'Platform: Android · Google Play';
+  if($('rvTitle'))$('rvTitle').textContent=isIos?'iOS Reviews':'Android Reviews';
+  setDateChip('rvDateChip');
+  if($('rvRangeBar'))$('rvRangeBar').innerHTML=
+    '<span class="wk-pill"><i style="background:'+(isIos?COLORS.blue:COLORS.green)+'"></i>'+
+      (isIos?'iOS':'Android')+' reviews · <b>'+nf(dated.length,0)+'</b></span>'+
+    '<span class="wk-arrow">'+activeDateLabel()+'</span>';
+
+  banner('rvNote',REVIEWS_READY[RVPLAT]?[]:[{level:'info',
+    message:'Review text is still downloading in the background. Filters and counts will fill in as it arrives.'}]);
+
+  buildReviewFilters(dated);
+
+  if(!RVBUILT){
+    RVBUILT=true;
+    const bind=(id,key)=>{const el=$(id); if(el)el.onchange=()=>{RVF[key]=el.value;RVSHOWN=PERF.reviewPage;renderReviewTable()}};
+    bind('fFrom','from'); bind('fTo','to'); bind('fVer','ver');
+    bind('fStar','star'); bind('fTheme','theme');
+
+    const plat=$('fPlatform');
+    if(plat)plat.onchange=()=>{
+      RVPLAT=plat.value;
+      /* Filters are cleared on switch. A device or build filter from the other
+         platform would match nothing and read as "no reviews" rather than as a
+         stale filter, which is the more confusing of the two failures. */
+      Object.keys(RVF).forEach(k=>RVF[k]='');
+      if($('fText'))$('fText').value='';
+      RVSORT={key:'date',dir:-1};
+      RVSHOWN=PERF.reviewPage;
+      renderReviews();
+    };
+
+    const t=$('fText');
+    if(t){let timer;t.oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>{
+      RVF.text=t.value;RVSHOWN=PERF.reviewPage;renderReviewTable();},180)}}
+
+    const rst=$('fReset');
+    if(rst)rst.onclick=()=>{
+      Object.keys(RVF).forEach(k=>RVF[k]='');
+      ['fFrom','fTo','fVer','fStar','fTheme'].forEach(id=>{if($(id))$(id).value=''});
+      if($('fText'))$('fText').value='';
+      RVSHOWN=PERF.reviewPage;
+      buildReviewFilters(dated); renderReviewTable();
+    };
+  }
+  renderReviewTable();
+}
+
+/* ==========================================================================
+   VIEW MANAGER
+
+   Each view renders the first time it is shown and is then marked clean, so
+   opening the dashboard builds one page of charts instead of five. New data or
+   a theme change marks every view dirty again; the visible one re-renders
+   immediately and the rest wait until they are opened.
+
+   Chart.js has to lay out against a real box, so rendering a hidden view would
+   produce a chart sized to a zero-height canvas. Deferring is both faster and
+   more correct.
+   ========================================================================== */
+const VIEWS={
+  overview:{render:renderOverview,dirty:true},
+  android: {render:renderAndroid, dirty:true},
+  ios:     {render:renderIos,     dirty:true},
+  reviews: {render:renderReviews, dirty:true}
+};
+let ACTIVE='overview';
+
+function markDirty(names){
+  (names||Object.keys(VIEWS)).forEach(n=>{if(VIEWS[n])VIEWS[n].dirty=true});
+}
+window.__themeRerender=function(){
+  Chart.defaults.color=cssVar('--t2','#a6b8d4');
+  Chart.defaults.borderColor=cssVar('--border','rgba(255,255,255,.08)');
+  destroyAll();markDirty();ensureRendered(ACTIVE);prefetchViews();
+};
+function ensureRendered(name){
+  const v=VIEWS[name];
+  if(!v||!v.dirty)return;
+  try{ v.render(); v.dirty=false; }
+  catch(e){ console.error(name+' render failed',e); v.dirty=false; }
+}
+/* Renders the pages nobody is looking at, one per idle slice, so switching
+   tabs later is instant without delaying the first paint. */
+function prefetchViews(){
+  const queue=Object.keys(VIEWS).filter(n=>n!==ACTIVE&&VIEWS[n].dirty);
+  const idle=window.requestIdleCallback||(fn=>setTimeout(()=>fn({timeRemaining:()=>50}),120));
+  const step=()=>{
+    const next=queue.shift();
+    if(!next)return;
+    ensureRendered(next);
+    if(queue.length)idle(step);
+  };
+  idle(step);
+}
+function showView(name){
+  if(!VIEWS[name])return;
+  ACTIVE=name;
+  document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===name));
+  if($('reviewMenuBtn'))$('reviewMenuBtn').classList.toggle('active',name==='reviews');
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===name));
+  ensureRendered(name);
+  /* Charts laid out while their container was hidden need a nudge once it is
+     visible, or they keep the width they were built at. */
+  requestAnimationFrame(()=>{Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}})});
+  window.scrollTo({top:0,behavior:'instant'});
+}
+
+/* ==========================================================================
+   CLIENT-SIDE CACHE
+
+   The core payload is kept in localStorage and painted immediately on a repeat
+   visit, while the network request runs in the background. A stale dashboard
+   on screen in 50ms that corrects itself a second later beats a blank one that
+   is perfectly accurate whenever the round trip finishes.
+
+   Only core is cached. Review text is far larger and would blow the ~5MB
+   localStorage budget, so it is always fetched fresh.
+   ========================================================================== */
+/* The cached copy is stamped with a fingerprint of the session that fetched
+   it. A different sign-in reads a different fingerprint, misses, and starts
+   clean - so one person's numbers can never be painted onto another person's
+   screen from this browser's storage. The fingerprint is a short hash, never
+   the token itself. */
+function sessionFingerprint(){
+  const t=sessionToken();
+  if(!t)return '';
+  let h=0;
+  for(let i=0;i<t.length;i++){ h=((h<<5)-h+t.charCodeAt(i))|0; }
+  return String(h);
+}
+function cacheSave(core){
+  try{
+    const s=JSON.stringify({at:Date.now(),who:sessionFingerprint(),core:core});
+    if(s.length>PERF.lsMaxChars)return;      // too big to be worth the quota
+    localStorage.setItem(PERF.lsKey,s);
+  }catch(e){ /* private mode, or quota exceeded: caching is optional */ }
+}
+function cacheLoad(){
+  try{
+    const raw=localStorage.getItem(PERF.lsKey);
+    if(!raw)return null;
+    const o=JSON.parse(raw);
+    if(!o||!o.core)return null;
+    if(o.who!==sessionFingerprint())return null;   // different session; start clean
+    return o;
+  }catch(e){ return null; }
+}
+/* ==========================================================================
+   CONNECT
+   ========================================================================== */
+let CONNECTING=false;
+function setStatus(s,cls){
+  const el=$('status');if(!el)return;
+  el.textContent=s;
+  el.classList.toggle('error',cls==='error');
+  el.classList.toggle('stale',cls==='stale');
+}
+function clockTime(t){try{return new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
+function loaderMsg(m){if($('loaderMsg'))$('loaderMsg').textContent=m}
+
+/**
+ * @param {string} part    'core' | 'reviews'
+ * @param {boolean} force  ask Apps Script to rebuild rather than serve cache
+ * @param {object}  win    optional {start,end} to trim the response to
+ */
+/**
+ * One authenticated request to the ASO Apps Script project.
+ *
+ * POST, not GET, because that is the door Auth.gs guards. Content-Type is
+ * text/plain on purpose: application/json triggers a CORS preflight, and an
+ * Apps Script web app cannot answer OPTIONS.
+ *
+ * @param {string}  part   'core' | 'reviews'
+ * @param {boolean} force  ask the server to rebuild rather than serve cache
+ * @param {object}  win    optional {start,end} to trim the response to
+ */
+async function fetchPart(part,force,win){
+  if(!API.url||API.url.indexOf('PASTE_')===0){
+    throw new Error('No ASO web app URL. Open this report from the hub, or set API_DEFAULTS.url.');
+  }
+
+  const token=sessionToken();
+  if(!token){
+    const err=new Error('Not signed in');
+    err.expired=true;
+    throw err;
+  }
+
+  const body={action:'payload',token:token,parts:part};
+  /* Explicit start and end rather than a day count, so the window the server
+     trims to is exactly the window the chips on screen describe. */
+  if(win&&win.start&&win.end){ body.start=win.start; body.end=win.end; }
+  if(force)body.force='1';
+
+  let lastError;
+  for(let attempt=1;attempt<=3;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),90000);
+    try{
+      const res=await fetch(API.url,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify(body),
+        redirect:'follow',
+        signal:controller.signal
+      });
+      clearTimeout(timer);
+      const text=(await res.text()).trim();
+
+      if(!res.ok){
+        const err=new Error('HTTP '+res.status+' from Apps Script');
+        err.retryable=res.status===429||res.status>=500;
+        throw err;
+      }
+      // Apps Script serves its own sign-in page with a 200, so the status code
+      // alone cannot tell that apart from real data.
+      if(text.charAt(0)==='<'){
+        throw new Error('Apps Script returned a sign-in page — redeploy with access "Anyone"');
+      }
+
+      let data;
+      try{ data=JSON.parse(text); }
+      catch(e){ throw new Error('Apps Script returned invalid JSON'); }
+
+      /* The session ran out, or the token was never valid. Retrying cannot fix
+         either, so tell the hub and let it put the sign-in gate back up. */
+      if(data.code===401||/^Unauthorized/i.test(String(data.error||''))){
+        const err=new Error('Your session ended. Sign in again.');
+        err.expired=true;
+        err.retryable=false;
+        throw err;
+      }
+      if(data.ok===false)throw new Error(data.error||'Request failed');
+
+      const payload=data.data||data;
+      if(payload.error)throw new Error(payload.message||'Request failed');
+      return payload;
+
+    }catch(e){
+      clearTimeout(timer);
+      lastError=e;
+      if(e.expired){ tellHub('mss3d:session-expired'); throw e; }
+      const retryable=e.retryable===true||e.name==='AbortError'||e instanceof TypeError;
+      if(!retryable||attempt===3)break;
+      await new Promise(r=>setTimeout(r,600*attempt));
+    }
+  }
+  throw lastError||new Error('Request failed');
+}
+
+function applyCore(j){
+  /* A background core refresh deliberately omits full review text. Preserve
+     the recent review rows already shown while a wider core window arrives,
+     instead of briefly emptying the Reviews page between phases. */
+  const oldAndroidReviews=A&&A.reviews&&A.reviews.all;
+  const oldIosReviews=I&&I.reviews&&I.reviews.all;
+  const keptAndroid=!!(oldAndroidReviews&&oldAndroidReviews.length);
+  const keptIos=!!(oldIosReviews&&oldIosReviews.length);
+  A=j.android||null;
+  I=j.ios||null;
+  if(A&&A.reviews&&A.reviews.allOmitted&&oldAndroidReviews&&oldAndroidReviews.length){
+    A.reviews.all=oldAndroidReviews;A.reviews.allOmitted=false;
+  }
+  if(I&&I.reviews&&I.reviews.allOmitted&&oldIosReviews&&oldIosReviews.length){
+    I.reviews.all=oldIosReviews;I.reviews.allOmitted=false;
+  }
+  LAST_META={generatedAt:j.generatedAt||null,warnings:j.warnings||[]};
+  if(j.today)SERVER_TODAY=j.today;
+  if(j.fullRange&&j.fullRange.start)FULL_RANGE=j.fullRange;
+  PARTIAL=!!j.window;                    // a window block means the reply was trimmed
+  CORE_WINDOW=j.window||j.fullRange||FULL_RANGE;
+  ADATES=collectDates(A);
+  IDATES=collectDates(I);
+  REVIEWS_READY={android:keptAndroid,ios:keptIos};
+  initDateFilters();
+  markDirty();
+}
+
+/**
+ * Merges the background review fetch into the blocks already on screen.
+ *
+ * Only the Reviews page cares, so nothing else is re-rendered - marking every
+ * view dirty here would rebuild all five pages of charts for data none of them
+ * display.
+ */
+function applyReviews(j){
+  if(A&&A.reviews&&j.android&&j.android.reviews){
+    A.reviews.all=j.android.reviews.all||[];
+    A.reviews.allOmitted=false;
+    REVIEWS_READY.android=true;
+  }
+  if(I&&I.reviews&&j.ios&&j.ios.reviews){
+    I.reviews.all=j.ios.reviews.all||[];
+    I.reviews.allOmitted=false;
+    REVIEWS_READY.ios=true;
+  }
+  if(j.window)REVIEW_WINDOW=j.window;
+  /* Review-derived cards and overview comparisons also depend on the full
+     review rows, so refresh every view when phase two arrives. */
+  markDirty();
+  ensureRendered(ACTIVE);
+}
+
+async function ensureReviewsForRange(win){
+  if(!win||!win.start||!win.end||rangeContains(REVIEW_WINDOW,win))return;
+  if(REVIEW_LOADING){
+    try{await REVIEW_LOADING}catch(e){}
+    if(rangeContains(REVIEW_WINDOW,win))return;
+  }
+  const request=(async()=>{
+    const reviews=await fetchPart('reviews',false,win);
+    applyReviews(reviews);
+    return reviews;
+  })();
+  REVIEW_LOADING=request;
+  try{return await request}finally{if(REVIEW_LOADING===request)REVIEW_LOADING=null}
+}
+
+async function connect(force){
+  if(CONNECTING)return;
+  CONNECTING=true;
+  const btn=$('refreshBtn');
+  if(btn)btn.disabled=true;
+
+  /* A cached copy means the page is already readable, so the blocking overlay
+     is skipped and the refresh happens quietly behind it. */
+  const hadData=!!(A||I);
+  if(!hadData){ loaderMsg('Loading dashboard…'); $('loader').classList.add('show'); }
+  setStatus(hadData?'Refreshing…':'Loading…');
+
+  try{
+    /* PHASE 1 - browser/server 30-day core window. The visual filter remains
+       Last 7 Days, while 7/14/30-day switches all render from this one block. */
+    const win30=rollingWindow(PERF.firstWindowDays);
+    const core30=await fetchPart('core',force,win30);
+    applyCore(core30);
+    cacheSave(core30);
+    ensureRendered(ACTIVE);
+    prefetchViews();
+    $('loader').classList.remove('show');
+    setStatus('Loaded · '+clockTime(core30.generatedAt||Date.now())+' · loading reviews…');
+
+    /* Start the 45-day memory-only prefetch immediately. It is deliberately
+       not written to localStorage, so the next cold browser load stays small. */
+    const core45Promise=fetchPart('core',false,rollingWindow(PERF.backgroundWindowDays));
+
+    /* The hub queues the other reports one at a time so they never fight for
+       the single Apps Script execution slot. This is its cue that ASO is
+       through the heavy part and the next report may start. */
+    tellHub('mss3d:report-ready');
+
+    /* PHASE 2 - only seven days of individual reviews on first load. */
+    try{
+      await ensureReviewsForRange(rollingWindow(7));
+      setStatus('Loaded · '+clockTime(LAST_META.generatedAt||Date.now())+' · loading 45 days…');
+    }catch(e){
+      console.error('initial review fetch failed',e);
+      setStatus('Loaded · reviews unavailable','stale');
+      banner('rvNote',[{level:'warn',message:'Recent reviews could not be loaded: '+(e.message||e)}]);
+    }
+
+    /* PHASE 3 - 45 days of core data in memory, never full history. Wider
+       single/custom ranges are fetched only when the user asks for them. */
+    try{
+      const core45=await core45Promise;
+      applyCore(core45);
+      ensureRendered(ACTIVE);
+      prefetchViews();
+      setStatus('Loaded · '+clockTime(LAST_META.generatedAt||Date.now()));
+    }catch(e){
+      console.error('45-day core fetch failed',e);
+      setStatus('Loaded · 30-day cache available','stale');
+    }
+  }catch(e){
+    setStatus(e.message||String(e),'error');
+    /* An expired session is the hub's problem to solve, and it is already
+       putting the gate back up. Repeating it across three banners here just
+       adds noise to a screen that is about to be covered anyway. */
+    if(!e.expired){
+      const msg=[{level:'error',message:e.message||String(e)}];
+      banner('anWarnings',msg); banner('ovWarnings',msg); banner('ioWarnings',msg);
+    }
+  }finally{
+    CONNECTING=false;
+    if(btn)btn.disabled=false;
+    $('loader').classList.remove('show');
+    const wanted=activeDateRange();
+    if(sessionToken()&&!rangeContains(CORE_WINDOW,wanted))fetchWindowIfNeeded();
+    if(sessionToken()&&ACTIVE==='reviews')ensureReviewsForRange(wanted).catch(e=>console.error('review range fetch failed',e));
+  }
+}
+
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+document.querySelectorAll('[data-review-platform]').forEach(b=>b.onclick=()=>{
+  RVPLAT=b.dataset.reviewPlatform;
+  Object.keys(RVF).forEach(k=>RVF[k]='');
+  RVSHOWN=PERF.reviewPage;RVSORT={key:'date',dir:-1};
+  if(VIEWS.reviews)VIEWS.reviews.dirty=true;
+  showView('reviews');
+  ensureReviewsForRange(rollingWindow(30)).catch(e=>{
+    console.error('30-day review fetch failed',e);
+    banner('rvNote',[{level:'warn',message:'The remaining 30-day reviews could not be loaded: '+(e.message||e)}]);
+  });
+});
+$('refreshBtn').onclick=()=>connect(true);
+
+/* Cached 30-day core paints immediately; reviews always come from Apps
+   Script's translation-aware window caches. */
+(function boot(){
+  const cached=cacheLoad();
+  if(cached){
+    try{
+      applyCore(cached.core);ensureRendered(ACTIVE);
+      setStatus('Cached · '+clockTime(cached.at)+' · updating…',
+        Date.now()-(cached.at||0)>PERF.staleAfterMs?'stale':null);
+    }catch(e){console.error('cached render failed',e);A=null;I=null;PARTIAL=true}
+  }
+  connect(false);
+})();
+</script>
+</body>
+</html>
