@@ -11,7 +11,7 @@ window.WEEKLY_LIVE_CONFIG = { live: true };
 </script>
 <style>
 body:not(.live-ready) .tabview{visibility:hidden}
-body:not(.live-ready)::before{content:'Loading live weekly data...';position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);z-index:9999;color:#edf2ff;background:#0b0c0f;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:18px 24px;font:600 13px 'DM Mono',monospace;box-shadow:0 12px 40px rgba(0,0,0,.65)}
+body:not(.live-ready)::before{content:'Loading Data';position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);z-index:9999;color:#edf2ff;background:#0b0c0f;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:18px 24px;font:600 13px 'Trebuchet MS',Arial,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.65)}
 body.live-error::before{content:'Live data could not be loaded. Use the controls above to retry.';color:#ff8ca1}
 #weeklyLiveControls{position:sticky;top:63px;z-index:99;width:min(1180px,calc(100vw - 32px));display:flex;flex-wrap:wrap;align-items:end;justify-content:center;gap:9px;margin:5px auto 0;padding:10px 13px;background:rgba(11,12,15,.97);border:1px solid rgba(255,255,255,.12);border-radius:13px;color:#edf2ff;box-shadow:0 8px 28px rgba(0,0,0,.45)}
 #weeklyLiveControls label{display:flex;flex-direction:column;gap:4px;color:#7589a8;font:500 8px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
@@ -58,10 +58,11 @@ body{font-family:'Poppins',system-ui,sans-serif;background:#1a1a1a;display:flex;
 .h1{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--t1);margin-top:4px;margin-bottom:13px;line-height:1.05;}
 .sf{height:32px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9.5px;color:var(--t3);}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;}
+.kpis{margin-bottom:28px;}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh);}
 .kpi .l{font-family:'DM Mono',monospace;font-size:9.5px;font-weight:500;text-transform:uppercase;color:var(--t3);letter-spacing:.06em;}
 .kpi .v{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;margin:5px 0 3px;}
-.kpi .d{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;}
+.kpi .d{font-family:'DM Mono',monospace;font-size:11.5px;font-weight:500;}
 .up{color:var(--green);} .down{color:var(--coral);}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);}
 .card h2{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--t1);margin-bottom:11px;}
@@ -186,15 +187,48 @@ th.idx,td.idx{width:34px;min-width:34px;text-align:right;color:var(--t3);backgro
 /* UA layout aliases available for structural conversion */
 .chartbox{position:relative;height:250px;}.chartbox.tall{height:300px;}
 .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;}.kpi-row.three{grid-template-columns:repeat(3,1fr);}.kpi-row.four{grid-template-columns:repeat(4,1fr);}
+.kpi-row{margin-bottom:28px;}.mt{margin-top:28px;}.stack{row-gap:28px;}
+.h1,.card h2,.card-title,.subhead h2{font-family:'Segoe UI',Arial,sans-serif!important;}
+body{font-family:'Segoe UI',Arial,sans-serif;}
+.eyebrow,.card-sub,.kpi .l,.sf,.note{font-family:'Segoe UI',Arial,sans-serif!important;}
+#tabnav,#tabnav .brand,#tabnav button,#weeklyFilterBar .brand,.subnav,.subnav button{font-family:'Trebuchet MS',Arial,sans-serif!important;}
+#tabnav button,.subnav button{font-size:12.5px!important;font-weight:650!important}
+#weeklyFilterBar .brand{display:none}#weeklyFilterBar{justify-content:flex-end}
+.date-controls,.date-controls *{font-family:'Trebuchet MS',Arial,sans-serif!important}
+body{--t2:#c0ccdf;--t3:#b5c3d7;--mute:#b5c3d7;--slate:#c0ccdf;}
+#weeklyLiveStatus,.date-span,.card-sub,.eyebrow,.sf,.mut{color:#c0ccdf!important;font-weight:600!important}
+#weeklyRefresh,.date-controls select,.date-confirm{font-size:13.5px!important;font-weight:750!important}
+#tabnav>.brand{display:none}
+#weeklyRefresh{color:#031018!important;border-color:transparent!important;background:var(--grad)!important;}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.grid-main{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(240px,.6fr);gap:14px;}.stack{display:grid;gap:12px;}.piebox{position:relative;height:360px;}
 /* ===== deeper UA match: KPI + card + eyebrow sizing exactly as ua_report.html ===== */
 .kpi{padding:15px 18px;}
 .kpi .v{font-size:26px;}
+.kpi .v{font-family:Poppins,system-ui,sans-serif;font-weight:400;}
+.tablewrap td.num,td.num{font-family:Poppins,system-ui,sans-serif!important;font-size:11.5px!important;font-weight:400;letter-spacing:.01em;}
+.tablewrap th.num,th.num{font-family:Poppins,system-ui,sans-serif!important;font-size:10.5px!important;font-weight:400;letter-spacing:.01em;}
+.legv,.legi2 .legv,.legn,.lrank{font-family:Poppins,system-ui,sans-serif;font-size:12.5px;font-weight:400;}
+/* UA numeric typography: include secondary values and inline legacy spans. */
+.kpi .v,.kpi .d,.kpi .d *,.kpi [style*="font-family"],.src-bar,.src-val,.delta,.rownum,
+td.num,th.num,td [style*="font-family"],.cmp td,.note [style*="font-family"],.statgrid span:last-child{
+  font-family:Poppins,system-ui,sans-serif!important;
+}
+.legend,.legend2,.legi,.legi2,.legend *,.legend2 *{
+  font-family:Poppins,system-ui,sans-serif!important;
+  font-size:12.5px!important;
+  font-weight:400!important;
+}
+/* Match ua_report.html's Weekly Campaign Performance table sizing. */
+table{font-size:11.5px!important}
+table th{font-size:10.5px!important;padding:10px 9px!important;color:#b8c5d9}
+table td{font-size:11.5px!important;padding:9px!important;color:#d7deea;font-weight:400}
+table td.num{font-size:12.5px!important}
+table th.num{font-size:11.5px!important}
 .kpi .l{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;}
 .card{padding:15px 17px;}
-.card h2{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.card h2{font-family:'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;}
 .eyebrow{letter-spacing:.16em;}
-.h1{font-family:'Syne',sans-serif;font-weight:800;}
+.h1{font-family:'Segoe UI',Arial,sans-serif;font-weight:800;}
 /* dates removed from slide headers/cards (UA-style: the filter is the only date UI) */
 .sh .date{display:none!important;}
 /* ===== all-black, no grey gaps (match UA exactly) ===== */
@@ -1012,7 +1046,8 @@ html,body{transition:background-color .18s linear,color .18s linear}
 </div>
 <div class="sf"><div>Slide A4 · Android Engagement Depth</div><div>Playspare · Game District</div></div>
 </div></div><script type="application/x-static-disabled">
-Chart.defaults.font.family="Poppins";Chart.defaults.font.size=11;Chart.defaults.color="#7a8fad";
+Chart.defaults.font.family="Poppins";Chart.defaults.font.size=11;Chart.defaults.font.weight='400';Chart.defaults.color="#7a8fad";
+Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
 const NF=v=>'$'+Math.round(v/1000)+'K';
 // trend — stacked Ad+IAP bars with week+date labels, total on top, % inside each segment
 const barTotals=[295394,286719,308289,312024];
@@ -1023,12 +1058,12 @@ const barValuePlugin={id:'barValues',afterDatasetsDraw(chart){
   // total on top
   const topMeta=chart.getDatasetMeta(1);
   topMeta.data.forEach((bar,i)=>{
-    ctx.fillStyle='#edf2ff';ctx.font='600 13px "DM Mono"';ctx.textAlign='center';
+    ctx.fillStyle='#edf2ff';ctx.font='500 14px Poppins,system-ui,sans-serif';ctx.textAlign='center';
     ctx.fillText('$'+(barTotals[i]/1000).toFixed(0)+'K',bar.x,bar.y-8);
   });
   // % inside Ad segment (dataset 0) and IAP segment (dataset 1)
   const adMeta=chart.getDatasetMeta(0);
-  ctx.font='700 11px "DM Mono"';ctx.textAlign='center';
+  ctx.font='400 12.5px Poppins,system-ui,sans-serif';ctx.textAlign='center';
   adMeta.data.forEach((bar,i)=>{
     const pct=Math.round(adData[i]/barTotals[i]*100);
     const cy=(bar.y+bar.base)/2;
@@ -1049,7 +1084,7 @@ options:{maintainAspectRatio:false,responsive:true,layout:{padding:{top:24}},plu
 animation:false},plugins:[barValuePlugin]});
 function donut(ctx,vals,cols){return new Chart(ctx,{type:'doughnut',data:{datasets:[{data:vals,backgroundColor:cols,borderWidth:0}]},options:{maintainAspectRatio:false,responsive:true,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>NF(c.raw)}}},animation:false}});}
 donut(iosSplit,[111618, 84798],['#4d9fff','rgba(77,159,255,.4)']);
-donut(andSplit,[86859, 28749],['#00e5c3','rgba(0,229,195,.4)']);
+donut(andSplit,[86859, 28749],['#00ad99','rgba(0,126,111,.72)']);
 // pies
 new Chart(iosIapPie,{type:'doughnut',data:{labels:["Summer Pass 2026","Remove Ads All","Manager Pass Pro + Elite","500 Energy Bundle","1000 Energy Bundle","Starter Pack","$2750 Cash Bundle","Premium Racks","$20000 Cash Bundle","100 Energy Bundle","VIP Rush Event","Manager Pass Pro","$8000 Cash Bundle","Manager Pass Elite","$1100 Cash Bundle","$500 Cash Bundle","2250 Energy Bundle","Independence Day USA","5000 Energy Bundle","VIP Rush Event Discounted","Independence Day Canada Discounted","$100 Cash Bundle","10000 Energy Bundle","Independence Day Canada","Starter pack at 30% discount"],datasets:[{data:[14779,9878,7338,5526,5323,5025,4424,3968,3665,3225,2971,2958,2907,2774,2448,1890,1604,986,838,706,538,445,390,233,3],backgroundColor:['#ff8a3d','#ffb800','#ff5c8a','#c77dff','#7b6cff','#ff6b6b','#ffd23f','#06d6a0','#ef476f','#f78c6b','#c9a227','#e07a5f','#9b5de5','#f15bb5','#fee440','#ff9770','#d4a373','#b5179e','#ff85a1','#ffc6ff','#ffadad','#fdffb6','#caffbf','#9bf6ff','#bdb2ff','#ffc6ff','#ff9e80','#e8985e','#d98880','#f8c471'].slice(0,),borderWidth:1,borderColor:'#0b0c0f'}]},options:{maintainAspectRatio:false,responsive:true,cutout:'52%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+NF(c.raw)}}},animation:false}});
 new Chart(andIapPie,{type:'doughnut',data:{labels:["summerpass26","removeads","mspproelite","premium_rack_offer","starterpack","energy_500","energy_100","vip_rush_event","msppro","energy_1000v2","cash_2750","cash_20000","mspelite","cash_8000","cash_1100","energy_2250","cash_500v2","msb_id_usa_independence","vip_rush_event_discounted","msb_id_can_independence_discounted","energy_10000","cash_100","energy_5000","msb_id_can_independence","rolling_offer_step_2"],datasets:[{data:[7718,4315,4017,3017,2532,2302,2204,2035,2034,2032,2003,1804,1482,1155,1012,946,837,831,486,481,398,276,207,102,2],backgroundColor:['#ff8a3d','#ffb800','#ff5c8a','#c77dff','#7b6cff','#ff6b6b','#ffd23f','#06d6a0','#ef476f','#f78c6b','#c9a227','#e07a5f','#9b5de5','#f15bb5','#fee440','#ff9770','#d4a373','#b5179e','#ff85a1','#ffc6ff','#ffadad','#fdffb6','#caffbf','#9bf6ff','#bdb2ff','#ffc6ff','#ff9e80','#e8985e','#d98880','#f8c471'],borderWidth:1,borderColor:'#0b0c0f'}]},options:{maintainAspectRatio:false,responsive:true,cutout:'52%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+NF(c.raw)}}},animation:false}});
@@ -1305,10 +1340,10 @@ const AD2={"labels": ["07 Apr", "08 Apr", "09 Apr", "10 Apr", "11 Apr", "12 Apr"
 (function(){if(typeof Chart==='undefined'||window.WEEKLY_LIVE_CONFIG)return;
 function linTrend(data){const pts=data.map((v,i)=>[i,v]).filter(p=>p[1]!=null);if(pts.length<2)return data.map(()=>null);const n=pts.length;let sx=0,sy=0,sxy=0,sxx=0;pts.forEach(([x,y])=>{sx+=x;sy+=y;sxy+=x*y;sxx+=x*x;});const denom=(n*sxx-sx*sx);const slope=denom!==0?(n*sxy-sx*sy)/denom:0;const intercept=(sy-slope*sx)/n;const first=pts[0][0],last=pts[pts.length-1][0];return data.map((v,i)=>(i>=first&&i<=last)?slope*i+intercept:null);}
 // last-value label plugin
-const lastLabel={id:'lastLabel',afterDatasetsDraw(ch,args,opts){const {ctx}=ch;ch.data.datasets.forEach((ds,di)=>{if(ds._noLabel)return;const meta=ch.getDatasetMeta(di);const pts=meta.data.filter((p,i)=>ds.data[i]!=null);if(!pts.length)return;const last=pts[pts.length-1];const li=ds.data.map((v,i)=>v!=null?i:-1).filter(i=>i>=0).pop();ctx.save();ctx.fillStyle=ds.borderColor;ctx.font='700 10px "DM Mono"';ctx.textAlign='left';const val=ds.data[li];ctx.fillText((opts.fmt?opts.fmt(val):val),last.x+4,last.y);ctx.restore();});}};
+const lastLabel={id:'lastLabel',afterDatasetsDraw(ch,args,opts){const {ctx}=ch;ch.data.datasets.forEach((ds,di)=>{if(ds._noLabel)return;const meta=ch.getDatasetMeta(di);const pts=meta.data.filter((p,i)=>ds.data[i]!=null);if(!pts.length)return;const last=pts[pts.length-1];const li=ds.data.map((v,i)=>v!=null?i:-1).filter(i=>i>=0).pop();ctx.save();ctx.fillStyle=ds.borderColor;ctx.font='400 12.5px Poppins,system-ui,sans-serif';ctx.textAlign='left';const val=ds.data[li];ctx.fillText((opts.fmt?opts.fmt(val):val),last.x+4,last.y);ctx.restore();});}};
 function tline(id,datasets,fmtY,fmtLbl){const el=document.getElementById(id);if(!el)return;new Chart(el,{type:'line',data:{labels:AD2.labels,datasets:datasets},options:{maintainAspectRatio:false,responsive:true,layout:{padding:{right:34}},plugins:{legend:{display:datasets.length>1,position:'bottom',labels:{boxWidth:8,font:{size:8},color:'#a6b8d4'}},lastLabel:{fmt:fmtLbl}},scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#a6b8d4',font:{size:8},callback:fmtY,maxTicksLimit:5}},x:{grid:{display:false},ticks:{color:'#a6b8d4',font:{size:7},maxRotation:0,autoSkip:true,maxTicksLimit:5}}},animation:false},plugins:[lastLabel]});}
 function dist(id,labels,cur,prev,markIdx,fmtLbl){const el=document.getElementById(id);if(!el)return;
- const mark={id:'mark',afterDatasetsDraw(ch){const {ctx}=ch;const mi=labels.indexOf(markIdx);if(mi<0)return;const meta=ch.getDatasetMeta(0);const p=meta.data[mi];if(!p)return;ctx.save();ctx.fillStyle='#ffb800';ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,7);ctx.fill();ctx.font='700 10px "DM Mono"';ctx.textAlign='center';ctx.fillText(fmtLbl(cur[mi]),p.x,p.y-8);ctx.restore();}};
+ const mark={id:'mark',afterDatasetsDraw(ch){const {ctx}=ch;const mi=labels.indexOf(markIdx);if(mi<0)return;const meta=ch.getDatasetMeta(0);const p=meta.data[mi];if(!p)return;ctx.save();ctx.fillStyle='#ffb800';ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,7);ctx.fill();ctx.font='400 12.5px Poppins,system-ui,sans-serif';ctx.textAlign='center';ctx.fillText(fmtLbl(cur[mi]),p.x,p.y-8);ctx.restore();}};
  new Chart(el,{type:'line',data:{labels:labels,datasets:[{label:'Current',data:cur,borderColor:'#4d9fff',backgroundColor:'#4d9fff22',tension:.3,borderWidth:2,pointRadius:0,fill:true},{label:'Prev window',data:prev,borderColor:'#7589a8',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,_noLabel:true}]},options:{maintainAspectRatio:false,responsive:true,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:8,font:{size:8},color:'#a6b8d4'}}},scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#a6b8d4',font:{size:8},callback:v=>v+'%',maxTicksLimit:5}},x:{grid:{display:false},ticks:{color:'#a6b8d4',font:{size:7},maxTicksLimit:8}}},animation:false},plugins:[mark]});}
 ['iOS','Android'].forEach(p=>{const pre=p==='iOS'?'ios':'and';const A=AD2[p];
  tline(pre+'PlaytimeD0',[{label:'Daily',data:A.pt_d0,borderColor:'#00e5c3',backgroundColor:'#00e5c322',tension:.3,borderWidth:1.5,pointRadius:0,fill:true,order:2},{label:'Trend',data:linTrend(A.pt_d0),borderColor:'#edf2ff',borderWidth:1.75,borderDash:[6,3],pointRadius:0,fill:false,tension:0,order:1,_noLabel:true}],v=>v+'s',v=>Math.round(v)+'s');
@@ -1584,7 +1619,9 @@ function maskCardByHeading(s,heading,message){
   card.style.position='relative';card.querySelectorAll('.live-cover').forEach(x=>x.remove());const cover=document.createElement('div');cover.className='live-cover';cover.textContent=message;card.appendChild(cover);
 }
 function chartLabels(labels){return (labels||[]).map(shortDate);}
-function commonOptions(yFormatter,stacked){return {responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#a6b8d4',boxWidth:10,font:{size:8}}},tooltip:{callbacks:{title:items=>{const v=items&&items[0]?items[0].label:'';return /^\d{4}-\d{2}-\d{2}/.test(v)?shortDate(v):v;},label:c=>' '+c.dataset.label+': '+yFormatter(c.parsed.y)}}},scales:{x:{stacked:!!stacked,grid:{display:false},ticks:{color:'#a6b8d4',font:{size:11},maxRotation:0,autoSkip:false,callback:function(value){const label=this.getLabelForValue(value);if(!/^\d{4}-\d{2}-\d{2}/.test(label))return label;const d=new Date(label.slice(0,10)+'T00:00:00');return !isNaN(d)&&d.getDay()===1?shortDate(label):'';}}},y:{stacked:!!stacked,beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#a6b8d4',font:{size:10},callback:yFormatter,maxTicksLimit:5}}}};}
+Chart.defaults.font.family='Poppins';Chart.defaults.font.size=11;Chart.defaults.font.weight='500';Chart.defaults.color='#c0ccdf';
+Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
+function commonOptions(yFormatter,stacked){return {responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#a6b8d4',boxWidth:10,font:{family:'Poppins',size:12.5,weight:'400'}}},tooltip:{callbacks:{title:items=>{const v=items&&items[0]?items[0].label:'';return /^\d{4}-\d{2}-\d{2}/.test(v)?shortDate(v):v;},label:c=>' '+c.dataset.label+': '+yFormatter(c.parsed.y)}}},scales:{x:{stacked:!!stacked,grid:{display:false},ticks:{color:'#a6b8d4',font:{family:'Poppins',size:11,weight:'400'},maxRotation:0,autoSkip:false,callback:function(value){const label=this.getLabelForValue(value);if(!/^\d{4}-\d{2}-\d{2}/.test(label))return label;const d=new Date(label.slice(0,10)+'T00:00:00');return !isNaN(d)&&d.getDay()===1?shortDate(label):'';}}},y:{stacked:!!stacked,beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#a6b8d4',font:{family:'Poppins',size:11,weight:'400'},callback:yFormatter,maxTicksLimit:5}}}};}
 function fitLineWindow(labels,series){
   labels=Array.isArray(labels)?labels:[];
   const actual=(series||[]).filter(s=>!s.dash&&Array.isArray(s.data));
@@ -1609,7 +1646,7 @@ const liveEndLabels={
   afterDatasetsDraw(chart,args,options){
     const {ctx,chartArea}=chart,formatter=options?.formatter||String;
     const labels=[];
-    ctx.save();ctx.font='700 10px "DM Mono",monospace';
+    ctx.save();ctx.font='400 12.5px Poppins,system-ui,sans-serif';
     chart.data.datasets.forEach((dataset,datasetIndex)=>{
       const meta=chart.getDatasetMeta(datasetIndex);if(meta.hidden)return;
       let last=-1;for(let i=(dataset.data||[]).length-1;i>=0;i--){if(finite(dataset.data[i])){last=i;break;}}
@@ -1646,7 +1683,7 @@ const livePiePercentLabels={
     meta.data.forEach((arc,index)=>{
       const value=values[index],percent=finite(value)?value/total*100:0,arcLength=(arc.endAngle-arc.startAngle)*arc.outerRadius,thickness=arc.outerRadius-arc.innerRadius;
       const text=num(percent,1)+'%';
-      ctx.save();ctx.font='800 12px "DM Mono",monospace';const width=ctx.measureText(text).width;
+      ctx.save();ctx.font='500 14px Poppins,system-ui,sans-serif';const width=ctx.measureText(text).width;
       if(percent<3||arcLength<width+10||thickness<18){ctx.restore();return;}
       const angle=(arc.startAngle+arc.endAngle)/2,radius=(arc.innerRadius+arc.outerRadius)/2,point={x:arc.x+Math.cos(angle)*radius,y:arc.y+Math.sin(angle)*radius};
       ctx.textAlign='center';ctx.textBaseline='middle';
@@ -1787,7 +1824,7 @@ function renderOverview(data){
   /* White on this pair: the ring uses a dark platform colour and a translucent
      tint of it, neither of which black reads against. */
   doughnut('iosSplit',['Ad Revenue','IAP'],[iw.totad,iIap],['#4d9fff','rgba(77,159,255,.42)'],'#fff');
-  doughnut('andSplit',['Ad Revenue','IAP'],[aw.totad,aIap],['#00e5c3','rgba(0,229,195,.42)'],'#fff');
+  doughnut('andSplit',['Ad Revenue','IAP'],[aw.totad,aIap],['#00ad99','rgba(0,126,111,.72)'],'#fff');
   const vals=[iw.totad/(iTot||1),iIap/(iTot||1),aw.totad/(aTot||1),aIap/(aTot||1)];
   [...s.querySelectorAll('.legi .legv')].slice(0,4).forEach((e,i)=>e.textContent=pct(vals[i],0,true));
 }
@@ -1989,29 +2026,22 @@ function renderNetworks(data,platform){
   if(shareTotal)shareTotal.innerHTML='<b style="color:var(--t1)">Total Ad Network Rev (Current):</b> '+money(total)+' · '+ranked.length+' networks';
   const legend=share?.querySelector('.legend2');if(legend)legend.innerHTML=ranked.map((n,i)=>'<div class="legi2"><span class="lrank">'+(i+1)+'</span><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><span class="lname">'+escapeHtml(n)+'</span><span class="legv">'+pct(current[n].revenue/(total||1),1,true)+'</span></div>').join('');
 }
-function analyticsValidMask(t){
-  const n=Math.max(t?.dau?.length||0,t?.installs?.length||0,t?.sessions?.length||0,t?.d1?.length||0);
-  return Array.from({length:n},(_,i)=>{
-    const dau=t?.dau?.[i],installs=t?.installs?.[i],sessions=t?.sessions?.[i],d1=t?.d1?.[i];
-    return finite(dau)&&dau>0&&finite(installs)&&installs>=0&&installs<=dau*1.5&&finite(sessions)&&sessions>0&&sessions<=20&&finite(d1)&&d1>0&&d1<=100;
-  });
-}
-function validAnalyticsSeries(values,mask){return (values||[]).map((value,index)=>mask[index]&&finite(value)?value:null);}
+function validAnalyticsSeries(values,test){return (values||[]).map((value,index)=>finite(value)&&(!test||test(value,index))?value:null);}
 
 function renderAnalytics(data,platform){
-  const name=platform==='iOS'?'iOS':'Android',pre=platform==='iOS'?'ios':'and',s=slide(name+' Player Analytics Overview'),w=data.analytics[platform].W_current,p=data.analytics[platform].W_prev,t=data.trend?.[platform]?.analytics||{},labels=t.labels||data.trend?.labels||[],mask=analyticsValidMask(t);
+  const name=platform==='iOS'?'iOS':'Android',pre=platform==='iOS'?'ios':'and',s=slide(name+' Player Analytics Overview'),w=data.analytics[platform].W_current,p=data.analytics[platform].W_prev,t=data.trend?.[platform]?.analytics||{},labels=t.labels||data.trend?.labels||[];
   setKpi(s,'DAU',num(w.dau),w.dau,p.dau,v=>num(v));setKpi(s,'New Installs / Day',num(w.installs),w.installs,p.installs,v=>num(v));setKpi(s,'Sessions / User',num(w.sessions,2),w.sessions,p.sessions,v=>num(v,2));setKpi(s,'Playtime / User',num(w.playtimeAvg,0)+'s',w.playtimeAvg,p.playtimeAvg,v=>num(v,0)+'s');setKpi(s,'D1 Retention',pct(w.d1,1,true),w.d1,p.d1,v=>pct(v,1,true));setKpi(s,'D7 Retention',pct(w.d7,1,true),w.d7,p.d7,v=>pct(v,1,true));setKpi(s,'Data Window',(labels.length||data.meta.trendDays)+' days',null,null,null,(labels[0]?longRange(labels[0],labels[labels.length-1]):'Live trend window'));setKpi(s,'Reporting Week',shortDate(data.meta.curStart)+' - '+shortDate(data.meta.curEnd),null,null,null,'Current selection');
   // The live analytics endpoint already returns retention in percentage
   // points (for example 0.4114 in Sheets becomes 41.14 here). Keep the
   // returned live values unchanged so Daily and its fitted Trend share units.
-  const color=platform==='iOS'?'#4d9fff':'#00e5c3',retention=validAnalyticsSeries(t.d1,mask),withTrend=(values,label,lineColor)=>{values=validAnalyticsSeries(values,mask);return [{label:'Trend',data:linearTrend(values),color:'#edf2ff',dash:true},{label:label||'Daily',data:values,color:lineColor,fill:true}];};lineChart(pre+'AnDau',labels,withTrend(t.dau,'Daily',color),v=>num(v));lineChart(pre+'AnInstall',labels,withTrend(t.installs,'Daily','#00e5c3'),v=>num(v));lineChart(pre+'AnSes',labels,withTrend(t.sessions,'Daily','#ffb800'),v=>num(v,2));lineChart(pre+'AnRet',labels,withTrend(retention,'Daily','#a78bfa'),v=>num(v,1)+'%');
+  const color=platform==='iOS'?'#4d9fff':'#00e5c3',withTrend=(values,label,lineColor,test)=>{values=validAnalyticsSeries(values,test);return [{label:'Trend',data:linearTrend(values),color:'#edf2ff',dash:true},{label:label||'Daily',data:values,color:lineColor,fill:true}];};lineChart(pre+'AnDau',labels,withTrend(t.dau,'Daily',color,v=>v>0),v=>num(v));lineChart(pre+'AnInstall',labels,withTrend(t.installs,'Daily','#00e5c3',v=>v>=0),v=>num(v));lineChart(pre+'AnSes',labels,withTrend(t.sessions,'Daily','#ffb800',v=>v>0&&v<=20),v=>num(v,2));lineChart(pre+'AnRet',labels,withTrend(t.d1,'Daily','#a78bfa',v=>v>=0&&v<=100),v=>num(v,1)+'%');
 }
 
 function renderEngagement(data,platform){
-  const name=platform==='iOS'?'iOS':'Android',pre=platform==='iOS'?'ios':'and',s=slide(name+' Engagement Depth'),w=data.analytics[platform].W_current,p=data.analytics[platform].W_prev,shop=data.shopDayCount[platform]||{},ft=data.ftue[platform]||{},t=data.trend?.[platform]?.analytics||{},tf=data.trend?.[platform]?.ftue||{},labels=t.labels||data.trend?.labels||[],mask=analyticsValidMask(t);
+  const name=platform==='iOS'?'iOS':'Android',pre=platform==='iOS'?'ios':'and',s=slide(name+' Engagement Depth'),w=data.analytics[platform].W_current,p=data.analytics[platform].W_prev,shop=data.shopDayCount[platform]||{},ft=data.ftue[platform]||{},t=data.trend?.[platform]?.analytics||{},tf=data.trend?.[platform]?.ftue||{},labels=t.labels||data.trend?.labels||[];
   setKpi(s,'Playtime D0',num(w.playtimeD0,0)+'s',w.playtimeD0,p.playtimeD0,v=>num(v,0)+'s');setKpi(s,'Playtime Avg',num(w.playtimeAvg,0)+'s',w.playtimeAvg,p.playtimeAvg,v=>num(v,0)+'s');setKpi(s,'Session Length D0',num(w.sessionLengthD0,0)+'s',w.sessionLengthD0,p.sessionLengthD0,v=>num(v,0)+'s');
   setKpi(s,'Reach Shop Lvl 10',pct(shop.shopLevel?.reachAt10,1,false),shop.shopLevel?.reachAt10,shop.shopLevelPrev?.reachAt10,v=>pct(v,1,false));setKpi(s,'Reach Day 10',pct(shop.dayCount?.reachAt10,1,false),shop.dayCount?.reachAt10,shop.dayCountPrev?.reachAt10,v=>pct(v,1,false));setKpi(s,'FTUE @10 min Engaged',pct(ft.W_current,1,false),ft.W_current,ft.W_prev,v=>pct(v,1,false));
-  const color=platform==='iOS'?'#4d9fff':'#00e5c3',withTrend=(values,lineColor)=>{values=validAnalyticsSeries(values,mask);return [{label:'Trend',data:linearTrend(values),color:'#edf2ff',dash:true},{label:'Daily',data:values,color:lineColor,fill:true}];};lineChart(pre+'PlaytimeD0',labels,withTrend(t.playtimeD0,color),v=>num(v,0)+'s');lineChart(pre+'PlaytimeAvg',labels,withTrend(t.playtimeAvg,'#00e5c3'),v=>num(v,0)+'s');lineChart(pre+'SessLen',labels,withTrend(t.sessionLengthD0,'#ffb800'),v=>num(v,0)+'s');const ftHasData=Array.isArray(tf.ftue)&&tf.ftue.some(v=>finite(v));const ftCard=document.getElementById(pre+'Ftue')?.closest('.card');if(ftCard)ftCard.style.display=ftHasData?'':'none';if(ftHasData)lineChart(pre+'Ftue',tf.labels||labels,withTrend(tf.ftue,'#a78bfa'),v=>num(v,1)+'%');
+  const color=platform==='iOS'?'#4d9fff':'#00e5c3',withTrend=(values,lineColor,test)=>{values=validAnalyticsSeries(values,test);return [{label:'Trend',data:linearTrend(values),color:'#edf2ff',dash:true},{label:'Daily',data:values,color:lineColor,fill:true}];};lineChart(pre+'PlaytimeD0',labels,withTrend(t.playtimeD0,color,v=>v>0),v=>num(v,0)+'s');lineChart(pre+'PlaytimeAvg',labels,withTrend(t.playtimeAvg,'#00e5c3',v=>v>0),v=>num(v,0)+'s');lineChart(pre+'SessLen',labels,withTrend(t.sessionLengthD0,'#ffb800',v=>v>0),v=>num(v,0)+'s');const ftValues=validAnalyticsSeries(tf.ftue,v=>v>=0&&v<=100),ftHasData=ftValues.some(v=>finite(v));const ftCard=document.getElementById(pre+'Ftue')?.closest('.card');if(ftCard)ftCard.style.display=ftHasData?'':'none';if(ftHasData)lineChart(pre+'Ftue',tf.labels||labels,withTrend(ftValues,'#a78bfa'),v=>num(v,1)+'%');
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
@@ -2389,7 +2419,7 @@ const RESTORED_RANGES=persistLoad();
 
 installControls();
 setupSubnav();
-document.body.insertAdjacentHTML('beforeend','<div id="uaLoader"><div class="lbox"><div class="spin"></div><b>Loading live weekly data</b><div class="pulse"></div></div></div>');
+document.body.insertAdjacentHTML('beforeend','<div id="uaLoader"><div class="lbox"><div class="spin"></div><b>Loading Data</b><div class="pulse"></div></div></div>');
 loadLive(true);
 })();
 </script>
