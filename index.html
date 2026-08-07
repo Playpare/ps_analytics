@@ -11,7 +11,7 @@
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
-    body { background: #000; color: #edf2ff; font-family: system-ui, sans-serif; }
+    body { background: #000; color: #edf2ff; font-family: 'Segoe UI', Arial, sans-serif; }
     .hub { height: 100%; display: grid; grid-template-rows: 58px minmax(0, 1fr); }
     .hub-nav {
       position: relative; z-index: 10; display: flex; align-items: center; gap: 8px;
@@ -19,12 +19,12 @@
       border-bottom: 1px solid rgba(255, 255, 255, .1);
       box-shadow: 0 5px 22px rgba(0, 0, 0, .4);
     }
-    .brand { margin-right: auto; font-weight: 750; letter-spacing: .01em; }
-    .brand span { color: #7589a8; font-size: 12px; font-weight: 500; }
+    .brand { margin-right: auto; font: 800 19px 'Trebuchet MS', sans-serif; letter-spacing: .01em; }
+    .brand span { color: #aebdd2; font-size: 15px; font-weight: 700; }
     .hub-nav button {
       border: 1px solid rgba(255, 255, 255, .13); border-radius: 999px;
       padding: 9px 18px; background: #0b0c0f; color: #a6b8d4;
-      font: 700 13px/1 system-ui, sans-serif; cursor: pointer;
+      font: 700 13px/1 'Trebuchet MS', sans-serif; cursor: pointer;
     }
     .hub-nav button:hover { color: #edf2ff; border-color: rgba(255, 255, 255, .25); }
     .hub-nav button:focus-visible { outline: 2px solid #00e5c3; outline-offset: 2px; }
@@ -34,7 +34,8 @@
     }
     .hub-nav button[disabled] { opacity: .4; cursor: not-allowed; }
     .hub-nav button[disabled]:hover { color: #a6b8d4; border-color: rgba(255, 255, 255, .13); }
-    .hub-nav button#authOut { margin-left: 14px; font-weight: 500; color: #7589a8; }
+    .hub-nav button#authOut { margin-left: 14px; font-weight: 700; color: #ff8ca1;
+      border-color: rgba(255,77,109,.45); background: rgba(255,77,109,.14); }
     .hub-nav button#authOut:hover { color: #ff8ca1; border-color: rgba(255, 140, 161, .4); }
     .reports { position: relative; min-height: 0; }
     .report-frame {
@@ -211,24 +212,24 @@ html,body{transition:background-color .18s linear,color .18s linear}
       <iframe
         class="report-frame"
         id="report-till-date"
-        data-src="till_date_report.html?v=20260806-default30-v3"
+        data-src="till_date_report.html?v=20260807-metric-style-v14"
         title="Monetization report till date"></iframe>
       <iframe
         class="report-frame"
         id="report-weekly"
-        data-src="weekly_report.html?v=20260806-max8-56day-v4"
+        data-src="weekly_report.html?v=20260807-analytics-series-v17"
         title="Weekly monetization report"
         hidden></iframe>
       <iframe
         class="report-frame"
         id="report-ua"
-        data-src="ua_report.html?v=20260806-share-tooltip-row-fix-v17"
+        data-src="ua_report.html?v=20260807-network-format-v29"
         title="User acquisition report"
         hidden></iframe>
       <iframe
         class="report-frame"
         id="report-aso"
-        data-src="aso_report.html?v=20260806-live-loader-v2"
+        data-src="aso_report.html?v=20260807-card-copy-v16"
         title="App store optimisation report"
         hidden></iframe>
     </section>
