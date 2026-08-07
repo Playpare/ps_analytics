@@ -22,10 +22,14 @@
     .brand b{background:var(--grad);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
     .tabs{display:flex;gap:5px}
     .tabdrop{position:relative}
-    .tabdrop-menu{display:none;position:absolute;top:calc(100% + 7px);left:0;min-width:130px;padding:6px;
-      border:1px solid var(--borderB);border-radius:11px;background:var(--card);box-shadow:var(--sh)}
-    .tabdrop:hover .tabdrop-menu,.tabdrop:focus-within .tabdrop-menu{display:grid;gap:5px}
-    .tabdrop-menu button{width:100%;text-align:left}
+    .tabdrop-menu{display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:152px;
+      padding:5px;background:#0b0c0f;border:1px solid var(--borderB);border-radius:10px;
+      z-index:200;box-shadow:0 14px 34px rgba(0,0,0,.6)}
+    .tabdrop:hover .tabdrop-menu,.tabdrop:focus-within .tabdrop-menu{display:block}
+    .tabs .tabdrop-menu button{display:block;width:100%;text-align:left;color:var(--t2);
+      background:transparent;border:0;border-radius:7px;padding:8px 12px;cursor:pointer}
+    .tabs .tabdrop-menu button:hover{background:rgba(255,255,255,.06);color:var(--t1)}
+    .tabs .tabdrop-menu button.active{color:var(--teal);background:transparent}
     .tabs button,.btn{border:1px solid var(--borderB);border-radius:20px;background:var(--card);color:var(--t2);padding:8px 13px;font:600 11px 'DM Mono';cursor:pointer}
     .tabs button.active,.btn.primary{color:#031018;border-color:transparent;background:var(--grad)}
     .btn:disabled{opacity:.55;cursor:default}
@@ -53,13 +57,13 @@
     .card h2 em{font:500 10px 'DM Mono';font-style:normal;color:var(--t3);margin-left:8px;letter-spacing:.04em}
     .kpi{padding:16px 20px;border-left:3px solid var(--teal);display:flex;flex-direction:column;justify-content:center}
     .kpi .l{color:var(--t3);font:500 9.5px 'DM Mono';text-transform:uppercase;letter-spacing:.06em}
-    .kpi .v{font:500 26px 'DM Mono';margin:6px 0 4px}
-    .kpi .d{color:var(--green);font:500 10px 'DM Mono'}
-    .kpi .p{color:var(--t3);font:500 9px 'DM Mono';margin-top:4px}
+    .kpi .v{font:400 26px Poppins,system-ui,sans-serif;margin:6px 0 4px}
+    .kpi .d{color:var(--green);font:500 11.5px 'DM Mono'}
+    .kpi .p{color:var(--t3);font:500 11px 'DM Mono';margin-top:5px}
     .duo{display:flex;align-items:flex-end;gap:11px;margin:8px 0 6px}
     .wcol{display:flex;flex-direction:column;gap:3px;min-width:0}
     .wl{color:var(--t3);font:500 8.5px 'DM Mono';text-transform:uppercase;letter-spacing:.11em}
-    .wv{font:500 15px 'DM Mono';color:var(--t2);line-height:1.05}
+    .wv{font:400 15px Poppins,system-ui,sans-serif;color:var(--t2);line-height:1.05}
     .wv.big{font-size:22px;color:var(--t1)}
     .sep{color:var(--t3);font:600 13px 'DM Mono';padding-bottom:2px}
     .chartbox{height:250px;position:relative}
@@ -72,7 +76,9 @@
     table{width:100%;border-collapse:collapse;font-size:10px}
     th{position:sticky;top:0;z-index:2;background:#11151b;color:var(--t2);text-align:left;padding:8px 7px;font:500 9px 'DM Mono';white-space:nowrap;border-bottom:1px solid var(--borderB)}
     td{padding:7px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:10px}
-    td.num,th.num{text-align:right;font-family:'DM Mono';font-variant-numeric:tabular-nums}
+    td.num,th.num{text-align:right;font-family:Poppins,system-ui,sans-serif;font-variant-numeric:tabular-nums;font-weight:400;letter-spacing:.01em}
+    td.num{font-size:11.5px!important}
+    th.num{font-size:10.5px!important}
     td.wk{font-family:'DM Mono';color:var(--t2);letter-spacing:.02em}
     tbody tr:hover td{background:rgba(255,255,255,.045)}
     tr.wk-break td{border-top:2px solid rgba(0,229,195,.45)}
@@ -88,6 +94,18 @@
     @keyframes viewIn{to{opacity:1;transform:none}}
     .view.active > .slide > .sh{position:sticky;top:58px;z-index:49;box-shadow:0 8px 20px rgba(0,0,0,.28);backdrop-filter:blur(10px)}
     .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .mt{margin-top:28px}
+    .h1,.h2s,.secth h3,.card h2,.card-title{font-family:'Segoe UI',Arial,sans-serif}
+    body{font-family:'Segoe UI',Arial,sans-serif}
+    .eyebrow,.card h2 em,.kpi .l,.wl,.sf,.secth .tag{font-family:'Segoe UI',Arial,sans-serif}
+    .top,.top .brand,.top button,.sh .brand{font-family:'Trebuchet MS',Arial,sans-serif}
+    .top button{font-size:12.5px;font-weight:650}
+    .sh>.brand{display:none}.sh{justify-content:flex-end}
+    .date-controls,.date-controls *,.sh .date{font-family:'Trebuchet MS',Arial,sans-serif!important}
+    :root{--t2:#c0ccdf;--t3:#b5c3d7}
+    .status,.date-span,.card-sub,.eyebrow,.sf,.mut{color:#c0ccdf!important;font-weight:600!important}
+    #refreshBtn,.date-controls select,.date-confirm{font-size:13.5px!important;font-weight:750!important}
+    .top>.brand{display:none}
     .kpi-row.three{grid-template-columns:repeat(3,1fr)}
     .kpi-row.four{grid-template-columns:repeat(4,1fr)}
     .kpi-row.five{grid-template-columns:repeat(5,1fr)}
@@ -101,12 +119,32 @@
     .kpi.a-amber{border-left-color:var(--amber)}
     .kpi.a-green{border-left-color:var(--green)}
     .kpi.a-coral{border-left-color:var(--coral)}
-    .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:9px;font:500 9.5px 'DM Mono';color:var(--t2)}
+    .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:9px;font:400 12.5px Poppins,system-ui,sans-serif;color:var(--t2)}
+    .legend,.legend *{font-family:Poppins,system-ui,sans-serif!important;font-size:12.5px!important;font-weight:400!important}
+    .kpi .v,.kpi .d,.kpi .d *,.kpi .p,.kpi .p *,.wv,.statgrid span:last-child,
+    table td,table td *,td.num,th.num,tfoot td,.fcount{
+      font-family:Poppins,system-ui,sans-serif!important;
+    }
     .legend i{display:inline-block;width:11px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
     .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;font:500 10px 'DM Mono'}
     .statgrid>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
     .statgrid span:first-child{color:var(--t3)}
     .statgrid span:last-child{color:var(--t1);font-variant-numeric:tabular-nums}
+    /* Match ua_report.html's Weekly Campaign Performance table sizing. */
+    #tblReviews table,#tblAnStability table,#tblIoStability table,
+    #tblAnRatings table,#tblIoRatings table,#tblAnThemes table,#tblIoThemes table{font-size:11.5px}
+    #tblReviews th,#tblAnStability th,#tblIoStability th,
+    #tblAnRatings th,#tblIoRatings th,#tblAnThemes th,#tblIoThemes th{
+      font-size:10.5px!important;padding:10px 9px;color:#b8c5d9
+    }
+    #tblReviews td,#tblAnStability td,#tblIoStability td,
+    #tblAnRatings td,#tblIoRatings td,#tblAnThemes td,#tblIoThemes td{
+      font-size:11.5px!important;padding:9px;color:#d7deea;font-weight:400
+    }
+    #tblReviews td.num,#tblAnStability td.num,#tblIoStability td.num,
+    #tblAnRatings td.num,#tblIoRatings td.num,#tblAnThemes td.num,#tblIoThemes td.num{font-size:12.5px!important}
+    #tblReviews th.num,#tblAnStability th.num,#tblIoStability th.num,
+    #tblAnRatings th.num,#tblIoRatings th.num,#tblAnThemes th.num,#tblIoThemes th.num{font-size:11.5px!important}
   </style>
   <style>
     body.lt{--bg:#eef1f7;--card:#ffffff;--card2:#f5f7fc;
@@ -144,7 +182,7 @@
     .note.info{border-left-color:var(--blue)}
     .note.warn{border-left-color:var(--amber)}
     .note.error{border-left-color:var(--coral);color:var(--coral)}
-    .pill{display:inline-block;padding:2px 8px;border-radius:20px;font:600 8.5px 'DM Mono';letter-spacing:.05em;text-transform:uppercase}
+    .pill{display:inline-block;padding:3px 9px;border-radius:20px;font:600 9.5px 'DM Mono';letter-spacing:.05em;text-transform:uppercase}
     .pill.green{background:rgba(0,196,122,.16);color:var(--green)}
     .pill.amber{background:rgba(255,184,0,.16);color:var(--amber)}
     .pill.coral{background:rgba(255,77,109,.16);color:var(--coral)}
@@ -177,7 +215,7 @@
     .sect+.sect{margin-top:26px}
     .secth{display:flex;align-items:center;gap:11px;margin:0 -18px 15px;padding:15px 18px 13px;
       border-bottom:1px solid var(--borderB)}
-    .secth h3{font:800 19px Syne;margin:0}
+    .secth h3{font:800 19px 'Segoe UI',Arial,sans-serif;margin:0}
     .secth .tag{font:600 9px 'DM Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--t3);
       border:1px solid var(--borderB);border-radius:20px;padding:4px 10px}
     .sect.s-coral .secth h3{color:var(--coral)}
@@ -231,7 +269,7 @@
   </script>
 </head>
 <body>
-  <div id="loader" class="loader"><div class="loader-in"><div class="spin"></div><b id="loaderMsg">Loading live ASO data</b><div class="loader-pulse"></div></div></div>
+  <div id="loader" class="loader"><div class="loader-in"><div class="spin"></div><b id="loaderMsg">Loading Data</b><div class="loader-pulse"></div></div></div>
 
   <header class="top">
     <div class="brand"><b>playspare</b> · ASO</div>
@@ -759,8 +797,11 @@ const row=(host,cards)=>{if($(host))$(host).innerHTML=cards.join('')};
    day ranges - iOS is typed in by hand and usually lags - so nothing here may
    assume a single shared x-axis.
    ========================================================================== */
-Chart.defaults.font.family="'DM Mono', monospace";
-Chart.defaults.font.size=9;
+Chart.defaults.font.family='Poppins';
+Chart.defaults.font.size=11;
+Chart.defaults.font.weight='500';
+Chart.defaults.color='#c0ccdf';
+Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
 
 /* Chart.js label padding only spaces legend items from each other. This
    reserves a gap below the legend so it does not crowd the top y-axis tick. */
@@ -1003,14 +1044,12 @@ function renderAndroid(){
 
   row('anRow2',[
     kpiSingle({label:'Average Crash Rate',accent:'coral',value:p2(avg.crashRate),
-      sub:activeDateLabel(),note:'daily mean across the selected period · '+statusPill((S.status||{}).crash)}),
+      note:'daily mean across the selected period · '+statusPill((S.status||{}).crash)}),
     kpiSingle({label:'Average ANR Rate',accent:'amber',value:p2(avg.anrRate),
-      sub:activeDateLabel(),note:'daily mean across the selected period · '+statusPill((S.status||{}).anr)}),
+      note:'daily mean across the selected period · '+statusPill((S.status||{}).anr)}),
     kpiSingle({label:'Peak Crash Rate',accent:'coral',value:p2(peak.crashRate),
-      sub:D[crash.indexOf(peak.crashRate)]?shortDate(D[crash.indexOf(peak.crashRate)]):'—',
       note:over.crash?over.crash+' day(s) above 1.09%':'never above threshold'}),
     kpiSingle({label:'Peak ANR Rate',accent:'amber',value:p2(peak.anrRate),
-      sub:D[anr.indexOf(peak.anrRate)]?shortDate(D[anr.indexOf(peak.anrRate)]):'—',
       note:over.anr?over.anr+' day(s) above 0.47%':'never above threshold'})]);
 
   lineX('anCrash',D,[
@@ -1056,7 +1095,7 @@ function renderAndroid(){
   const daysCovered=D.length||1;
   row('anRow3',[
     kpiSingle({label:'Average Rating',accent:'teal',value:n2(R.storedMean),
-      sub:R.storedRows+' rows in '+activeDateLabel(),
+      sub:R.storedRows+' rows in the selected period',
       note:'mean of rating rows inside the selected period'}),
     kpiSingle({label:'Ratings per Day',accent:'blue',value:n0(tw/daysCovered),
       sub:n0(tw)+' over '+daysCovered+' day'+(daysCovered===1?'':'s'),note:'written reviews per day'}),
@@ -1279,15 +1318,14 @@ function renderIos(){
 
   row('ioRow2',[
     kpiSingle({label:'Average Crashes per Day',accent:'coral',value:n1(avgPerDay),
-      sub:activeDateLabel(),note:'daily mean across the selected period'}),
+      note:'daily mean across the selected period'}),
     kpiSingle({label:'Total Crashes',accent:'blue',value:cp(tot.crashes),
       sub:n0(tot.crashes)+' across '+D.length+' selected days',note:'sum across the selected period'}),
     kpiSingle({label:'Peak Daily Crashes',accent:'coral',value:n0(peak.crashes),
-      sub:peak.date?shortDate(peak.date):'—',
       note:(S.daysAboveAverage||0)+' day(s) more than 25% above average'}),
     kpiSingle({label:'Days With Crash Data',accent:'amber',value:n0(S.series.length),
       sub:n0(S.series.length)+' of '+D.length+' selected days',
-      note:low.date?'lowest day '+n0(low.crashes)+' on '+shortDate(low.date):'no rows in selected period'})]);
+      note:low.date?'lowest daily count: '+n0(low.crashes):'no rows in selected period'})]);
 
   lineX('ioCrash',D,[
     {label:'Crashes',data:crashes,borderColor:COLORS.coral,backgroundColor:'rgba(255,77,109,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
@@ -1334,7 +1372,7 @@ function renderIos(){
 
   row('ioRow3',[
     kpiSingle({label:'Average Store Rating',accent:'teal',value:n2(R.storedMean),
-      sub:activeDateLabel(),note:'daily mean across the selected period'}),
+      note:'daily mean across the selected period'}),
     kpiSingle({label:'Rating Days Reported',accent:'blue',value:n0(R.storedRows),
       sub:R.storedRows+' stored day'+(R.storedRows===1?'':'s')+
         ((R.changePts===null||R.changePts===undefined)?'':' · '+(R.changePts>0?'+':'')+n2(R.changePts)+' over the period'),
@@ -2102,7 +2140,7 @@ async function connect(force){
   /* A cached copy means the page is already readable, so the blocking overlay
      is skipped and the refresh happens quietly behind it. */
   const hadData=!!(A||I);
-  if(!hadData){ loaderMsg('Loading dashboard…'); $('loader').classList.add('show'); }
+  if(!hadData){ loaderMsg('Loading Data'); $('loader').classList.add('show'); }
   setStatus(hadData?'Refreshing…':'Loading…');
 
   try{
@@ -2170,6 +2208,8 @@ async function connect(force){
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 document.querySelectorAll('[data-review-platform]').forEach(b=>b.onclick=()=>{
   RVPLAT=b.dataset.reviewPlatform;
+  b.blur();
+  document.getElementById('reviewMenuBtn')?.blur();
   Object.keys(RVF).forEach(k=>RVF[k]='');
   RVSHOWN=PERF.reviewPage;RVSORT={key:'date',dir:-1};
   if(VIEWS.reviews)VIEWS.reviews.dirty=true;
