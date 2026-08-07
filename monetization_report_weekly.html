@@ -45,10 +45,9 @@ body.live-error::before{content:'Live data could not be loaded. Use the controls
 --r:14px;--rs:8px;--sh:0 8px 40px rgba(0,0,0,.6);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{overflow-x:hidden}
 body{font-family:'Poppins',system-ui,sans-serif;background:#1a1a1a;display:flex;flex-direction:column;align-items:center;gap:34px;padding:34px 0;}
 .mono{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;}
-.slide{width:min(1520px,100%);min-height:calc(min(1520px,100vw)*0.5625);height:auto;background:var(--bg);color:var(--t1);position:relative;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;container-type:inline-size;}
+.slide{width:min(1520px,100vw);min-height:calc(min(1520px,100vw)*0.5625);height:auto;background:var(--bg);color:var(--t1);position:relative;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;container-type:inline-size;}
 .sh{height:58px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;background:var(--glass);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
 .brand{font-family:'Quicksand',sans-serif;font-weight:700;font-size:16px;color:var(--t1);letter-spacing:.01em;}
 .brand b{font-weight:700;}
@@ -152,7 +151,7 @@ table.airy thead th{padding:9px 6px;}
 #tabnav button{font-family:'Quicksand',sans-serif;font-weight:700;font-size:14px;color:#a6b8d4;background:#0b0c0f;border:1px solid rgba(255,255,255,.12);padding:9px 22px;border-radius:22px;cursor:pointer;}
 #tabnav button.active{color:#031018;background:linear-gradient(135deg,#00e5c3,#4d9fff);border-color:transparent;}
 .tabview{display:flex;flex-direction:column;align-items:center;gap:34px;width:100%;} .tabview.hidden{display:none;}
-.tabview .slide{width:100%;max-width:none;box-shadow:none;}
+.tabview .slide{width:100vw;max-width:none;box-shadow:none;}
 .subnav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px 12px;position:sticky;top:0;z-index:60;background:rgba(11,12,15,.9);backdrop-filter:blur(8px);border:1px solid var(--borderB);border-radius:999px;margin-bottom:-6px;}
 .subnav button{cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--t2);background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:999px;padding:7px 20px;transition:background .15s,color .15s;}
 .subnav button:hover{color:var(--t1);background:rgba(255,255,255,.1);}
@@ -346,11 +345,6 @@ body.lt .slide{background:#ffffff;box-shadow:0 10px 34px rgba(30,50,90,.10)}
 html,body{transition:background-color .18s linear,color .18s linear}
 .top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:background-color .18s linear,border-color .18s linear}
 @media (prefers-reduced-motion: reduce){html,body,.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:none}}
-/* Root report sections must never establish a horizontal scroll range.
-   Tables retain their own .tablewrap scrolling where it is actually needed. */
-html,body{width:100%;max-width:100%;overflow-x:clip!important}
-.tabview,.tabview .slide,.slide,.sb{width:100%;max-width:100%;min-width:0}
-canvas{max-width:100%!important}
 </style>
 </head><body><div id="tabnav"><span class="brand"><span class="brandgr">playspare</span> · Monetization Report</span><button id="btn-report" class="navbtn active" type="button">Monetization Report</button><button id="btn-analytics" class="navbtn" type="button">Analytics</button><div class="navdrop" id="platform-nav"><button id="btn-platform" class="navbtn" data-toggle type="button">Platform ▾</button><div class="navmenu"><button data-platform="ios">iOS</button><button data-platform="android">Android</button></div></div><div id="weeklyRefreshArea"><button id="weeklyRefresh" class="navbtn" type="button">↻ Refresh</button><span id="weeklyLiveStatus">Loading...</span></div></div><div id="weeklyFilterBar" class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Weekly</span></div><div id="weeklyDateHost"></div></div><div id="tab-report" class="tabview">
 <div class="slide">
@@ -1222,7 +1216,7 @@ const API = {
       throw new Error('Not signed in - open the hub and sign in.');
     }
     let lastError;
-    for(let attempt=1;attempt<=4;attempt++){
+    for(let attempt=1;attempt<=2;attempt++){
       const controller=new AbortController();
       /* A cold Weekly Apps Script execution can exceed one minute. Aborting
          it at 60s leaves that server execution running and immediately starts
@@ -1245,9 +1239,17 @@ const API = {
           err.retryable=res.status===404||res.status===429||res.status>=500;
           throw err;
         }
+        /* Google intermittently answers a perfectly valid request with an HTML
+           page (a throttling interstitial) after 20-40 seconds. Measured on
+           this deployment, it hits even a no-op ping, so it is transient
+           infrastructure behaviour rather than a misconfiguration - retry it
+           instead of failing outright. If it still returns HTML on the last
+           attempt, the deployment really is wrong and the message says so. */
         if(body.charAt(0)==='<'){
-          const err=new Error('Apps Script returned a Google sign-in page instead of data');
-          err.retryable=false;
+          const err=new Error(attempt<2
+            ?'Apps Script returned an HTML page instead of data - retrying.'
+            :'Apps Script returned a Google sign-in page instead of data. Redeploy it with "Execute as: Me" and "Who has access: Anyone".');
+          err.retryable=attempt<2;
           throw err;
         }
         let data;
@@ -1256,14 +1258,22 @@ const API = {
           err.retryable=false;
           throw err;
         }
-        if(data.code === 401||/^Unauthorized\b/i.test(String(data.error||''))){
-          if(attempt<4){
+        /* A bare {error:'Unauthorized'} with no code is Apps Script's legacy
+           key-gated doGet answering a redirect-downgraded POST - a transient
+           routing quirk, NOT a session problem. Retry it; never sign out. */
+        if(data.code===undefined&&String(data.error||'')==='Unauthorized'){
+          const err=new Error('Apps Script routed the request to its GET endpoint - retrying.');
+          err.retryable=true;
+          throw err;
+        }
+        if(data.code === 401||/^Unauthorized:/i.test(String(data.error||''))){
+          if(attempt<2){
             try{window.parent.postMessage({type:'mss3d:need-token'},location.origin)}catch(e){}
           }else{
             try{window.parent.postMessage({type:'mss3d:session-expired'},location.origin)}catch(e){}
           }
-          const err=new Error(attempt<4?'Authentication rejected - refreshing token and retrying.':'Session expired - reload the hub and sign in again.');
-          err.retryable=attempt<4;
+          const err=new Error(attempt<2?'Authentication rejected - refreshing token and retrying.':'Session expired - reload the hub and sign in again.');
+          err.retryable=attempt<2;
           err.authFailure=true;
           throw err;
         }
@@ -1277,7 +1287,7 @@ const API = {
         clearTimeout(timer);
         lastError=e;
         const retryable=e?.retryable===true||e?.name==='AbortError'||e instanceof TypeError;
-        if(!retryable||attempt===4)throw e;
+        if(!retryable||attempt===2)throw e;
         setStatus(e?.authFailure?`Weekly authentication rejected — retrying automatically (${attempt}/4)…`:`Weekly request interrupted — retrying automatically (${attempt}/4)…`,true);
         await new Promise(resolve=>setTimeout(resolve,Math.min(10000,1500*Math.pow(2,attempt-1))));
       }
@@ -1698,8 +1708,7 @@ function installControls(){
       '<option value="w2">Last 2 weeks</option>'+
       '<option value="w4">Last 4 weeks</option>'+
       '<option value="w6">Last 6 weeks</option>'+
-      '<option value="w8">Last 8 weeks</option>'+
-      '<option value="w10">Last 10 weeks</option>'+
+      '<option value="w8">Last 8 weeks</option>'+ 
       '<option value="single">Single date</option>'+
       '<option value="range">Custom range</option>'+
     '</select>'+
@@ -1720,13 +1729,16 @@ function installControls(){
     }
   });
   const g=id=>document.getElementById(id);
-  /* Every new report document starts from Last 2 Weeks. Date selections are
-     intentionally session-local UI state and must not survive reload/sign-in. */
+  /* The dashboard ALWAYS opens on Last 2 weeks: it is the smallest window,
+     so the first paint is the fastest possible, and the wider presets are
+     warmed in the background right after. Restoring the previously saved
+     mode here used to make the first load as slow as the heaviest filter
+     the user had ever picked. Saved dates are still restored for the
+     single/range inputs so switching to them keeps the old values. */
   g('weeklyMode').value='w2';
-  g('weeklyDate').value='';
-  g('weeklyStart').value='';
-  g('weeklyEnd').value='';
-  ['weekly_mode','weekly_date','weekly_start','weekly_end'].forEach(k=>localStorage.removeItem(k));
+  g('weeklyDate').value=localStorage.getItem('weekly_date')||'';
+  g('weeklyStart').value=localStorage.getItem('weekly_start')||'';
+  g('weeklyEnd').value=localStorage.getItem('weekly_end')||'';
   function syncMode(){
     const m=g('weeklyMode').value;
     box.classList.toggle('single',m==='single');
@@ -1737,7 +1749,10 @@ function installControls(){
   /* Refresh is the deliberate "the sheets moved, go and look again" action, so
      it drops every remembered range rather than just the one on screen - a
      stale preset served instantly is worse than a slow accurate one. */
-  g('weeklyRefresh').addEventListener('click',()=>{payloadCache.clear();loadLive(false,true);});
+  /* Refresh must be a real refresh: clear the stored copies as well as the
+     in-memory ones, or the reload after it would restore what was just
+     discarded. force=1 then makes the backend rebuild too. */
+  g('weeklyRefresh').addEventListener('click',()=>{payloadCache.clear();persistClear();loadLive(false,true);});
   syncMode();
 }
 
@@ -2053,33 +2068,128 @@ function numberTables(){
    time after, which is the same instant response without inventing any figure
    the server did not compute. warmPresets() then fetches the remaining presets
    in the background, so in practice the first click on each is already warm. */
-const PAYLOAD_TTL_MS=15*60*1000;   // the sheets keep changing; never serve a range forever
+/* ── Daily refresh boundary ──────────────────────────────────────────────
+   The source sheets are written once a week - Mondays, roughly 06:00-08:00
+   Asia/Karachi - and are not touched in between, so a payload fetched after
+   that sync stays correct for the rest of the week. A rolling TTL (this used
+   to be 15 minutes) therefore threw away good data and made people wait for
+   a rebuild of numbers that had not changed.
+   Instead every cached range is stamped against the most recent DAILY_REFRESH_HOUR
+   boundary: the first load after 09:00 refetches, and every load between
+   then and the next 09:00 renders straight from memory.
+   Daily rather than weekly on purpose - it costs one request a day against
+   the server's own warm cache, and it means a corrected sheet or a re-run
+   sync is picked up the next morning without anyone pressing Refresh.
+   The hour matches the warm trigger in weekly_router.gs, which rebuilds the
+   server-side caches between 08:00 and 09:00 so this refetch is a cache read. */
+const DAILY_REFRESH_HOUR=9;
+function refreshBoundary(){
+  const now=new Date();
+  const b=new Date(now.getFullYear(),now.getMonth(),now.getDate(),DAILY_REFRESH_HOUR,0,0,0);
+  /* Before 09:00 the day's boundary has not happened yet, so yesterday's is
+     the one still in force - otherwise every load between midnight and 09:00
+     would look stale and refetch. */
+  if(b.getTime()>now.getTime())b.setDate(b.getDate()-1);
+  return b.getTime();
+}
+const isFresh=entry=>!!entry&&entry.at>=refreshBoundary();
+
 const payloadCache=new Map();      // canonical params key -> {at, json}
 const inflight=new Map();          // canonical params key -> in-progress request
 const cacheKey=params=>JSON.stringify(Object.keys(params).sort().map(k=>[k,params[k]]));
+
+/* ── Ranges that survive a reload ────────────────────────────────────────
+   payloadCache alone dies with the document, so every reload of the hub -
+   or every first click on the Weekly tab in a new session - paid the network
+   again for data already fetched that morning. Mirroring it into localStorage
+   makes those loads instant: the report paints from disk with no request at
+   all until the next 09:00 boundary.
+   One localStorage key per range, not one blob: an oversized range then fails
+   on its own instead of taking every other cached range down with it. */
+const PERSIST_PREFIX='mss3d_weekly_payload_v3_max8:';
+/* A single range is capped well under the ~5M-character origin quota, so one
+   fat payload can never crowd out the rest. Anything larger simply is not
+   persisted - it still caches in memory for the session. */
+const PERSIST_MAX_CHARS=1500000;
+const persistKeyFor=key=>PERSIST_PREFIX+key;
+
+/** Restores this morning's ranges into payloadCache; drops anything stale. */
+function persistLoad(){
+  let restored=0;
+  try{
+    const boundary=refreshBoundary();
+    /* Backwards: removeItem() reindexes localStorage, so a forward loop would
+       skip the entry after every deletion. */
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k=localStorage.key(i);
+      if(!k||k.indexOf(PERSIST_PREFIX)!==0)continue;
+      let entry=null;
+      try{entry=JSON.parse(localStorage.getItem(k));}catch(e){/* corrupt */}
+      if(!entry||!entry.json||!(entry.at>=boundary)){
+        try{localStorage.removeItem(k);}catch(e){}
+        continue;
+      }
+      payloadCache.set(k.slice(PERSIST_PREFIX.length),entry);
+      restored++;
+    }
+  }catch(e){/* storage blocked or unavailable; the memory cache still works */}
+  return restored;
+}
+
+function persistSave(key,entry){
+  try{
+    const text=JSON.stringify(entry);
+    if(text.length>PERSIST_MAX_CHARS)return;
+    localStorage.setItem(persistKeyFor(key),text);
+  }catch(e){
+    /* Out of quota. Drop the stored ranges and keep just this one, rather
+       than leaving a cache that silently stops accepting new entries. */
+    try{
+      persistClear();
+      localStorage.setItem(persistKeyFor(key),JSON.stringify(entry));
+    }catch(e2){/* still no room: this session keeps it in memory only */}
+  }
+}
+
+function persistClear(){
+  try{
+    const doomed=[];
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&k.indexOf(PERSIST_PREFIX)===0)doomed.push(k);
+    }
+    doomed.forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+  }catch(e){}
+}
 /* Every render gets its own copy. renderAll() runs trimTrend(), which rewrites
    data.trend in place, so handing out the stored object would let one render
    edit what the next one reads. */
 function clonePayload(json){try{return structuredClone(json)}catch(e){return JSON.parse(JSON.stringify(json))}}
 
 async function requestPayload(opts){
-  const {mode='latest',date='',start='',end='',trend='90',selfStart='',selfEnd='',force=false}=opts||{};
-  const params = { trendDays: trend || 90 };
+  const {mode='latest',date='',start='',end='',trend='56',selfStart='',selfEnd='',force=false}=opts||{};
+  const params = { trendDays: Math.min(56,Number(trend)||56) };
   if(mode==='week'){ if(date) params.week=date; }
   else if(mode==='single'){ if(date){ params.start=date; params.end=date; } }
   else if(mode==='range'){ if(start&&end){ params.start=start; params.end=end; } }
   else if(mode==='all'){ params.all='1'; }
   if(selfStart&&selfEnd){ params.selfBenchStart=selfStart; params.selfBenchEnd=selfEnd; }
   const key=cacheKey(params),cached=payloadCache.get(key);
-  if(force)payloadCache.delete(key);
-  else if(cached&&Date.now()-cached.at<PAYLOAD_TTL_MS){STATE.fromCache=true;return clonePayload(cached.json);}
+  if(force){payloadCache.delete(key);try{localStorage.removeItem(persistKeyFor(key));}catch(e){}}
+  else if(isFresh(cached)){STATE.fromCache=true;return clonePayload(cached.json);}
   STATE.fromCache=false;
   /* Clicking a preset that the background warm-up is already fetching should
      join that request, not open a second identical Apps Script execution. */
   if(!force&&inflight.has(key))return clonePayload(await inflight.get(key));
+  /* After the key is computed, so a forced and a normal request share one
+     cache slot. force=1 tells the backend to rebuild instead of serving its
+     own server-side cache - that is what makes Refresh a real refresh. */
+  if(force)params.force='1';
   const pending=(async()=>{
     const json=(await API.call('payload', params)).data;if(json.error)throw new Error(json.error);if(!json.meta||!json.iOS||!json.Android)throw new Error('Unexpected payload: required live report fields are missing');if(!json.benchmark)throw new Error('Live Benchmark payload is missing; redeploy the current Apps Script project');
-    payloadCache.set(key,{at:Date.now(),json});
+    const entry={at:Date.now(),json};
+    payloadCache.set(key,entry);
+    persistSave(key,entry);            // so a reload later today costs nothing
     return json;
   })();
   inflight.set(key,pending);
@@ -2088,36 +2198,29 @@ async function requestPayload(opts){
 }
 
 /* Fetch the preset windows the user has not opened yet, one at a time, so that
-   switching between them later is a memory read rather than a round trip. */
-const PRESET_MODES=['w2','w4','w6','w8','w10'];
+   switching between them later is a memory read rather than a round trip.
+   w2 is the default first paint, and no preset exceeds eight weeks; with the
+   server-side payload cache these
+   are usually sub-second reads rather than rebuilds. */
+const PRESET_MODES=['w8','w4','w6'];
 let warming=false;
 function presetRequest(mode){
   const wk=/^w(\d+)$/.exec(mode); if(!wk)return null;
   const w=weekWindow(Number(wk[1]), weekAnchor());
-  return {mode:'range',start:isoDay(w.start),end:isoDay(w.end),trend:'90'};
+  return {mode:'range',start:isoDay(w.start),end:isoDay(w.end),trend:'56'};
 }
-/* A custom payload contains correct totals for the whole selected range, but
-   some backend deployments return that range as one overview bar. Build the
-   chart series with the same Monday-Sunday buckets used by presets. Boundary
-   weeks are clipped to the exact custom dates, so no out-of-range revenue is
-   introduced into the first or last bar. */
-async function customWeeklySeries(start,end,trend,force){
-  const parse=s=>{const p=String(s).split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
-  const first=parse(start),last=parse(end);
-  if(Number.isNaN(first.getTime())||Number.isNaN(last.getTime())||first>last)return[];
-  const buckets=[];
-  for(let cursor=new Date(first);cursor<=last;){
-    const daysToSunday=(7-cursor.getDay())%7;
-    const sunday=new Date(cursor);sunday.setDate(sunday.getDate()+daysToSunday);
-    const bucketEnd=sunday<last?sunday:last;
-    buckets.push({start:isoDay(cursor.getTime()),end:isoDay(bucketEnd.getTime())});
-    cursor=new Date(bucketEnd);cursor.setDate(cursor.getDate()+1);
-  }
-  return Promise.all(buckets.map(b=>requestPayload({mode:'range',start:b.start,end:b.end,trend,force})));
-}
+/* Gap between two background preset requests. Apps Script throttles a burst
+   of requests to the same deployment - it answers slowly and sometimes drops
+   the connection outright, which surfaced as "Weekly request interrupted".
+   These four requests were previously fired back to back with no gap at all,
+   which is why only Weekly showed that error: it is the only page that sends
+   more than one request per load. Nothing waits on this loop, so spacing it
+   out costs the user nothing. */
+const PRESET_GAP_MS=8000;
 async function warmPresets(){
   if(warming)return; warming=true;
   try{
+    let sent=0;
     for(const mode of PRESET_MODES){
       /* A user-initiated load owns the connection. Wait it out rather than
          adding a parallel Apps Script execution that would slow it down.
@@ -2125,11 +2228,15 @@ async function warmPresets(){
       for(let waited=0;STATE.loading&&waited<60000;waited+=1000)await new Promise(r=>setTimeout(r,1000));
       if(STATE.loading)break;
       const req=presetRequest(mode); if(!req)continue;
-      if(payloadCache.has(cacheKey({trendDays:req.trend,start:req.start,end:req.end})))continue;
+      /* Freshness, not mere presence: a range restored from localStorage is
+         already good for today, so after the first load of the day every
+         preset is skipped here and the warm-up sends nothing at all. */
+      if(isFresh(payloadCache.get(cacheKey({trendDays:req.trend,start:req.start,end:req.end}))))continue;
+      if(sent)await new Promise(r=>setTimeout(r,PRESET_GAP_MS));
       /* Warming is invisible: it never writes the status line, the spinner or
          the error banner. One failure means the backend or the session is
          unhappy, so stop instead of firing three more doomed requests. */
-      try{ await requestPayload(req); }catch(e){ break; }
+      try{ await requestPayload(req); sent++; }catch(e){ break; }
     }
   }finally{ warming=false; }
 }
@@ -2149,7 +2256,7 @@ async function loadLive(auto,force){
   if(STATE.loading)return;STATE.loading=true;const button=document.getElementById('weeklyLoad'),refreshButton=document.getElementById('weeklyRefresh');if(button)button.disabled=true;if(refreshButton)refreshButton.disabled=true;document.body.classList.remove('live-error');document.body.classList.add('live-busy');if(!STATE.data)document.body.classList.remove('live-ready');
   clearLiveError();
   const g=id=>document.getElementById(id);
-  const mode=g('weeklyMode')?.value||'w2',date=g('weeklyDate')?.value||'',start=g('weeklyStart')?.value||'',end=g('weeklyEnd')?.value||'',trend='90';
+  const mode=g('weeklyMode')?.value||'w2',date=g('weeklyDate')?.value||'',start=g('weeklyStart')?.value||'',end=g('weeklyEnd')?.value||'',trend='56';
   /* Hold the overlay for a beat. A cached or quick payload can come back in
      under 100ms, and an overlay that appears and vanishes inside one or two
      frames reads as nothing having happened at all - the exact thing the
@@ -2161,6 +2268,7 @@ async function loadLive(auto,force){
   if(mode==='single'&&!date)return stop('Choose a date for this filter mode');
   if(mode==='range'&&(!start||!end))return stop('Choose both From and To dates');
   if(mode==='range'&&start>end)return stop('From date must be on or before To date');
+  localStorage.setItem('weekly_mode',mode);localStorage.setItem('weekly_date',date);localStorage.setItem('weekly_start',start);localStorage.setItem('weekly_end',end);
   setStatus('Loading...');
   try{
     let data;
@@ -2177,9 +2285,6 @@ async function loadLive(auto,force){
       STATE.asOf=data.meta.asOf||STATE.asOf;
     } else {
       data=await requestPayload({mode,date,start,end,trend,force});
-      if(mode==='range'){
-        data.weeklySeries=await customWeeklySeries(start,end,trend,force);
-      }
       if(mode==='latest'&&data.meta?.asOf&&data.meta?.curEnd&&data.meta.asOf<data.meta.curEnd){const d=new Date(data.meta.curStart+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-1);const latestComplete=d.toISOString().slice(0,10);data=await requestPayload({mode:'week',date:latestComplete,trend,force});}
     }
     renderAll(data);
@@ -2194,9 +2299,11 @@ async function loadLive(auto,force){
     setStatus('Loaded - '+clockTime(Date.now()));
     try{window.parent.postMessage({type:'mss3d:report-ready',report:'weekly'},location.origin)}catch(e){}
     /* Warm the remaining presets once this render has settled, so the next
-       filter change is a memory read. Deliberately after the paint - it must
-       never compete with the load the user is actually watching. */
-    setTimeout(warmPresets,2500);
+       filter change is a memory read. Deliberately well after the paint: the
+       hub starts the other three reports about a second in, and stacking the
+       warm-up on top of that was enough to get this page's requests dropped. */
+    /* Preset payloads are warmed by Apps Script triggers. Do not download
+       several large ranges automatically; fetch one only when it is selected. */
   }catch(err){console.error(err);document.body.classList.add('live-error');setStatus('Error: '+(err.message||String(err)),true);showLiveError(err);}
   finally{STATE.loading=false;clearBusy();if(button)button.disabled=false;if(refreshButton)refreshButton.disabled=false;}
 }
@@ -2259,8 +2366,26 @@ window.__weeklyDebug={
   get build(){return new URLSearchParams(location.search).get('v')||'(no ?v= - opened directly)'},
   get cachedRanges(){return [...payloadCache.keys()]},
   get lastRenderFromCache(){return STATE.fromCache},
+  /* Why a load did or did not hit the network: everything cached at or after
+     `boundary` is served from memory until `nextRefresh`. */
+  get cacheStatus(){
+    const b=refreshBoundary(),next=new Date(b+86400000);
+    return {
+      refreshHour:DAILY_REFRESH_HOUR,
+      boundary:new Date(b).toLocaleString(),
+      nextRefresh:next.toLocaleString(),
+      restoredFromDisk:RESTORED_RANGES,
+      ranges:[...payloadCache.entries()].map(([k,v])=>({
+        range:k,fetched:new Date(v.at).toLocaleString(),fresh:isFresh(v)
+      }))
+    };
+  },
   state:STATE
 };
+
+/* Before the first load, so a range fetched earlier today is already in hand
+   and loadLive() paints from it without touching the network. */
+const RESTORED_RANGES=persistLoad();
 
 installControls();
 setupSubnav();
