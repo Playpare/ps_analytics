@@ -434,13 +434,11 @@ function previousPeriodRows(rows){
   const duration=bounds.end-bounds.start+1,prevEnd=bounds.start-1,prevStart=prevEnd-duration+1;
   return (rows||[]).filter(r=>{const info=rowDateInfo(r);if(!info.d)return false;const[a,b]=rowSpan(info);return a<=prevEnd&&b>=prevStart});
 }
-/* Cohorts always show exactly the newest six week buckets present in their own
-   dataset. This is independent of the report date filter and advances only
-   when a new cohort week is added, at which point the oldest bucket drops. */
-function latestSixCohortWeeks(rows){
+/* Select the requested number of newest cohort-week buckets. */
+function latestCohortWeeks(rows,count){
   const dated=rows.map(r=>({r,d:dateVal(weekValue(r))})).filter(x=>x.d);
   if(!dated.length)return rows;
-  const latestKeys=[...new Set(dated.map(x=>localISO(x.d)))].sort().slice(-6);
+  const latestKeys=[...new Set(dated.map(x=>localISO(x.d)))].sort().slice(-Math.max(1,count||6));
   const keep=new Set(latestKeys);
   return dated.filter(x=>keep.has(localISO(x.d))).map(x=>x.r);
 }
@@ -964,16 +962,20 @@ function renderPlatformNetwork(p,overallRows,dailyRows){
   const sByIap=visibleShareEntries(shares,x=>x.IAP_Revenue).sort((a,b)=>b.IAP_Revenue-a.IAP_Revenue);pie(p+'IapNetworkShare',sByIap.map(x=>x.channel),sByIap.map(x=>x.IAP_Revenue),'IAP Revenue Share',SIDE_PIE);
   const dxSource=dailyRows&&dailyRows.length?dailyRows:allowedOverallRows;
   let campaigns=aggregateCampaignRows(filterRows(DATA.campaigns_data?.rows||[]).filter(r=>appIs(r,p)&&campaignChannelAllowed(p,field(r,'channel'))));
-  let cohorts=latestSixCohortWeeks((DATA.weekly_network?.rows||[]).filter(r=>appIs(r,p)&&campaignChannelAllowed(p,field(r,'channel'))));
-  const cohortDates=cohorts.map(r=>dateVal(weekValue(r))).filter(Boolean).sort((a,b)=>a-b);
-  const cohortTitle=$(p+'CohortTitle');
-  if(cohortTitle)cohortTitle.textContent='ROAS Cohorts · Latest 6 Available Weeks'+(cohortDates.length?' · '+shortDate(cohortDates[0])+' – '+shortDate(new Date(cohortDates.at(-1).getTime()+WEEK_SPAN_DAYS*MS_DAY)):'');
+  const cohortAll=(DATA.weekly_network?.rows||[]).filter(r=>appIs(r,p)&&campaignChannelAllowed(p,field(r,'channel')));
+  const cohortWeekMatch=/^w(\d+)$/.exec(DATE_FILTER);
+  const cohortWeekCount=cohortWeekMatch?Math.max(6,Number(cohortWeekMatch[1])):6;
+  const cohortSource=cohortWeekMatch?cohortAll:filterRows(cohortAll);
   const dxChannels=[...new Set(dxSource.map(r=>r.channel).filter(Boolean).map(String))].sort();
-  const tableChannels=[...new Set([...campaigns,...cohorts].map(r=>field(r,'channel')).filter(Boolean).map(String))].sort();
+  const tableChannels=[...new Set([...campaigns,...cohortSource].map(r=>field(r,'channel')).filter(Boolean).map(String))].sort();
   const sharedChannels=[...new Set([...dxChannels,...tableChannels])].sort();
   populateChannelSelect(p+'DxdChannel',sharedChannels,fDx);populateChannelSelect(p+'CampaignChannel',sharedChannels,fDx);
   const roasRows=fDx==='all'?dxSource:dxSource.filter(r=>channelKey(r.channel)===channelKey(fDx));renderPlatformRoas(p+'RoasDaily',roasRows);
   if(fDx!=='all')campaigns=campaigns.filter(r=>channelKey(field(r,'channel'))===channelKey(fDx));
+  const cohorts=latestCohortWeeks(fDx==='all'?cohortSource:cohortSource.filter(r=>channelKey(field(r,'channel'))===channelKey(fDx)),cohortWeekCount);
+  const cohortDates=cohorts.map(r=>dateVal(weekValue(r))).filter(Boolean).sort((a,b)=>a-b);
+  const cohortTitle=$(p+'CohortTitle');
+  if(cohortTitle)cohortTitle.textContent='ROAS Cohorts · Latest '+cohortWeekCount+' Available Weeks'+(cohortDates.length?' · '+shortDate(cohortDates[0])+' – '+shortDate(new Date(cohortDates.at(-1).getTime()+WEEK_SPAN_DAYS*MS_DAY)):'');
   const campaignSorter=campaignNetworkSorter(campaigns,PLATFORM_FILTER[p].campaignSort),orderedCampaigns=campaigns.slice().sort(campaignSorter);
   richTable(p+'CampaignTable',campaigns,{exclude:['app','Week','Weeks','Network Cost Diff'],number:true,sort:campaignSorter});
   addCampaignSeparators(p+'CampaignTable',orderedCampaigns);
