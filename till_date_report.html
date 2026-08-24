@@ -52,7 +52,23 @@
     .tabs{display:flex;gap:5px}
     .tabs button,.btn,.pill{border:1px solid var(--borderB);border-radius:20px;background:var(--card);color:var(--t2);padding:8px 13px;font:600 11px 'DM Mono',monospace;cursor:pointer;transition:border-color .15s,color .15s}
     .tabs button:hover,.btn:hover,.pill:hover{border-color:var(--teal);color:var(--t1)}
-    .tabs button.active,.btn.primary,.pill.active{color:var(--onGrad);border-color:transparent;background:var(--grad)}
+.tabs button.active,.btn.primary,.pill.active{color:var(--onGrad);border-color:transparent;background:var(--grad)}
+body:not(.lt) .tabs button:not(.active){color:#e3e9f4}
+html,body{scrollbar-width:thin;scrollbar-color:#4d9fff #070809}
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:12px;height:12px;display:block}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track{background:#070809;border-left:1px solid rgba(255,255,255,.06)}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#00bfa8,#4d7fd8);border:3px solid #070809;border-radius:999px}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#8b7cf6,#4d9fff)}
+body.lt{scrollbar-color:#5274a8 #e7ecf6}body.lt::-webkit-scrollbar-track{background:#e7ecf6;border-left-color:rgba(15,30,60,.1)}body.lt::-webkit-scrollbar-thumb{border-color:#e7ecf6}
+.tablewrap,.cohort-table-wrap{scrollbar-width:thin;scrollbar-color:rgba(166,184,212,.58) rgba(255,255,255,.045)}
+.tablewrap::-webkit-scrollbar,.cohort-table-wrap::-webkit-scrollbar{width:10px;height:10px}
+.tablewrap::-webkit-scrollbar-track,.cohort-table-wrap::-webkit-scrollbar-track{background:rgba(255,255,255,.045);border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb,.cohort-table-wrap::-webkit-scrollbar-thumb{background:rgba(166,184,212,.58);border:2px solid #11151b;border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb:hover,.cohort-table-wrap::-webkit-scrollbar-thumb:hover{background:rgba(215,222,234,.76)}
+body.lt .tablewrap,body.lt .cohort-table-wrap{scrollbar-color:rgba(82,98,122,.55) rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-track,body.lt .cohort-table-wrap::-webkit-scrollbar-track{background:rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-thumb,body.lt .cohort-table-wrap::-webkit-scrollbar-thumb{background:rgba(82,98,122,.55);border-color:#e7ecf6}
+body.lt .tablewrap::-webkit-scrollbar-thumb:hover,body.lt .cohort-table-wrap::-webkit-scrollbar-thumb:hover{background:rgba(39,54,75,.7)}
     .btn[disabled]{opacity:.45;cursor:not-allowed}
     .connect{margin-left:auto;display:flex;align-items:center;gap:6px}
     .connect input{width:225px;background:var(--card2);color:var(--t1);border:1px solid var(--borderB);border-radius:8px;padding:7px 9px;font:10px 'DM Mono',monospace}
@@ -251,6 +267,16 @@ body.lt{background:#eef1f7;color:#0d1b2e}
 html,body{transition:background-color .18s linear,color .18s linear}
 .top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:background-color .18s linear,border-color .18s linear}
 @media (prefers-reduced-motion: reduce){html,body,.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:none}}
+</style>
+<style>
+button{transition:transform .2s cubic-bezier(.2,.8,.2,1),filter .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease,color .18s ease}
+button:not(:disabled):hover{transform:translateY(-3px) scale(1.035);filter:brightness(1.12);border-color:#00e5c3!important;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82),0 7px 16px rgba(0,160,138,.2)}
+button:not(:disabled):active{transform:translateY(1px) scale(.94);transition-duration:.07s}
+@media (prefers-reduced-motion:reduce){button{transition:none!important}button:hover,button:active{transform:none!important}}
+html,body,.tablewrap,.cohort-table-wrap{scrollbar-color:#4b535f #111318!important}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track,.tablewrap::-webkit-scrollbar-track,.cohort-table-wrap::-webkit-scrollbar-track{background:#111318!important}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb,.tablewrap::-webkit-scrollbar-thumb,.cohort-table-wrap::-webkit-scrollbar-thumb{background:#4b535f!important;border-color:#111318!important}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover,.tablewrap::-webkit-scrollbar-thumb:hover,.cohort-table-wrap::-webkit-scrollbar-thumb:hover{background:#69727f!important}
 </style>
 </head>
 <body>
