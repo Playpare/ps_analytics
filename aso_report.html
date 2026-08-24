@@ -31,7 +31,23 @@
     .tabs .tabdrop-menu button:hover{background:rgba(255,255,255,.06);color:var(--t1)}
     .tabs .tabdrop-menu button.active{color:var(--teal);background:transparent}
     .tabs button,.btn{border:1px solid var(--borderB);border-radius:20px;background:var(--card);color:var(--t2);padding:8px 13px;font:600 11px 'DM Mono';cursor:pointer}
-    .tabs button.active,.btn.primary{color:#031018;border-color:transparent;background:var(--grad)}
+.tabs button.active,.btn.primary{color:#031018;border-color:transparent;background:var(--grad)}
+body:not(.lt) .tabs button:not(.active){color:#e3e9f4}
+html,body{scrollbar-width:thin;scrollbar-color:#4d9fff #070809}
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:12px;height:12px;display:block}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track{background:#070809;border-left:1px solid rgba(255,255,255,.06)}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#00bfa8,#4d7fd8);border:3px solid #070809;border-radius:999px}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#8b7cf6,#4d9fff)}
+body.lt{scrollbar-color:#5274a8 #e7ecf6}body.lt::-webkit-scrollbar-track{background:#e7ecf6;border-left-color:rgba(15,30,60,.1)}body.lt::-webkit-scrollbar-thumb{border-color:#e7ecf6}
+.tablewrap{scrollbar-width:thin;scrollbar-color:rgba(166,184,212,.58) rgba(255,255,255,.045)}
+.tablewrap::-webkit-scrollbar{width:10px;height:10px}
+.tablewrap::-webkit-scrollbar-track{background:rgba(255,255,255,.045);border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb{background:rgba(166,184,212,.58);border:2px solid #11151b;border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(215,222,234,.76)}
+body.lt .tablewrap{scrollbar-color:rgba(82,98,122,.55) rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-track{background:rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-thumb{background:rgba(82,98,122,.55);border-color:#e7ecf6}
+body.lt .tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(39,54,75,.7)}
     .btn:disabled{opacity:.55;cursor:default}
     .connect{margin-left:auto;display:flex;gap:8px;align-items:center}
     .status{font:500 10px 'DM Mono',monospace;color:var(--t3);white-space:nowrap}
@@ -267,6 +283,16 @@
     else apply(window.getTheme(),true);
   })();
   </script>
+<style>
+button{transition:transform .2s cubic-bezier(.2,.8,.2,1),filter .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease,color .18s ease}
+button:not(:disabled):hover{transform:translateY(-3px) scale(1.035);filter:brightness(1.12);border-color:#00e5c3!important;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82),0 7px 16px rgba(0,160,138,.2)}
+button:not(:disabled):active{transform:translateY(1px) scale(.94);transition-duration:.07s}
+@media (prefers-reduced-motion:reduce){button{transition:none!important}button:hover,button:active{transform:none!important}}
+html,body,.tablewrap,.cohort-table-wrap{scrollbar-color:#4b535f #111318!important}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track,.tablewrap::-webkit-scrollbar-track,.cohort-table-wrap::-webkit-scrollbar-track{background:#111318!important}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb,.tablewrap::-webkit-scrollbar-thumb,.cohort-table-wrap::-webkit-scrollbar-thumb{background:#4b535f!important;border-color:#111318!important}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover,.tablewrap::-webkit-scrollbar-thumb:hover,.cohort-table-wrap::-webkit-scrollbar-thumb:hover{background:#69727f!important}
+</style>
 </head>
 <body>
   <div id="loader" class="loader"><div class="loader-in"><div class="spin"></div><b id="loaderMsg">Loading Data</b><div class="loader-pulse"></div></div></div>
@@ -276,9 +302,9 @@
     <nav class="tabs">
       <button class="active" data-view="overview">Overview</button>
       <button data-view="android">Android</button>
-      <button data-view="ios">iOS</button>
+      <button data-view="ios">IOS</button>
       <span class="tabdrop"><button type="button" id="reviewMenuBtn">Reviews &#9662;</button><span class="tabdrop-menu">
-        <button type="button" data-review-platform="ios">iOS</button>
+        <button type="button" data-review-platform="ios">IOS</button>
         <button type="button" data-review-platform="android">Android</button>
       </span></span>
     </nav>
@@ -290,14 +316,14 @@
 
   <!-- ============================ OVERVIEW ============================ -->
   <main id="overview" class="view active"><section class="slide">
-    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Android + iOS</div><div class="date" id="ovDateChip">—</div></div>
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Android + IOS</div><div class="date" id="ovDateChip">—</div></div>
     <div class="sb">
       <div class="eyebrow">Both platforms · live from Google Sheets</div>
       <div class="h1">ASO Report</div>
       <div class="weekbar" id="ovRangeBar"></div>
       <div id="ovWarnings"></div>
 
-      <div class="h2s">Android vs iOS <span class="tag">same window, same definitions</span></div>
+      <div class="h2s">Android vs IOS <span class="tag">same window, same definitions</span></div>
       <div class="kpi-row four" id="ovRow1"></div>
 
       <div class="h2s">Where They Differ <span class="tag">shape of the feedback, not just the totals</span></div>
@@ -308,7 +334,7 @@
         </article>
         <article class="card"><h2>Review Volume by Day<em>written reviews landing each day</em></h2>
           <div class="chartbox tall"><canvas id="ovVolume"></canvas></div>
-          <div class="legend"><span><i style="background:#00c47a"></i>Android</span><span><i style="background:#4d9fff"></i>iOS</span></div>
+          <div class="legend"><span><i style="background:#00c47a"></i>Android</span><span><i style="background:#4d9fff"></i>IOS</span></div>
         </article>
       </div>
     </div>
@@ -378,10 +404,10 @@
 
   <!-- ============================ iOS ============================ -->
   <main id="ios" class="view"><section class="slide">
-    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · iOS</div><div class="date" id="ioDateChip">—</div></div>
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · IOS</div><div class="date" id="ioDateChip">—</div></div>
     <div class="sb">
-      <div class="eyebrow">Platform: iOS · App Store</div>
-      <div class="h1">iOS Quality, Ratings &amp; Conversion</div>
+      <div class="eyebrow">Platform: IOS · App Store</div>
+      <div class="h1">IOS Quality, Ratings &amp; Conversion</div>
       <div class="weekbar" id="ioRangeBar"></div>
       <div id="ioWarnings"></div>
 
@@ -434,7 +460,7 @@
           <div class="chartbox tall"><canvas id="ioConvSourceDaily"></canvas></div></article>
       </section>
     </div>
-    <div class="sf"><span>ASO · iOS</span><span>Playspare · Game District</span></div>
+    <div class="sf"><span>ASO · IOS</span><span>Playspare · Game District</span></div>
   </section></main>
 
   <!-- ============================ REVIEWS ============================ -->
@@ -449,7 +475,7 @@
       <div class="filterbar">
         <label class="fgroup"><span>Platform</span><select id="fPlatform">
           <option value="android">Android · Google Play</option>
-          <option value="ios">iOS · App Store</option>
+          <option value="ios">IOS · App Store</option>
         </select></label>
         <label class="fgroup"><span>From</span><select id="fFrom"></select></label>
         <label class="fgroup"><span>To</span><select id="fTo"></select></label>
@@ -670,6 +696,9 @@ async function applyDateFilter(){
   /* A new dashboard period gets its own newest review date by default. */
   RVF.from='';RVF.to='';RVSHOWN=PERF.reviewPage;
   syncDateControls();
+  loaderMsg('Loading Data');
+  $('loader').classList.add('show');
+  setStatus('Loading…');
 
   const wanted=activeDateRange();
   /* Android/iOS review cards use the same row-level review data as the Reviews
@@ -680,7 +709,11 @@ async function applyDateFilter(){
   pending.push(ensureReviewsForRange(wanted));
   try{ await Promise.all(pending); }
   catch(e){ console.error('date-filter data fetch failed',e); }
-  destroyAll();markDirty();ensureRendered(ACTIVE);prefetchViews();
+  finally{
+    destroyAll();markDirty();ensureRendered(ACTIVE);prefetchViews();
+    $('loader').classList.remove('show');
+    setStatus('Loaded · '+clockTime(LAST_META.generatedAt||Date.now()));
+  }
 }
 
 async function fetchWindowIfNeeded(){
@@ -764,7 +797,7 @@ function kpiCompare(o){
       '<div class="wcol"><span class="wl"><i style="background:'+COLORS.green+'"></i>Android</span>'+
         '<span class="wv big'+(aWin?' win':'')+'">'+(has(a)?f(a):'—')+'</span></div>'+
       '<span class="sep vs">vs</span>'+
-      '<div class="wcol"><span class="wl"><i style="background:'+COLORS.blue+'"></i>iOS</span>'+
+      '<div class="wcol"><span class="wl"><i style="background:'+COLORS.blue+'"></i>IOS</span>'+
         '<span class="wv big'+(bWin?' win':'')+'">'+(has(b)?f(b):'—')+'</span></div>'+
     '</div>'+
     (o.sub?'<div class="d mut">'+o.sub+'</div>':'')+
@@ -1432,7 +1465,7 @@ function renderOverview(){
     const selected=activeDateLabel();
     $('ovRangeBar').innerHTML=
       (A?'<span class="wk-pill"><i style="background:'+COLORS.green+'"></i>Android · <b>'+selected+'</b></span>':'')+
-      (I?'<span class="wk-pill"><i style="background:'+COLORS.blue+'"></i>iOS · <b>'+selected+'</b></span>':'')+
+      (I?'<span class="wk-pill"><i style="background:'+COLORS.blue+'"></i>IOS · <b>'+selected+'</b></span>':'')+
       '<span class="wk-arrow">live from Google Sheets</span>';
   }
   banner('ovWarnings',LAST_META.warnings||[]);
@@ -1467,14 +1500,14 @@ function renderOverview(){
   const stars=[1,2,3,4,5];
   groupBar('ovDist',stars.map(s=>s+'★'),[
     {label:'Android',data:stars.map(s=>aTot?(aDist[s]||0)/aTot*100:null),backgroundColor:'rgba(0,196,122,.75)',borderRadius:4},
-    {label:'iOS',data:stars.map(s=>iTot?(iDist[s]||0)/iTot*100:null),backgroundColor:'rgba(77,159,255,.75)',borderRadius:4}],
+    {label:'IOS',data:stars.map(s=>iTot?(iDist[s]||0)/iTot*100:null),backgroundColor:'rgba(77,159,255,.75)',borderRadius:4}],
     v=>nf(v,1)+'%');
 
   /* ---- chart 2: daily written-review volume over the union of both windows ---- */
   const days=datesInActiveRange();
   groupBar('ovVolume',days.map(shortDate),[
     {label:'Android',data:align(AR.volumeByDate,'count',days),backgroundColor:'rgba(0,196,122,.7)',borderRadius:3},
-    {label:'iOS',data:align(IR.volumeByDate,'count',days),backgroundColor:'rgba(77,159,255,.7)',borderRadius:3}],
+    {label:'IOS',data:align(IR.volumeByDate,'count',days),backgroundColor:'rgba(77,159,255,.7)',borderRadius:3}],
     n0);
 }
 
@@ -1661,12 +1694,12 @@ function renderReviews(){
   }
 
   if($('fPlatform'))$('fPlatform').value=RVPLAT;
-  if($('rvEyebrow'))$('rvEyebrow').textContent=isIos?'Platform: iOS · App Store':'Platform: Android · Google Play';
-  if($('rvTitle'))$('rvTitle').textContent=isIos?'iOS Reviews':'Android Reviews';
+  if($('rvEyebrow'))$('rvEyebrow').textContent=isIos?'Platform: IOS · App Store':'Platform: Android · Google Play';
+  if($('rvTitle'))$('rvTitle').textContent=isIos?'IOS Reviews':'Android Reviews';
   setDateChip('rvDateChip');
   if($('rvRangeBar'))$('rvRangeBar').innerHTML=
     '<span class="wk-pill"><i style="background:'+(isIos?COLORS.blue:COLORS.green)+'"></i>'+
-      (isIos?'iOS':'Android')+' reviews · <b>'+nf(dated.length,0)+'</b></span>'+
+      (isIos?'IOS':'Android')+' reviews · <b>'+nf(dated.length,0)+'</b></span>'+
     '<span class="wk-arrow">'+activeDateLabel()+'</span>';
 
   banner('rvNote',REVIEWS_READY[RVPLAT]?[]:[{level:'info',
