@@ -69,7 +69,12 @@ body{font-family:'Poppins',system-ui,sans-serif;background:#1a1a1a;display:flex;
 .cohort-tog{display:inline-flex;gap:3px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:7px;padding:2px;margin-left:8px;vertical-align:middle;}
 .cohort-tog button{font-family:'DM Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--t3);background:transparent;border:none;border-radius:5px;padding:3px 9px;cursor:pointer;transition:all .15s;}
 .cohort-tog button:hover{color:var(--t1);}
-.cohort-tog button.on{color:#0b0c0f;font-weight:700;}
+.cohort-tog button.on{
+  color:#031018!important;
+  background:linear-gradient(135deg,var(--teal),var(--blue))!important;
+  box-shadow:0 0 0 1px rgba(77,159,255,.22),0 2px 8px rgba(0,229,195,.18);
+  font-weight:700;
+}
 .cohort-pending{display:flex;align-items:center;justify-content:center;height:100%;font-family:'DM Mono',monospace;font-size:11px;color:var(--t3);text-align:center;line-height:1.6;padding:0 20px;}
 table{width:100%;border-collapse:collapse;}
 thead th{background:rgba(255,255,255,.04);color:var(--t2);font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;padding:8px 6px;text-align:left;font-weight:500;border-bottom:1px solid var(--borderB);}
@@ -86,6 +91,12 @@ table.airy thead th{padding:9px 6px;}
 .badge{color:#020d1a;font-family:'DM Mono',monospace;font-size:9px;font-weight:700;padding:3px 11px;border-radius:20px;}
 .delta{font-family:'DM Mono',monospace;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;}
 .delta.up{background:var(--greenD);color:var(--green);} .delta.down{background:var(--coralD);color:var(--coral);}
+.product-split-grid{gap:0!important;}
+.product-split-table+ .product-split-table{border-left:2px solid var(--borderB);}
+.product-split-table+ .product-split-table th:first-child,
+.product-split-table+ .product-split-table td:first-child{padding-left:16px!important;}
+.product-value-cell{background:rgba(var(--heat-rgb),var(--heat-alpha));}
+.product-wow-cell{background:rgba(var(--heat-rgb),var(--heat-alpha));}
 .src-row{display:flex;align-items:center;gap:12px;margin-bottom:11px;}
 .src-name{width:120px;font-size:12px;font-weight:600;color:var(--t1);}
 .src-bar-track{flex:1;height:22px;background:var(--card2);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;align-items:center;}
@@ -162,6 +173,11 @@ table.airy thead th{padding:9px 6px;}
 #tabnav{width:100%;align-self:stretch;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:flex-start;gap:10px;height:58px;padding:0 24px;background:rgba(9,10,13,.97);border-bottom:1px solid var(--borderB);}
 #tabnav .brand{margin-right:14px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:16px;white-space:nowrap;}
 #tabnav .navbtn{font-family:'DM Mono',monospace;font-weight:600;font-size:11px;color:var(--t2);background:var(--card);border:1px solid var(--borderB);padding:8px 15px;border-radius:20px;cursor:pointer;}
+#tabnav .platform-select{appearance:none;-webkit-appearance:none;color:var(--t1);padding:8px 32px 8px 15px;background-color:var(--card);background-image:linear-gradient(45deg,transparent 50%,var(--t2) 50%),linear-gradient(135deg,var(--t2) 50%,transparent 50%);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;outline:0;border:2px solid rgba(166,184,212,.62);box-shadow:none;font-family:'Trebuchet MS',Arial,sans-serif!important;font-size:12.5px!important;font-weight:650!important;line-height:1;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;transition:border-color .16s ease,color .16s ease,box-shadow .16s ease;}
+#tabnav .platform-select:hover{border-color:#00e5c3;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82)}
+#tabnav .platform-select:focus{border-color:#00e5c3;outline:0;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82)}
+#tabnav .platform-select option{background:#0b0c0f;color:#edf2ff}
+body.lt #tabnav .platform-select option{background:#fff;color:#0d1b2e}
 #tabnav .navbtn.active{color:#031018;background:var(--grad);border-color:transparent;}
 .navdrop{position:relative;}
 .navmenu{display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:152px;background:#0b0c0f;border:1px solid var(--borderB);border-radius:10px;padding:5px;z-index:200;box-shadow:0 14px 34px rgba(0,0,0,.6);}
@@ -170,6 +186,22 @@ table.airy thead th{padding:9px 6px;}
 #tabnav .navmenu button:hover{background:rgba(255,255,255,.06);color:var(--t1);}
 #tabnav .navmenu button.active{color:var(--teal);background:transparent;}
 #tabnav button.active{color:#031018;background:var(--grad);border-color:transparent;}
+body:not(.lt) #tabnav .navbtn:not(.active),body:not(.lt) #tabnav .navmenu button:not(.active),body:not(.lt) .subnav button:not(.active){color:#e3e9f4}
+html,body{scrollbar-width:thin;scrollbar-color:#4d9fff #070809}
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:12px;height:12px;display:block}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track{background:#070809;border-left:1px solid rgba(255,255,255,.06)}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#00bfa8,#4d7fd8);border:3px solid #070809;border-radius:999px}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#8b7cf6,#4d9fff)}
+body.lt{scrollbar-color:#5274a8 #e7ecf6}body.lt::-webkit-scrollbar-track{background:#e7ecf6;border-left-color:rgba(15,30,60,.1)}body.lt::-webkit-scrollbar-thumb{border-color:#e7ecf6}
+.tablewrap{scrollbar-width:thin;scrollbar-color:rgba(166,184,212,.58) rgba(255,255,255,.045)}
+.tablewrap::-webkit-scrollbar{width:10px;height:10px}
+.tablewrap::-webkit-scrollbar-track{background:rgba(255,255,255,.045);border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb{background:rgba(166,184,212,.58);border:2px solid #11151b;border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(215,222,234,.76)}
+body.lt .tablewrap{scrollbar-color:rgba(82,98,122,.55) rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-track{background:rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-thumb{background:rgba(82,98,122,.55);border-color:#e7ecf6}
+body.lt .tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(39,54,75,.7)}
 #weeklyRefreshArea{margin-left:auto;display:flex;align-items:center;gap:9px;min-width:0}
 #weeklyRefreshArea #weeklyLiveStatus{min-width:0;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #weeklyFilterBar{position:sticky;top:58px;z-index:99;width:100%;padding-left:24px;padding-right:24px}
@@ -224,6 +256,23 @@ table th{font-size:10.5px!important;padding:10px 9px!important;color:#b8c5d9}
 table td{font-size:11.5px!important;padding:9px!important;color:#d7deea;font-weight:400}
 table td.num{font-size:12.5px!important}
 table th.num{font-size:11.5px!important}
+/* Spacious UA-detail table scale across every Weekly table. */
+table thead th{font-size:11.5px!important;padding:11px 10px!important;line-height:1.35}
+table tbody td{font-size:13px!important;padding:11px 10px!important;line-height:1.4}
+table tbody td.num{font-size:12.5px!important;font-weight:400!important;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+table thead th.num{font-size:11.5px!important}
+table .rownum{font-size:11px!important;min-width:38px;width:38px}
+table .delta{font-size:11.5px!important;padding:3px 9px}
+/* UA number typography everywhere Weekly presents a value. */
+.kpi .v,.kpi .d,.kpi .d *,td.num,th.num,.delta,.src-val,.src-bar,
+.legv,.legi2 .legv,.legn,.lrank,.rownum,.statgrid span:last-child{
+  font-family:Poppins,system-ui,sans-serif!important;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.01em;
+}
+.kpi .v,td.num,th.num,.src-val,.legv,.legi2 .legv,.legn,.lrank,.rownum{
+  font-weight:400!important;
+}
 .kpi .l{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;}
 .card{padding:15px 17px;}
 .card h2{font-family:'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;}
@@ -367,7 +416,7 @@ body.lt #tabnav button{color:#56657f}
 body.lt .navmenu{background:#ffffff;border-color:rgba(15,30,60,.14)}
 body.lt th,
 body.lt .tablewrap thead th{background:#e7ecf6;color:#56657f}
-body.lt .cohort-tog button.on{color:#ffffff}
+body.lt .cohort-tog button.on{color:#031018!important}
 body.lt #weeklyLiveControls input,
 body.lt #weeklyLiveControls select{color:#0d1b2e;border-color:rgba(15,30,60,.16)}
 body.lt #weeklyLiveControls select.date{background-image:linear-gradient(45deg,transparent 50%,#0d1b2e 50%),linear-gradient(135deg,#0d1b2e 50%,transparent 50%),linear-gradient(#ffffff,#ffffff)}
@@ -378,9 +427,16 @@ body.lt .slide{background:#ffffff;box-shadow:0 10px 34px rgba(30,50,90,.10)}
 <style>
 html,body{transition:background-color .18s linear,color .18s linear}
 .top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:background-color .18s linear,border-color .18s linear}
-@media (prefers-reduced-motion: reduce){html,body,.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:none}}
+button{transition:transform .2s cubic-bezier(.2,.8,.2,1),filter .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease,color .18s ease}
+button:not(:disabled):hover{transform:translateY(-3px) scale(1.035);filter:brightness(1.12);border-color:#00e5c3!important;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82),0 7px 16px rgba(0,160,138,.2)}
+button:not(:disabled):active{transform:translateY(1px) scale(.94);transition-duration:.07s}
+@media (prefers-reduced-motion: reduce){html,body,.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi,button{transition:none!important}button:hover,button:active{transform:none!important}}
+html,body,.tablewrap,.cohort-table-wrap{scrollbar-color:#4b535f #111318!important}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track,.tablewrap::-webkit-scrollbar-track,.cohort-table-wrap::-webkit-scrollbar-track{background:#111318!important}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb,.tablewrap::-webkit-scrollbar-thumb,.cohort-table-wrap::-webkit-scrollbar-thumb{background:#4b535f!important;border-color:#111318!important}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover,.tablewrap::-webkit-scrollbar-thumb:hover,.cohort-table-wrap::-webkit-scrollbar-thumb:hover{background:#69727f!important}
 </style>
-</head><body><div id="tabnav"><span class="brand"><span class="brandgr">playspare</span> · Monetization Report</span><button id="btn-report" class="navbtn active" type="button">Monetization Report</button><button id="btn-analytics" class="navbtn" type="button">Analytics</button><div class="navdrop" id="platform-nav"><button id="btn-platform" class="navbtn" data-toggle type="button">Platform ▾</button><div class="navmenu"><button data-platform="ios">iOS</button><button data-platform="android">Android</button></div></div><div id="weeklyRefreshArea"><button id="weeklyRefresh" class="navbtn" type="button">↻ Refresh</button><span id="weeklyLiveStatus">Loading...</span></div></div><div id="weeklyFilterBar" class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Weekly</span></div><div id="weeklyDateHost"></div></div><div id="tab-report" class="tabview">
+</head><body><div id="tabnav"><span class="brand"><span class="brandgr">playspare</span> · Monetization Report</span><button id="btn-report" class="navbtn active" type="button">Monetization Report</button><button id="btn-analytics" class="navbtn" type="button">Analytics</button><div class="navdrop" id="platform-nav"><button id="btn-platform" class="navbtn" data-toggle type="button">Platform ▾</button><div class="navmenu"><button data-platform="overview">Overview</button><button data-platform="ios">iOS</button><button data-platform="android">Android</button></div></div><div id="weeklyRefreshArea"><button id="weeklyRefresh" class="navbtn" type="button">↻ Refresh</button><span id="weeklyLiveStatus">Loading...</span></div></div><div id="weeklyFilterBar" class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Weekly</span></div><div id="weeklyDateHost"></div></div><div id="tab-report" class="tabview">
 <div class="slide">
 <div class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Executive Summary</span></div>
     <div class="date">Jun 29–Jul 05, 2026 (W4)</div></div>
@@ -1315,6 +1371,10 @@ const API = {
         if(!data.ok){
           const err=new Error(data.error || 'Request failed');
           err.retryable=data.code>=500;
+          /* BUSY: means the backend is mid-rebuild and is queuing us, not
+             that anything failed. Retrying is correct; the wording just
+             should not read like an error. */
+          err.queued=/^BUSY:/.test(String(data.error||''));
           throw err;
         }
         return data;
@@ -1323,7 +1383,9 @@ const API = {
         lastError=e;
         const retryable=e?.retryable===true||e?.name==='AbortError'||e instanceof TypeError;
         if(!retryable||attempt===2)throw e;
-        setStatus(e?.authFailure?`Weekly authentication rejected — retrying automatically (${attempt}/4)…`:`Weekly request interrupted — retrying automatically (${attempt}/4)…`,true);
+        setStatus(e?.authFailure?`Weekly authentication rejected — retrying automatically (${attempt}/4)…`
+          :e?.queued?`Weekly data is refreshing — this will finish by itself…`
+          :`Weekly request interrupted — retrying automatically (${attempt}/4)…`,true);
         await new Promise(resolve=>setTimeout(resolve,Math.min(10000,1500*Math.pow(2,attempt-1))));
       }
     }
@@ -1619,7 +1681,7 @@ function maskCardByHeading(s,heading,message){
   card.style.position='relative';card.querySelectorAll('.live-cover').forEach(x=>x.remove());const cover=document.createElement('div');cover.className='live-cover';cover.textContent=message;card.appendChild(cover);
 }
 function chartLabels(labels){return (labels||[]).map(shortDate);}
-Chart.defaults.font.family='Poppins';Chart.defaults.font.size=11;Chart.defaults.font.weight='500';Chart.defaults.color='#c0ccdf';
+Chart.defaults.font.family='Poppins';Chart.defaults.font.size=11;Chart.defaults.font.weight='400';Chart.defaults.color='#c0ccdf';
 Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
 function commonOptions(yFormatter,stacked){return {responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#a6b8d4',boxWidth:10,font:{family:'Poppins',size:12.5,weight:'400'}}},tooltip:{callbacks:{title:items=>{const v=items&&items[0]?items[0].label:'';return /^\d{4}-\d{2}-\d{2}/.test(v)?shortDate(v):v;},label:c=>' '+c.dataset.label+': '+yFormatter(c.parsed.y)}}},scales:{x:{stacked:!!stacked,grid:{display:false},ticks:{color:'#a6b8d4',font:{family:'Poppins',size:11,weight:'400'},maxRotation:0,autoSkip:false,callback:function(value){const label=this.getLabelForValue(value);if(!/^\d{4}-\d{2}-\d{2}/.test(label))return label;const d=new Date(label.slice(0,10)+'T00:00:00');return !isNaN(d)&&d.getDay()===1?shortDate(label):'';}}},y:{stacked:!!stacked,beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#a6b8d4',font:{family:'Poppins',size:11,weight:'400'},callback:yFormatter,maxTicksLimit:5}}}};}
 function fitLineWindow(labels,series){
@@ -1715,8 +1777,11 @@ function barChart(id,labels,series){
 }
 function rowHtml(label,actual,us,bench,prev,formatter){
   const f=formatter||num,b=finite(bench),d1=b?change(actual,bench):null,d2=change(actual,prev);
-  const cmp=v=>finite(v)?'<span style="color:'+(v>=0?'var(--green)':'var(--coral)')+'">'+(v>=0?'+':'-')+num(Math.abs(v)*100,0)+'%</span>':'<span style="color:var(--t3)">no comp</span>';
-  return '<tr><td class="fmt-name">'+label+'</td><td class="num b">'+f(actual)+'</td><td class="num" style="color:var(--t2)">'+(finite(us)?f(us):'\u2014')+'</td><td class="num mut">'+(b?f(bench):'--')+'</td><td class="num">'+cmp(d1)+'</td><td class="num mut">'+f(prev)+'</td><td class="num">'+cmp(d2)+'</td></tr>';
+  const rowMax=Math.max(Number.EPSILON,...[actual,us,bench,prev].filter(finite).map(v=>Math.abs(v)));
+  const metricRgb=/ecpm/i.test(label)?'236,10,155':/viewer/i.test(label)?'77,159,255':/imp\/dau/i.test(label)?'139,92,246':/d0/i.test(label)?'255,184,0':/d7/i.test(label)?'167,139,250':/d27/i.test(label)?'34,211,238':/^dau$/i.test(label)?'249,115,22':/arpdau/i.test(label)?'59,130,246':'139,92,246';
+  const heat=value=>finite(value)?'background:rgba('+metricRgb+','+(0.08+0.24*Math.min(1,Math.abs(value)/rowMax)).toFixed(3)+')':'';
+  const cmpCell=v=>{if(!finite(v))return '<td class="num" style="color:var(--t3)">no comp</td>';const up=v>=0,rgb=up?'77,159,255':'255,77,109',alpha=(0.09+0.22*Math.min(1,Math.abs(v))).toFixed(3);return '<td class="num" style="color:'+(up?'var(--blue)':'var(--coral)')+';background:rgba('+rgb+','+alpha+')">'+(up?'+':'-')+num(Math.abs(v)*100,0)+'%</td>';};
+  return '<tr><td class="fmt-name">'+label+'</td><td class="num b" style="'+heat(actual)+'">'+f(actual)+'</td><td class="num" style="color:var(--t2);'+heat(us)+'">'+(finite(us)?f(us):'\u2014')+'</td><td class="num mut" style="'+heat(bench)+'">'+(b?f(bench):'--')+'</td>'+cmpCell(d1)+'<td class="num mut" style="'+heat(prev)+'">'+f(prev)+'</td>'+cmpCell(d2)+'</tr>';
 }
 // Inserts a "US" <th> right after the current-week "Actual" column (once).
 // Robust to the leading "#" column that numberTables() adds on later renders.
@@ -1905,7 +1970,7 @@ function renderImmersive(data,platform){
   setKpi(s,'Blended eCPM',money(blend,3),null,null,null,'Revenue / impressions x 1000');
   setKpi(s,'Blended Fill Rate',pct(fill,2,false),null,null,null,'Impression-weighted Gadsme + Anzu');
   setKpi(s,'AdMob Failover',pct(w.failover_pct,1,false),null,null,null,(finite(w.failover_pct)&&w.failover_pct<=10?'Within':'Above')+' 10% target | '+money(w.failover));
-  const table=s.querySelector('table'),tbody=table?.querySelector('tbody');if(tbody){const winner=(a,b,low)=>!finite(a)||!finite(b)?'N/A':((low?a<b:a>b)?'Gadsme':'Anzu');tbody.innerHTML=[['Revenue',money(w.gadsme),money(w.anzu),winner(w.gadsme,w.anzu)],['Impressions',num(w.gadsme_imp),num(w.anzu_imp),winner(w.gadsme_imp,w.anzu_imp)],['eCPM',money(w.gadsme_ecpm,3),money(w.anzu_ecpm,3),winner(w.gadsme_ecpm,w.anzu_ecpm)],['Fill Rate',pct(w.gadsme_fill,2,false),pct(w.anzu_fill,2,false),winner(w.gadsme_fill,w.anzu_fill)]].map(r=>'<tr><td class="fmt-name">'+r[0]+'</td><td class="num b">'+r[1]+'</td><td class="num b">'+r[2]+'</td><td class="num">'+r[3]+'</td></tr>').join('');}
+  const table=s.querySelector('table'),tbody=table?.querySelector('tbody');if(tbody){const winner=(a,b,low)=>!finite(a)||!finite(b)?'N/A':((low?a<b:a>b)?'Gadsme':'Anzu'),rows=[['Revenue',w.gadsme,w.anzu,money,'139,92,246'],['Impressions',w.gadsme_imp,w.anzu_imp,num,'77,159,255'],['eCPM',w.gadsme_ecpm,w.anzu_ecpm,v=>money(v,3),'236,10,155'],['Fill Rate',w.gadsme_fill,w.anzu_fill,v=>pct(v,2,false),'255,184,0']];tbody.innerHTML=rows.map(r=>{const max=Math.max(Number.EPSILON,Math.abs(r[1]||0),Math.abs(r[2]||0)),shade=v=>'background:rgba('+r[4]+','+(0.08+0.24*Math.min(1,Math.abs(v||0)/max)).toFixed(3)+')',win=winner(r[1],r[2]);return '<tr><td class="fmt-name">'+r[0]+'</td><td class="num b" style="'+shade(r[1])+'">'+r[3](r[1])+'</td><td class="num b" style="'+shade(r[2])+'">'+r[3](r[2])+'</td><td class="num" style="color:var(--blue);background:rgba(77,159,255,.16);font-weight:600!important">'+win+'</td></tr>';}).join('');}
   const failoverLabel=[...s.querySelectorAll('div')].find(el=>clean(el.textContent).startsWith('AdMob Failover (')&&el.children.length===0);
   if(failoverLabel){
     failoverLabel.textContent='AdMob Failover (Current)';
@@ -1971,7 +2036,10 @@ function renderIAP(data,platform){
 function renderProductTables(s,current,previous){
   if(!s)return;const card=[...s.querySelectorAll('.card')].find(c=>clean(c.querySelector('h2')?.textContent).includes('All IAP Products')),tables=card?[...card.querySelectorAll('table')]:[];if(!tables.length)return;
   const names=[...new Set([...Object.keys(current),...Object.keys(previous)])].sort((a,b)=>(current[b]||0)-(current[a]||0)),mid=Math.ceil(names.length/2);
-  [names.slice(0,mid),names.slice(mid)].forEach((list,i)=>{if(!tables[i])return;const tb=tables[i].querySelector('tbody');if(tb)tb.innerHTML=list.map(n=>{const c=current[n]||0,p=previous[n]||0,d=change(c,p);return '<tr><td style="font-size:9.5px">'+escapeHtml(n)+'</td><td class="num mut" style="font-size:9.5px">'+money(p)+'</td><td class="num b" style="font-size:9.5px">'+money(c)+'</td><td class="num"><span class="delta '+(finite(d)&&d>=0?'up':'down')+'">'+(finite(d)?(d>=0?'+':'-')+num(Math.abs(d)*100,0)+'%':(c?'new':'N/A'))+'</span></td></tr>';}).join('');});
+  const maxPrevious=Math.max(1,...names.map(n=>previous[n]||0)),maxCurrent=Math.max(1,...names.map(n=>current[n]||0));
+  const heat=(value,max,rgb)=>'--heat-rgb:'+rgb+';--heat-alpha:'+(0.07+0.25*Math.min(1,Math.max(0,value/max))).toFixed(3)+';font-size:9.5px';
+  const grid=tables[0]?.parentElement;if(grid)grid.classList.add('product-split-grid');
+  [names.slice(0,mid),names.slice(mid)].forEach((list,i)=>{if(!tables[i])return;const table=tables[i];table.classList.add('product-split-table');table.dataset.rowStart=String(i===0?1:mid+1);const tb=table.querySelector('tbody');if(tb)tb.innerHTML=list.map(n=>{const c=current[n]||0,p=previous[n]||0,d=change(c,p),wowStrength=finite(d)?Math.min(1,Math.abs(d)):0;return '<tr><td style="font-size:9.5px">'+escapeHtml(n)+'</td><td class="num mut product-value-cell" style="'+heat(p,maxPrevious,'77,159,255')+'">'+money(p)+'</td><td class="num b product-value-cell" style="'+heat(c,maxCurrent,'0,229,195')+'">'+money(c)+'</td><td class="num product-wow-cell" style="--heat-rgb:'+(finite(d)&&d>=0?'0,224,154':'255,61,103')+';--heat-alpha:'+(0.06+0.18*wowStrength).toFixed(3)+'"><span class="delta '+(finite(d)&&d>=0?'up':'down')+'">'+(finite(d)?(d>=0?'+':'-')+num(Math.abs(d)*100,0)+'%':(c?'new':'N/A'))+'</span></td></tr>';}).join('');});
 }
 
 function canonicalNetworkName(raw){
@@ -2076,7 +2144,7 @@ function numberTables(){
       const th=document.createElement('th');th.className='rownum';th.textContent='#';
       headRow.insertBefore(th,headRow.firstChild);
     }
-    let n=1;
+    let n=Math.max(1,Number(tb.dataset.rowStart)||1);
     tb.querySelectorAll('tbody tr').forEach(tr=>{
       let cell=tr.querySelector('.rownum');
       if(!cell){cell=document.createElement('td');cell.className='rownum';tr.insertBefore(cell,tr.firstChild);}
@@ -2096,12 +2164,13 @@ function numberTables(){
    What is both safe and fast is remembering each range's own payload. A range
    costs one round trip the first time and renders straight from memory every
    time after, which is the same instant response without inventing any figure
-   the server did not compute. warmPresets() then fetches the remaining presets
-   in the background, so in practice the first click on each is already warm. */
+   the server did not compute. hydratePresets() then pulls every remaining
+   preset in a single background request, so in practice the first click on
+   each is already warm. */
 /* ── Daily refresh boundary ──────────────────────────────────────────────
-   The source sheets are written once a week - Mondays, roughly 06:00-08:00
-   Asia/Karachi - and are not touched in between, so a payload fetched after
-   that sync stays correct for the rest of the week. A rolling TTL (this used
+   The source sheets are appended to once a DAY, roughly 06:00-08:00
+   Asia/Karachi, and are not touched in between, so a payload fetched after
+   that import stays correct for the rest of the day. A rolling TTL (this used
    to be 15 minutes) therefore threw away good data and made people wait for
    a rebuild of numbers that had not changed.
    Instead every cached range is stamped against the most recent DAILY_REFRESH_HOUR
@@ -2227,47 +2296,49 @@ async function requestPayload(opts){
   finally{ inflight.delete(key); }
 }
 
-/* Fetch the preset windows the user has not opened yet, one at a time, so that
-   switching between them later is a memory read rather than a round trip.
-   w2 is the default first paint, and no preset exceeds eight weeks; with the
-   server-side payload cache these
-   are usually sub-second reads rather than rebuilds. */
-const PRESET_MODES=['w8','w4','w6'];
+/* ── Preset hydration: ONE request for every window ──────────────────────
+   The previous version sent four separate requests, spaced 8 seconds apart,
+   because Apps Script answers a burst to the same /exec with an HTML
+   throttling page - which is where "Weekly request interrupted" came from.
+   One request cannot burst, so the spacing is no longer needed either.
+
+   Measured payloads are 47-73 KB per preset, so all four together are about
+   250 KB: one modest response instead of four round trips, each of which was
+   paying its own cold start.
+
+   The backend action only SERVES what the 09:00 warmer already cached - it
+   never builds - so this can neither run long nor collide with the warmer.
+   Anything it reports as null is simply left out, and the normal single
+   request fetches it when that preset is actually selected. */
+const PRESET_WEEKS=[2,4,6,8];
 let warming=false;
-function presetRequest(mode){
-  const wk=/^w(\d+)$/.exec(mode); if(!wk)return null;
-  const w=weekWindow(Number(wk[1]), weekAnchor());
-  return {mode:'range',start:isoDay(w.start),end:isoDay(w.end),trend:'56'};
+function presetCacheKey(w){
+  return cacheKey({trendDays:56,start:isoDay(w.start),end:isoDay(w.end)});
 }
-/* Gap between two background preset requests. Apps Script throttles a burst
-   of requests to the same deployment - it answers slowly and sometimes drops
-   the connection outright, which surfaced as "Weekly request interrupted".
-   These four requests were previously fired back to back with no gap at all,
-   which is why only Weekly showed that error: it is the only page that sends
-   more than one request per load. Nothing waits on this loop, so spacing it
-   out costs the user nothing. */
-const PRESET_GAP_MS=8000;
-async function warmPresets(){
+async function hydratePresets(){
   if(warming)return; warming=true;
   try{
-    let sent=0;
-    for(const mode of PRESET_MODES){
-      /* A user-initiated load owns the connection. Wait it out rather than
-         adding a parallel Apps Script execution that would slow it down.
-         Bounded, so a request that never settles cannot pin this loop. */
-      for(let waited=0;STATE.loading&&waited<60000;waited+=1000)await new Promise(r=>setTimeout(r,1000));
-      if(STATE.loading)break;
-      const req=presetRequest(mode); if(!req)continue;
-      /* Freshness, not mere presence: a range restored from localStorage is
-         already good for today, so after the first load of the day every
-         preset is skipped here and the warm-up sends nothing at all. */
-      if(isFresh(payloadCache.get(cacheKey({trendDays:req.trend,start:req.start,end:req.end}))))continue;
-      if(sent)await new Promise(r=>setTimeout(r,PRESET_GAP_MS));
-      /* Warming is invisible: it never writes the status line, the spinner or
-         the error banner. One failure means the backend or the session is
-         unhappy, so stop instead of firing three more doomed requests. */
-      try{ await requestPayload(req); sent++; }catch(e){ break; }
-    }
+    /* Freshness, not mere presence: a range restored from localStorage is
+       already good until the next 09:00 boundary, so after the first load of
+       the day this sends nothing at all. */
+    const missing=PRESET_WEEKS.filter(n=>!isFresh(payloadCache.get(presetCacheKey(weekWindow(n,weekAnchor())))));
+    if(!missing.length)return;
+
+    const res=await API.call('payload_bundle',{weeks:missing});
+    const presets=res&&res.data&&res.data.presets;
+    if(!presets)return;
+
+    Object.keys(presets).forEach(k=>{
+      const item=presets[k];
+      if(!item||!item.payload)return;      // backend had not cached this one yet
+      const key=cacheKey({trendDays:56,start:item.start,end:item.end});
+      const entry={at:Date.now(),json:item.payload};
+      payloadCache.set(key,entry);
+      persistSave(key,entry);              // survives reload until the next 09:00
+    });
+  }catch(e){
+    /* Invisible by design: hydration is an optimisation. It must never write
+       the status line, the spinner or the error banner. */
   }finally{ warming=false; }
 }
 function probeLastDataDate(probe){
@@ -2332,8 +2403,10 @@ async function loadLive(auto,force){
        filter change is a memory read. Deliberately well after the paint: the
        hub starts the other three reports about a second in, and stacking the
        warm-up on top of that was enough to get this page's requests dropped. */
-    /* Preset payloads are warmed by Apps Script triggers. Do not download
-       several large ranges automatically; fetch one only when it is selected. */
+    /* One request, shortly after the paint has settled, fills localStorage
+       with every preset window. Switching 2 -> 4 -> 6 -> 8 for the rest of
+       the day is then a memory read with no network at all. */
+    setTimeout(hydratePresets,1200);
   }catch(err){console.error(err);document.body.classList.add('live-error');setStatus('Error: '+(err.message||String(err)),true);showLiveError(err);}
   finally{STATE.loading=false;clearBusy();if(button)button.disabled=false;if(refreshButton)refreshButton.disabled=false;}
 }
@@ -2356,13 +2429,38 @@ function setupSubnav(){
   selectSub(document.getElementById('tab-report'),'overview');
   selectSub(document.getElementById('tab-analytics'),'ios');
 
+  /* Native pill select, matching the UA Negative Spend platform control. */
+  const oldPlatform=document.getElementById('platform-nav');
+  if(oldPlatform){
+    const select=document.createElement('select');
+    select.id='weeklyPlatformSelect';select.className='navbtn platform-select';
+    select.setAttribute('aria-label','Platform');
+    select.innerHTML='<option value="overview">Overview</option><option value="ios">IOS</option><option value="android">Android</option>';
+    oldPlatform.replaceWith(select);
+    select.onchange=()=>{
+      const choice=select.value;
+      if(choice==='overview'){
+        weeklyPlatform=null;weeklyReportCategory='overview';weeklyActiveTab='report';
+        showTab('report');selectSub(document.getElementById('tab-report'),'overview');
+      }else{
+        weeklyPlatform=choice;weeklyReportCategory=choice;
+        selectSub(document.getElementById('tab-report'),choice);
+        selectSub(document.getElementById('tab-analytics'),choice);
+      }
+    };
+  }
+
   document.getElementById('btn-report')?.addEventListener('click',()=>{
     weeklyActiveTab='report';showTab('report');
-    selectSub(document.getElementById('tab-report'),'overview');
+    const target=weeklyPlatform||'overview';
+    selectSub(document.getElementById('tab-report'),target);
+    const select=document.getElementById('weeklyPlatformSelect');if(select)select.value=target;
   });
   document.getElementById('btn-analytics')?.addEventListener('click',()=>{
     weeklyActiveTab='analytics';showTab('analytics');
-    selectSub(document.getElementById('tab-analytics'),weeklyPlatform||'ios');
+    const target=weeklyPlatform||'ios';
+    selectSub(document.getElementById('tab-analytics'),target);
+    const select=document.getElementById('weeklyPlatformSelect');if(select)select.value=target;
   });
   document.querySelectorAll('#tabnav .navbtn[data-toggle]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();const drop=btn.closest('.navdrop'),open=drop.classList.contains('open');document.querySelectorAll('.navdrop.open').forEach(d=>d.classList.remove('open'));if(!open)drop.classList.add('open');});
@@ -2370,10 +2468,17 @@ function setupSubnav(){
   document.querySelectorAll('#platform-nav .navmenu button').forEach(item=>{
     item.addEventListener('click',e=>{
       e.stopPropagation();weeklyPlatform=item.dataset.platform;weeklyReportCategory=weeklyPlatform;
-      document.getElementById('btn-platform').textContent='Platform: '+(weeklyPlatform==='ios'?'iOS':'Android')+' ▾';
+      if(weeklyPlatform==='overview'){
+        weeklyPlatform=null;weeklyReportCategory='overview';weeklyActiveTab='report';
+        showTab('report');
+        document.getElementById('btn-platform').textContent='Platform: Overview ▾';
+        selectSub(document.getElementById('tab-report'),'overview');
+      }else{
+        document.getElementById('btn-platform').textContent='Platform: '+(weeklyPlatform==='ios'?'iOS':'Android')+' ▾';
+        selectSub(document.getElementById('tab-report'),weeklyPlatform);
+        selectSub(document.getElementById('tab-analytics'),weeklyPlatform);
+      }
       item.closest('.navmenu').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===item));
-      selectSub(document.getElementById('tab-report'),weeklyPlatform);
-      selectSub(document.getElementById('tab-analytics'),weeklyPlatform);
       item.closest('.navdrop').classList.remove('open');
     });
   });
