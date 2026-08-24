@@ -113,6 +113,22 @@
     .platform-network select[id$="CohortChannel"]{display:none}
   </style>
 <style>
+body:not(.lt) .tabs button:not(.active){color:#e3e9f4}
+html,body{scrollbar-width:thin;scrollbar-color:#4d9fff #070809}
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:12px;height:12px;display:block}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track{background:#070809;border-left:1px solid rgba(255,255,255,.06)}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#00bfa8,#4d7fd8);border:3px solid #070809;border-radius:999px}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#8b7cf6,#4d9fff)}
+body.lt{scrollbar-color:#5274a8 #e7ecf6}body.lt::-webkit-scrollbar-track{background:#e7ecf6;border-left-color:rgba(15,30,60,.1)}body.lt::-webkit-scrollbar-thumb{border-color:#e7ecf6}
+.tablewrap{scrollbar-width:thin;scrollbar-color:rgba(166,184,212,.58) rgba(255,255,255,.045)}
+.tablewrap::-webkit-scrollbar{width:10px;height:10px}
+.tablewrap::-webkit-scrollbar-track{background:rgba(255,255,255,.045);border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb{background:rgba(166,184,212,.58);border:2px solid #11151b;border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(215,222,234,.76)}
+body.lt .tablewrap{scrollbar-color:rgba(82,98,122,.55) rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-track{background:rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-thumb{background:rgba(82,98,122,.55);border-color:#e7ecf6}
+body.lt .tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(39,54,75,.7)}
 /* light theme — same tokens, inverted surfaces */
 body.lt{--bg:#eef1f7;--card:#ffffff;--card2:#f5f7fc;
   --border:rgba(15,30,60,.09);--borderB:rgba(15,30,60,.16);
@@ -202,11 +218,21 @@ html,body{transition:background-color .18s linear,color .18s linear}
 .top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:background-color .18s linear,border-color .18s linear}
 @media (prefers-reduced-motion: reduce){html,body,.top,.sh,#tabnav,.topbar,.hub-nav,.card,.slide,.kpi{transition:none}}
 </style>
+<style>
+button{transition:transform .2s cubic-bezier(.2,.8,.2,1),filter .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease,color .18s ease}
+button:not(:disabled):hover{transform:translateY(-3px) scale(1.035);filter:brightness(1.12);border-color:#00e5c3!important;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82),0 7px 16px rgba(0,160,138,.2)}
+button:not(:disabled):active{transform:translateY(1px) scale(.94);transition-duration:.07s}
+@media (prefers-reduced-motion:reduce){button{transition:none!important}button:hover,button:active{transform:none!important}}
+html,body,.tablewrap,.cohort-table-wrap{scrollbar-color:#4b535f #111318!important}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track,.tablewrap::-webkit-scrollbar-track,.cohort-table-wrap::-webkit-scrollbar-track{background:#111318!important}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb,.tablewrap::-webkit-scrollbar-thumb,.cohort-table-wrap::-webkit-scrollbar-thumb{background:#4b535f!important;border-color:#111318!important}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover,.tablewrap::-webkit-scrollbar-thumb:hover,.cohort-table-wrap::-webkit-scrollbar-thumb:hover{background:#69727f!important}
+</style>
 </head>
 <body>
   <header class="top">
     <div class="brand"><b>playspare</b> · UA</div>
-    <nav class="tabs"><button class="active" data-view="overview">Overview</button><button data-view="android">Android</button><button data-view="ios">iOS</button><button data-view="legacy">Legacy</button></nav>
+<nav class="tabs"><button class="active" data-view="overview">Overview</button><button data-view="android">Android</button><button data-view="ios">IOS</button><button data-view="legacy">Legacy</button><button data-view="negative-spend">UA Negative Spend</button></nav>
     <div class="connect"><button id="connectBtn" class="btn primary">&#8635; Refresh</button></div><span id="status" class="status">Not connected</span>
   </header>
 
@@ -222,6 +248,8 @@ html,body{transition:background-color .18s linear,color .18s linear}
 
   <main id="legacy" class="view"><section class="slide"><div class="sh"><div class="brand"><b>playspare</b> · Legacy Games · AND + iOS</div><div class="date" data-date-range>Live Sheet Data</div></div><div class="sb"><div class="eyebrow">Portfolio excluding Supermarket</div><div class="h1">Legacy Games</div><div class="kpi-row"><div class="kpi"><div class="l">Total Revenue</div><div class="v" id="legacyRevenue">—</div></div><div class="kpi"><div class="l">Total ROI</div><div class="v" id="legacyTotalRoi">—</div></div></div><article class="card mt"><h2>Android + iOS DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="legacyCombined"></canvas></div></article><div class="kpi-row four mt"><div class="kpi"><div class="l">Android Cost</div><div class="v" id="legacyAndroidCost">—</div></div><div class="kpi"><div class="l">Android ROI</div><div class="v" id="legacyAndroidRoi">—</div></div><div class="kpi"><div class="l">Android Profit</div><div class="v" id="legacyAndroidProfit">—</div></div><div class="kpi"><div class="l">Android Revenue</div><div class="v" id="legacyAndroidRevenue">—</div></div></div><article class="card mt"><h2>Android DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="legacyAndroid"></canvas></div></article><div class="kpi-row four mt"><div class="kpi"><div class="l">iOS Cost</div><div class="v" id="legacyIosCost">—</div></div><div class="kpi"><div class="l">iOS ROI</div><div class="v" id="legacyIosRoi">—</div></div><div class="kpi"><div class="l">iOS Profit</div><div class="v" id="legacyIosProfit">—</div></div><div class="kpi"><div class="l">iOS Revenue</div><div class="v" id="legacyIosRevenue">—</div></div></div><article class="card mt"><h2>iOS DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="legacyIos"></canvas></div></article></div><div class="sf"><span>UA · Legacy Games</span><span>Playspare · Game District</span></div></section></main>
 
+
+  <main id="negative-spend" class="view"><iframe id="negativeSpendFrame" title="UA Negative Spend" loading="lazy" style="display:block;width:100%;min-height:calc(100vh - 58px);border:0;background:#000"></iframe></main>
 
   <div id="loader" class="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading Data</b><div class="pulse"></div></div></div>
 
@@ -705,7 +733,7 @@ function setKpis(prefix,platform){
   if(!cost&&!revenue) return dash();
   const roi=analysisRoi(platform)||(cost?revenue/cost:0);
   $(prefix+'Spend').textContent=money(cost);
-  $(prefix+'Roi').textContent=roi?roi.toFixed(2)+'x':'—';
+  $(prefix+'Roi').textContent=roi?roi.toFixed(2):'—';
   setMoneyKpi(prefix+'Revenue',revenue);
   setMoneyKpi(prefix+'Profit',profit,moneyK);
 }
@@ -727,7 +755,7 @@ function analysisTotalsFromRows(rows,platform){
   return{cost,revenue,profit,roi:cost?revenue/cost:0};
 }
 function previousKpiValue(id,value){
-  if(/roi|roas/i.test(id))return value.toFixed(2)+'x';
+  if(/roi|roas/i.test(id))return value.toFixed(2);
   if(/install/i.test(id))return compact(value);
   if(/spend|cost|revenue|profit/i.test(id))return money(value);
   return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(value);
@@ -912,7 +940,7 @@ const shareBarLabels={
   id:'shareBarLabels',
   afterDatasetsDraw(chart){
     const ctx=chart.ctx;ctx.save();ctx.font='500 12.5px Poppins,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    chart.data.datasets.forEach((ds,di)=>chart.getDatasetMeta(di).data.forEach((bar,i)=>{const value=Number(ds.data[i])||0;if(value<.08)return;const p=bar.getProps(['x','base','y'],true);ctx.fillStyle=di===0?'#fff':'#06201d';ctx.fillText((value*100).toFixed(1)+'%',(p.x+p.base)/2,p.y)}));
+    chart.data.datasets.forEach((ds,di)=>chart.getDatasetMeta(di).data.forEach((bar,i)=>{const value=Number(ds.data[i])||0;if(value<.08)return;const p=bar.getProps(['x','base','y'],true);ctx.fillStyle=di===0?'#fff':'#000000';ctx.fillText((value*100).toFixed(1)+'%',(p.x+p.base)/2,p.y)}));
     ctx.restore()
   }
 };
@@ -1023,7 +1051,36 @@ async function connect(){
 }
 function setStatus(s,error){$('status').textContent=s;$('status').classList.toggle('error',!!error)}
 function promotePieSections(){document.querySelectorAll('.view').forEach(view=>{if(view.id==='android'||view.id==='ios')return;const body=view.querySelector('.sb');if(!body)return;const pieCards=[...view.querySelectorAll('canvas')].filter(canvas=>/pie|share/i.test(canvas.id)).map(canvas=>canvas.closest('.card')).filter((card,index,all)=>card&&all.indexOf(card)===index);if(!pieCards.length)return;const row=document.createElement('section');row.className='page-pies';pieCards.forEach(card=>row.appendChild(card));body.prepend(row);view.querySelectorAll('.piegrid,.two,.stack').forEach(container=>{if(!container.children.length)container.remove()})})}
-document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===b.dataset.view));Object.values(charts).forEach(c=>c.resize())});
+function openNegativeSpend(){
+  const frame=$('negativeSpendFrame');
+  if(!frame||frame.getAttribute('src'))return;
+  const api=new URLSearchParams(location.search).get('negativeApi')||'';
+  if(!api){setStatus('Negative Spend URL is missing from the hub.',true);return}
+  frame.src='negative_spend_report.html?v=20260824-ua-inner-v1&api='+encodeURIComponent(api);
+  frame.addEventListener('load',()=>{
+    const resize=()=>{
+      try{
+        const doc=frame.contentDocument;
+        if(doc)frame.style.height=Math.max(window.innerHeight-58,doc.documentElement.scrollHeight,doc.body?doc.body.scrollHeight:0)+'px';
+      }catch(e){}
+    };
+    resize();
+    try{new ResizeObserver(resize).observe(frame.contentDocument.documentElement)}catch(e){}
+  },{once:true});
+}
+window.addEventListener('message',ev=>{
+  const frame=$('negativeSpendFrame');
+  if(!frame||ev.source!==frame.contentWindow||!ev.data)return;
+  if(/^mss3d:/.test(String(ev.data.type||''))){
+    try{window.parent.postMessage(ev.data,location.origin)}catch(e){}
+  }
+});
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===b));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===b.dataset.view));
+  if(b.dataset.view==='negative-spend')openNegativeSpend();
+  else Object.values(charts).forEach(c=>c.resize());
+});
 installPlatformNetworkSections();installCampaignSortControls();promotePieSections();$('connectBtn').onclick=connect;try{localStorage.removeItem('ua_api_url');localStorage.removeItem('ua_api_key');}catch(e){}connect();
 
   </script>
