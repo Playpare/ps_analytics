@@ -224,19 +224,19 @@ html,body{transition:background-color .18s linear,color .18s linear}
       <iframe
         class="report-frame"
         id="report-weekly"
-        data-src="weekly_report.html?v=20260824-ua-number-font-v27"
+        data-src="weekly_report.html?v=20260825-cache-refresh-v29"
         title="Weekly monetization report"
         hidden></iframe>
       <iframe
         class="report-frame"
         id="report-ua"
-        data-src="ua_report.html?v=20260824-themed-scrollbars-v33"
+        data-src="ua_report.html?v=20260825-negative-loader-v35"
         title="User acquisition report"
         hidden></iframe>
       <iframe
         class="report-frame"
         id="report-aso"
-        data-src="aso_report.html?v=20260824-themed-scrollbars-v19"
+        data-src="aso_report.html?v=20260825-cache-refresh-v20"
         title="App store optimisation report"
         hidden></iframe>
     </section>
@@ -252,6 +252,12 @@ html,body{transition:background-color .18s linear,color .18s linear}
        deployments themselves private.
        ============================================================ */
     const API_URLS = {
+      /* The login-only deployment: a standalone project with no bound
+         workbook and one daily trigger. Sign-in used to run on 'negative',
+         which has seven triggers including onWorkbookChange - so any edit to
+         that workbook could make a login queue behind a full rebuild. That is
+         what made signing in feel random. PASTE THE NEW /exec URL HERE. */
+      auth:     'https://script.google.com/macros/s/AKfycbwh7vdep424Y5kriYAl1h8T1MOVxycuFuWb_z0Vlu6D4xD8gvu6xqRGkYjbvFgZ_LS2/exec',
       ua:       'https://script.google.com/macros/s/AKfycbzPMKh4b9gA_N05_Dxjt3qJwAJNi4IoE7N3x5sjS-7EbtUPAAm9zABivxCm0jC-9-qJ/exec',
       weekly:   'https://script.google.com/macros/s/AKfycbwhZhBqnp8jmEuL12XUS4RWYZJz9n3YjJEEOvvo--zoOL3BhCQx1IjoJRR8z8A-p64lMw/exec',
       tilldate: 'https://script.google.com/macros/s/AKfycbyaSzBDM3Ayh9dSdyjhdLWC7l2er6kTUhD6kcO6GEfnW22GRA3_KnvIxTELyv-1cYtj/exec',
@@ -262,7 +268,7 @@ html,body{transition:background-color .18s linear,color .18s linear}
     /* The one backend that issues tokens. The Authentication tab lives in the
        Weekly workbook, and every project verifies the resulting token locally
        with the shared AUTH_HMAC_SECRET_V1, so nobody signs in twice. */
-    const AUTH_BACKEND = 'weekly';
+    const AUTH_BACKEND = 'auth';
 
     /* How long a hub session is trusted for when the backend does not say.
        Keep this at or below the server-side token lifetime in Auth.gs —
@@ -282,7 +288,7 @@ html,body{transition:background-color .18s linear,color .18s linear}
     /* Report id (used in the URL hash and on the buttons) -> backend name. */
     const BACKEND_OF  = { 'till-date': 'tilldate', 'weekly': 'weekly', 'ua': 'ua', 'aso': 'aso' };
     const REPORT_IDS  = ['ua', 'weekly', 'till-date', 'aso'];
-    const LABEL_OF    = { tilldate: 'Till Date', weekly: 'Weekly', ua: 'UA', aso: 'ASO', negative: 'UA Negative Spend' };
+    const LABEL_OF    = { tilldate: 'Till Date', weekly: 'Weekly', ua: 'UA', aso: 'ASO', negative: 'UA Negative Spend', auth: 'Sign-in' };
 
     const $ = (id) => document.getElementById(id);
 
@@ -524,17 +530,35 @@ html,body{transition:background-color .18s linear,color .18s linear}
       if (frame) frameBase[id] = frame.dataset.src || '';
     });
 
+    /* True while the sign-in screen is up. */
+    function gateOpen() {
+      return !$('authGate').classList.contains('done');
+    }
+
     function startFrame(id) {
       const frame = $('report-' + id);
       if (!frame || frame.src) return false;          // already loaded: keep it
+      /* HARD GATE — nothing loads behind the sign-in screen.
+         Every call site already checks, but the checks were spread across
+         showReport(), the prefetch timer and the pageshow restore, and a
+         single missed one costs the person a ~340 KB report document plus an
+         Apps Script execution while they are still typing a password. One
+         refusal here makes that structurally impossible. */
+      if (gateOpen()) return false;
       const base = frameBase[id];
       if (!base) return false;
       const backend = BACKEND_OF[id];
       /* A report must not start without a token and fail as "Unauthorized". */
       if (!isAvailable(backend)) return false;
       const join = base.indexOf('?') >= 0 ? '&' : '?';
+      /* No cache-buster. UA used to append '&cb=' + Date.now(), which forced
+         a fresh download of this ~100 KB document on every hub open while
+         Weekly, Till Date and ASO were served from the browser cache - on the
+         one report that is the default tab, so it sat directly on the path
+         everybody waits for. The '?v=' string in data-src already busts the
+         cache on deploy, which is the only time it needs busting. */
       frame.src = base + join + 'api=' + encodeURIComponent(API_URLS[backend]) +
-        (id === 'ua' ? '&negativeApi=' + encodeURIComponent(API_URLS.negative) + '&cb=' + Date.now() : '');
+        (id === 'ua' ? '&negativeApi=' + encodeURIComponent(API_URLS.negative) : '');
       frame.removeAttribute('data-src');
       return true;
     }
@@ -573,14 +597,15 @@ html,body{transition:background-color .18s linear,color .18s linear}
        AFTER UA settles, never alongside it. Two reports fetching at once is
        exactly the burst that makes Apps Script answer with an HTML throttling
        page - the "Weekly request interrupted" message. The trigger is UA's
-       own mss3d:report-ready, with a timeout as a backstop in case a report
-       never sends one.
+       own mss3d:report-ready. There is deliberately no timeout fallback:
+       starting Weekly merely because UA is slow would overlap both Apps
+       Script requests and recreate the interruption this sequencing prevents.
+       A manual Weekly-tab click still starts Weekly immediately.
 
        ASO and Till Date are deliberately NOT prefetched. They stay lazy and
        load on their first click, exactly as now.
        ============================================================ */
     const PREFETCH_AFTER = { ua: 'weekly' };
-    const PREFETCH_FALLBACK_MS = 9000;
     const prefetchDone = {};
 
     function schedulePrefetch(afterId) {
@@ -592,8 +617,10 @@ html,body{transition:background-color .18s linear,color .18s linear}
         prefetchDone[target] = true;
         window.removeEventListener('message', onReady);
         /* Never start a report without a token: it would fail as
-           "Unauthorized" and burn a request for nothing. */
-        if (!readSession()) return;
+           "Unauthorized" and burn a request for nothing. Keep the gate check
+           as a sign-out can briefly leave a valid-looking session record while
+           the sign-in screen is already back up. */
+        if (!readSession() || gateOpen()) return;
         const frame = $('report-' + target);
         if (frame && frame.src) return;        // already opened by hand
         startFrame(target);
@@ -602,11 +629,11 @@ html,body{transition:background-color .18s linear,color .18s linear}
       const onReady = (ev) => {
         if (ev.origin !== location.origin) return;
         const data = ev.data;
-        if (data && data.type === 'mss3d:report-ready') go();
+        /* Only the report this handoff is waiting for may release it. */
+        if (data && data.type === 'mss3d:report-ready' && data.report === afterId) go();
       };
 
       window.addEventListener('message', onReady);
-      setTimeout(go, PREFETCH_FALLBACK_MS);
     }
 
     function showReport(id) {
@@ -625,9 +652,8 @@ html,body{transition:background-color .18s linear,color .18s linear}
       });
 
       const frame = $('report-' + id);
-      const gateOpen = !$('authGate').classList.contains('done');
 
-      if (frame && !gateOpen) {
+      if (frame && !gateOpen()) {
         /* First visit to this tab: load it now. A tab opened before keeps its
            document, so startFrame() returns false and the report is simply
            revealed - no request, no waiting. */
@@ -768,8 +794,7 @@ html,body{transition:background-color .18s linear,color .18s linear}
     }
 
     setInterval(() => {
-      const gateOpen = !$('authGate').classList.contains('done');
-      if (!gateOpen && !readSession()) handleExpiry();
+      if (!gateOpen() && !readSession()) handleExpiry();
     }, 60000);
 
     /* A report can ask the hub to re-check the session — same-origin only. */
@@ -873,8 +898,11 @@ html,body{transition:background-color .18s linear,color .18s linear}
       verifySessionInBackground(existing.token);
     } else {
       clearSession();          // drop half-written tokens from an earlier attempt
-      showReport(currentReport);
+      /* Gate FIRST. showReport() is layout-only while the gate is up, because
+         startFrame() refuses, but doing it in this order makes that a
+         guarantee rather than something that happens to hold. */
       showGate();
+      showReport(currentReport);
     }
   })();
   </script>
