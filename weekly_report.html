@@ -1281,6 +1281,338 @@ np('andNetPie',["AppLovin Bidding","Google Bidding","Google Ad Manager Native","
 })();
 </script>
 <script>
+/**
+ * ============================================================
+ * snapshot-client.js — one cache layer for every report
+ * ------------------------------------------------------------
+ * Paste this inside a <script> tag in weekly_report.html and
+ * ua_report.html, ABOVE their existing code. It defines two globals:
+ *
+ *   SnapshotStore   IndexedDB read/write
+ *   SnapshotBoot    the paint-first-verify-after load sequence
+ *
+ * WHY INDEXEDDB AND NOT localStorage
+ *
+ * The hub and all four reports share one origin, so they share ONE
+ * localStorage quota of about 5MB. Weekly's payloads are 47-73KB each and
+ * its persistence code already has to handle running out of room: on a
+ * quota error persistSave() wipes every stored range and keeps only the one
+ * it was writing. UA's payload is around 1MB, which is why ua_report.html
+ * never even tried to persist and refetched on every single load.
+ *
+ * IndexedDB gives hundreds of megabytes, is asynchronous so it never blocks
+ * the first paint, and stores real objects - so a 1MB payload costs no
+ * JSON.stringify on write and no JSON.parse on read.
+ *
+ * WHAT THE BOOT SEQUENCE DOES
+ *
+ * Old order: ask the server, wait, then paint. A cold morning meant a
+ * spinner for 40-90 seconds and sometimes an error.
+ *
+ * New order: paint whatever is on disk immediately, THEN check whether it is
+ * still current. The check is one request that answers `unchanged` in about
+ * 90 bytes without the server opening a spreadsheet, so the usual outcome is
+ * that nothing else happens and the user never sees a loading state at all.
+ *
+ * And after the first check of the day, even that request is skipped: a copy
+ * verified after today's data hour is trusted until tomorrow.
+ * ============================================================ */
+
+(function () {
+  'use strict';
+
+  /* The hour the daily sync finishes. weekly_report.html used 9, which was
+     wrong in both directions: the sync lands 06:00-08:00, so anyone opening
+     between 07:00 and 09:00 was served a copy marked stale, and the refetch
+     it triggered landed on top of the 08:30 warm. */
+  const DATA_HOUR = 8;
+
+  const DB_NAME = 'mss3d';
+  const DB_VERSION = 1;
+  const STORE = 'snapshots';
+
+  /* ============================================================
+   * 1. IndexedDB
+   * ============================================================ */
+
+  let dbPromise = null;
+
+  function openDb() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve, reject) {
+      let req;
+      try { req = indexedDB.open(DB_NAME, DB_VERSION); }
+      catch (e) { reject(e); return; }
+
+      req.onupgradeneeded = function () {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+      /* Another tab is holding an old version open. Rather than hang, give
+         up and run without a disk cache - the report still works, it just
+         pays the network once. */
+      req.onblocked = function () { reject(new Error('IndexedDB blocked')); };
+    });
+    return dbPromise;
+  }
+
+  function tx(mode, fn) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        const t = db.transaction(STORE, mode);
+        const store = t.objectStore(STORE);
+        let out;
+        try { out = fn(store); } catch (e) { reject(e); return; }
+        t.oncomplete = function () { resolve(out && out.result !== undefined ? out.result : out); };
+        t.onerror = function () { reject(t.error); };
+        t.onabort = function () { reject(t.error || new Error('aborted')); };
+      });
+    });
+  }
+
+  const SnapshotStore = {
+    /** Returns the stored record, or null. Never throws. */
+    get: function (name) {
+      return tx('readonly', function (s) { return s.get(name); })
+        .catch(function () { return null; });
+    },
+    /** Returns true on success. Never throws. */
+    put: function (name, record) {
+      return tx('readwrite', function (s) { return s.put(record, name); })
+        .then(function () { return true; })
+        .catch(function (e) {
+          console.warn('[snapshot] could not persist:', e && e.message);
+          return false;
+        });
+    },
+    clear: function (name) {
+      return tx('readwrite', function (s) { return s.delete(name); })
+        .then(function () { return true; })
+        .catch(function () { return false; });
+    },
+    /**
+     * One-time cleanup of the localStorage tier this replaces. Safe to call
+     * on every boot; it only removes keys this project wrote.
+     */
+    evictLegacy: function (prefixes) {
+      try {
+        const doomed = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          for (let j = 0; j < prefixes.length; j++) {
+            if (k.indexOf(prefixes[j]) === 0) { doomed.push(k); break; }
+          }
+        }
+        doomed.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+        return doomed.length;
+      } catch (e) { return 0; }
+    }
+  };
+
+  /* ============================================================
+   * 2. The daily boundary
+   * ============================================================ */
+
+  /**
+   * The most recent DATA_HOUR that has actually happened.
+   *
+   * Before 08:00 the day's boundary is still ahead of us, so yesterday's is
+   * the one in force - otherwise every load between midnight and 08:00 would
+   * look stale and send a request for data that has not been replaced yet.
+   */
+  function dataBoundary() {
+    const now = new Date();
+    const b = new Date(now.getFullYear(), now.getMonth(), now.getDate(), DATA_HOUR, 0, 0, 0);
+    if (b.getTime() > now.getTime()) b.setDate(b.getDate() - 1);
+    return b.getTime();
+  }
+
+  /** True when this record was verified against the server after the boundary. */
+  function verifiedToday(record) {
+    return !!record && Number(record.checkedAt) >= dataBoundary();
+  }
+
+  /* ============================================================
+   * 3. The boot sequence
+   * ============================================================ */
+
+  /**
+   * Loads a report, painting from disk first whenever possible.
+   *
+   * @param {Object} opts
+   *   name      {string}   IndexedDB key for this report ('weekly' | 'ua')
+   *   request   {Function} (stamp) => Promise<serverResponse>
+   *   render    {Function} (data, meta) => void        MUST be synchronous-safe
+   *   onStatus  {Function} (text, kind) => void        optional
+   *   alwaysCheck {boolean} skip the once-a-day shortcut (default false)
+   *
+   * The server response is expected to be either
+   *   { unchanged:true, stamp }
+   * or
+   *   { stamp, complete, presets|datasets, retryAfter }
+   *
+   * @return {Promise<{source:string, stamp:string}>}
+   */
+  async function load(opts) {
+    const name = opts.name;
+    const say = opts.onStatus || function () {};
+
+    let stored = null;
+    try { stored = await SnapshotStore.get(name); } catch (e) { stored = null; }
+
+    /* ---- Fast path: painted from disk, no network at all ---------------
+       A copy verified after this morning's boundary is correct until
+       tomorrow, because the sheets are append-only and appended to once a
+       day. This is what almost every load after the first one hits. */
+    if (stored && stored.data && verifiedToday(stored) && !opts.alwaysCheck) {
+      opts.render(stored.data, { source: 'disk', stamp: stored.stamp, builtAt: stored.builtAt });
+      say('');
+      return { source: 'disk', stamp: stored.stamp };
+    }
+
+    /* ---- Paint anything we have, THEN verify --------------------------
+       Even a copy from last week is better than a spinner: it is on screen
+       in a few milliseconds and gets corrected a moment later if it is
+       wrong. The old code showed nothing until the server answered. */
+    let painted = false;
+    if (stored && stored.data) {
+      opts.render(stored.data, { source: 'disk-stale', stamp: stored.stamp, builtAt: stored.builtAt });
+      painted = true;
+      say('Checking for new data\u2026', 'busy');
+    } else {
+      say('Loading\u2026', 'busy');
+    }
+
+    let res;
+    try {
+      res = await opts.request(stored && stored.stamp ? stored.stamp : '');
+    } catch (err) {
+      /* A failed check when we already have something on screen is a
+         non-event. Say so quietly and keep the painted view. */
+      if (painted) {
+        say('Showing your saved copy \u2014 could not reach the server.', 'warn');
+        return { source: 'disk-stale', stamp: stored.stamp };
+      }
+      throw err;
+    }
+
+    /* ---- Still current -------------------------------------------------
+       Stamp the record so the rest of today takes the fast path above. */
+    if (res && res.unchanged) {
+      await SnapshotStore.put(name, {
+        stamp: stored.stamp,
+        builtAt: res.builtAt || stored.builtAt || 0,
+        checkedAt: Date.now(),
+        data: stored.data
+      });
+      if (!painted) opts.render(stored.data, { source: 'disk', stamp: stored.stamp });
+      say('');
+      return { source: 'disk-verified', stamp: stored.stamp };
+    }
+
+    /* ---- New data ------------------------------------------------------ */
+    const data = opts.extract ? opts.extract(res) : res;
+    opts.render(data, { source: 'network', stamp: res.stamp, builtAt: res.builtAt });
+
+    /* A partial answer is stored anyway - a browser with four of five
+       presets is better off than one with none - but NOT marked as verified,
+       so the next load checks again instead of trusting a gap. */
+    await SnapshotStore.put(name, {
+      stamp: res.stamp,
+      builtAt: res.builtAt || 0,
+      checkedAt: res.complete === false ? 0 : Date.now(),
+      data: data
+    });
+
+    if (res.complete === false) {
+      say('Some views are still being prepared\u2026', 'busy');
+      scheduleRecheck(opts, res.retryAfter || 45);
+    } else {
+      say('');
+    }
+
+    return { source: 'network', stamp: res.stamp };
+  }
+
+  /**
+   * Comes back for the rest of a partial bundle, once, quietly.
+   *
+   * Deliberately not a loop: the warm either finishes in the next minute or
+   * something is wrong, and a page that keeps polling all afternoon is how a
+   * quiet problem turns into a throttled deployment.
+   */
+  function scheduleRecheck(opts, seconds) {
+    setTimeout(function () {
+      load(Object.assign({}, opts, { alwaysCheck: true })).catch(function () {});
+    }, Math.max(10, seconds) * 1000);
+  }
+
+  /**
+   * The Refresh button: ask the server to rebuild, then poll the stamp.
+   *
+   * Nothing blocks. The current view stays on screen and readable for the
+   * whole rebuild.
+   *
+   * @param {Object} opts   same shape as load(), plus:
+   *   forceRequest {Function} () => Promise<{status, retryAfter}>
+   *   stampRequest {Function} () => Promise<{stamp}>
+   */
+  async function refresh(opts) {
+    const say = opts.onStatus || function () {};
+    const before = await SnapshotStore.get(opts.name);
+    const beforeStamp = before && before.stamp;
+
+    say('Rebuilding from the sheet\u2026', 'busy');
+
+    let ack;
+    try { ack = await opts.forceRequest(); }
+    catch (err) { say('Could not start a rebuild: ' + (err.message || err), 'error'); return false; }
+
+    if (ack && ack.status === 'THROTTLED') {
+      say('A rebuild just ran. Try again in about ' +
+          Math.ceil((ack.retryAfter || 300) / 60) + ' minute(s).', 'warn');
+      return false;
+    }
+
+    /* Poll the cheap stamp action, not the payload. Each poll is a Script
+       Property read - it never opens the workbook and never builds. */
+    const deadline = Date.now() + 4 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise(function (r) { setTimeout(r, 10000); });
+      let now;
+      try { now = await opts.stampRequest(); } catch (e) { continue; }
+      if (now && now.stamp && now.stamp !== beforeStamp) {
+        await SnapshotStore.clear(opts.name);
+        await load(Object.assign({}, opts, { alwaysCheck: true }));
+        return true;
+      }
+    }
+
+    say('The rebuild is taking longer than usual. Your current view is still accurate ' +
+        'as of the last sync.', 'warn');
+    return false;
+  }
+
+  /* ============================================================
+   * 4. Export
+   * ============================================================ */
+
+  window.SnapshotStore = SnapshotStore;
+  window.SnapshotBoot = {
+    load: load,
+    refresh: refresh,
+    dataBoundary: dataBoundary,
+    verifiedToday: verifiedToday,
+    DATA_HOUR: DATA_HOUR
+  };
+})();
+
+</script>
+
+<script>
 /* ---- API client: URL arrives via ?api= from the hub, token via sessionStorage ---- */
 window.__themeRerender = function(){ if (STATE && STATE.data) renderAll(STATE.data); };
 
@@ -1296,7 +1628,8 @@ const API = {
   url: new URLSearchParams(location.search).get('api') || '',
   tokenKey: 'mss3d_token',
   get token(){ return sessionStorage.getItem(API.tokenKey) || ''; },
-  async call(action, params){
+  async call(action, params, options){
+    const quiet=!!(options&&options.quiet);
     if(!API.url) throw new Error('No API URL - open this report from the hub, not on its own.');
     if(!API.token){
       try{window.parent.postMessage({type:'mss3d:need-token'},location.origin)}catch(e){}
@@ -1306,8 +1639,32 @@ const API = {
       try{window.parent.postMessage({type:'mss3d:session-expired'},location.origin)}catch(e){}
       throw new Error('Not signed in - open the hub and sign in.');
     }
-    let lastError;
-    for(let attempt=1;attempt<=2;attempt++){
+    /* ── Two clocks, not one ──────────────────────────────────────────────
+       TRANSPORT failures (dropped connection, Google's HTML throttling page,
+       a redirect that re-entered the GET endpoint) are momentary. Retry
+       twice, quickly.
+
+       QUEUED answers are not failures at all. The backend NEVER builds inside
+       a user request: a cold window is handed to a one-shot trigger and the
+       request returns immediately with BUILDING: (build just scheduled) or
+       BUSY: (another execution is already building it). A cold buildPayload_
+       across 14 tabs takes roughly 40-60s.
+
+       The old schedule - two attempts, 1.5s then 3s, and a pattern that only
+       recognised BUSY: - therefore gave up about a minute too early and
+       painted the raw "BUILDING: Weekly data is being prepared" string into
+       the red error box. That is exactly why clicking a different filter a
+       moment later "worked": the trigger had finished in the meantime and the
+       second click was a plain cache read.
+
+       Queued answers now get their own budget, ~85s, which covers a cold
+       build with room to spare. */
+    const TRANSPORT_RETRIES=2;
+    const QUEUE_POLLS=8;
+    const QUEUE_WAIT_MS=[4000,6000,8000,10000,12000,15000,15000,15000];
+    const isQueuedText=t=>/^(BUILDING|BUSY):/.test(String(t||''));
+    let lastError,transportTries=0,queuedPolls=0;
+    for(;;){
       const controller=new AbortController();
       /* A cold Weekly Apps Script execution can exceed one minute. Aborting
          it at 60s leaves that server execution running and immediately starts
@@ -1337,10 +1694,11 @@ const API = {
            instead of failing outright. If it still returns HTML on the last
            attempt, the deployment really is wrong and the message says so. */
         if(body.charAt(0)==='<'){
-          const err=new Error(attempt<2
+          const more=transportTries<TRANSPORT_RETRIES;
+          const err=new Error(more
             ?'Apps Script returned an HTML page instead of data - retrying.'
             :'Apps Script returned a Google sign-in page instead of data. Redeploy it with "Execute as: Me" and "Who has access: Anyone".');
-          err.retryable=attempt<2;
+          err.retryable=more;
           throw err;
         }
         let data;
@@ -1358,35 +1716,49 @@ const API = {
           throw err;
         }
         if(data.code === 401||/^Unauthorized:/i.test(String(data.error||''))){
-          if(attempt<2){
+          const more=transportTries<TRANSPORT_RETRIES;
+          if(more){
             try{window.parent.postMessage({type:'mss3d:need-token'},location.origin)}catch(e){}
           }else{
             try{window.parent.postMessage({type:'mss3d:session-expired'},location.origin)}catch(e){}
           }
-          const err=new Error(attempt<2?'Authentication rejected - refreshing token and retrying.':'Session expired - reload the hub and sign in again.');
-          err.retryable=attempt<2;
+          const err=new Error(more?'Authentication rejected - refreshing token and retrying.':'Session expired - reload the hub and sign in again.');
+          err.retryable=more;
           err.authFailure=true;
           throw err;
         }
         if(!data.ok){
           const err=new Error(data.error || 'Request failed');
-          err.retryable=data.code>=500;
-          /* BUSY: means the backend is mid-rebuild and is queuing us, not
-             that anything failed. Retrying is correct; the wording just
-             should not read like an error. */
-          err.queued=/^BUSY:/.test(String(data.error||''));
+          /* BUILDING: the backend has just scheduled a trigger to build this
+             window. BUSY: another execution is already building it. Neither
+             is a failure - both mean "come back shortly", and both are
+             answered on the queue budget rather than the transport one. */
+          err.queued=isQueuedText(data.error);
+          err.retryable=err.queued||data.code>=500;
           throw err;
         }
         return data;
       }catch(e){
         clearTimeout(timer);
         lastError=e;
+
+        /* Queued: poll on the long budget and do NOT flag the status line as
+           an error. The backend is working; saying so in red is a lie. */
+        if(e&&e.queued){
+          if(queuedPolls>=QUEUE_POLLS)throw e;
+          const wait=QUEUE_WAIT_MS[Math.min(queuedPolls,QUEUE_WAIT_MS.length-1)];
+          queuedPolls++;
+          if(!quiet)setStatus(`Preparing weekly data — this finishes by itself (checking again in ${Math.round(wait/1000)}s)…`,false);
+          await new Promise(resolve=>setTimeout(resolve,wait));
+          continue;
+        }
+
         const retryable=e?.retryable===true||e?.name==='AbortError'||e instanceof TypeError;
-        if(!retryable||attempt===2)throw e;
-        setStatus(e?.authFailure?`Weekly authentication rejected — retrying automatically (${attempt}/4)…`
-          :e?.queued?`Weekly data is refreshing — this will finish by itself…`
-          :`Weekly request interrupted — retrying automatically (${attempt}/4)…`,true);
-        await new Promise(resolve=>setTimeout(resolve,Math.min(10000,1500*Math.pow(2,attempt-1))));
+        if(!retryable||transportTries>=TRANSPORT_RETRIES)throw e;
+        transportTries++;
+        if(!quiet)setStatus(e?.authFailure?`Weekly authentication rejected — retrying automatically (${transportTries}/${TRANSPORT_RETRIES})…`
+          :`Weekly request interrupted — retrying automatically (${transportTries}/${TRANSPORT_RETRIES})…`,true);
+        await new Promise(resolve=>setTimeout(resolve,Math.min(10000,1500*Math.pow(2,transportTries-1))));
       }
     }
     throw lastError||new Error('Weekly request failed');
@@ -1810,7 +2182,8 @@ function installControls(){
       '<option value="w2">Last 2 weeks</option>'+
       '<option value="w4">Last 4 weeks</option>'+
       '<option value="w6">Last 6 weeks</option>'+
-      '<option value="w8">Last 8 weeks</option>'+ 
+      '<option value="w8">Last 8 weeks</option>'+
+      '<option value="w10">Last 10 weeks</option>'+ 
       '<option value="single">Single date</option>'+
       '<option value="range">Custom range</option>'+
     '</select>'+
@@ -1854,7 +2227,7 @@ function installControls(){
   /* Refresh must be a real refresh: clear the stored copies as well as the
      in-memory ones, or the reload after it would restore what was just
      discarded. force=1 then makes the backend rebuild too. */
-  g('weeklyRefresh').addEventListener('click',()=>{payloadCache.clear();persistClear();loadLive(false,true);});
+  g('weeklyRefresh').addEventListener('click',()=>{weeklyRefresh();});
   syncMode();
 }
 
@@ -2164,33 +2537,24 @@ function numberTables(){
    What is both safe and fast is remembering each range's own payload. A range
    costs one round trip the first time and renders straight from memory every
    time after, which is the same instant response without inventing any figure
-   the server did not compute. hydratePresets() then pulls every remaining
-   preset in a single background request, so in practice the first click on
-   each is already warm. */
+   the server did not compute. loadSnapshot() puts every preset into that map
+   before the first render, so in practice each one is already warm. */
 /* ── Daily refresh boundary ──────────────────────────────────────────────
    The source sheets are appended to once a DAY, roughly 06:00-08:00
    Asia/Karachi, and are not touched in between, so a payload fetched after
-   that import stays correct for the rest of the day. A rolling TTL (this used
-   to be 15 minutes) therefore threw away good data and made people wait for
-   a rebuild of numbers that had not changed.
-   Instead every cached range is stamped against the most recent DAILY_REFRESH_HOUR
-   boundary: the first load after 09:00 refetches, and every load between
-   then and the next 09:00 renders straight from memory.
-   Daily rather than weekly on purpose - it costs one request a day against
-   the server's own warm cache, and it means a corrected sheet or a re-run
-   sync is picked up the next morning without anyone pressing Refresh.
-   The hour matches the warm trigger in weekly_router.gs, which rebuilds the
-   server-side caches between 08:00 and 09:00 so this refetch is a cache read. */
-const DAILY_REFRESH_HOUR=9;
-function refreshBoundary(){
-  const now=new Date();
-  const b=new Date(now.getFullYear(),now.getMonth(),now.getDate(),DAILY_REFRESH_HOUR,0,0,0);
-  /* Before 09:00 the day's boundary has not happened yet, so yesterday's is
-     the one still in force - otherwise every load between midnight and 09:00
-     would look stale and refetch. */
-  if(b.getTime()>now.getTime())b.setDate(b.getDate()-1);
-  return b.getTime();
-}
+   that import stays correct for the rest of the day.
+
+   The hour used to be 9 here, and that was wrong in both directions. The
+   sync lands by 08:00, so anyone opening between 07:00 and 09:00 was served
+   a copy marked stale and triggered a refetch - which landed right on top of
+   the 08:30 warm and queued behind it. SnapshotBoot.dataBoundary() owns this
+   now and uses 08:00, matching the 08:15 warm in WeeklySnapshot.gs.
+
+   Freshness is also no longer a clock question at all. The server publishes
+   a stamp that moves when the DATA moves, so a range is current because the
+   stamp says so, not because it is younger than an arbitrary hour. The
+   boundary only decides how often we bother to ASK. */
+const refreshBoundary=()=>SnapshotBoot.dataBoundary();
 const isFresh=entry=>!!entry&&entry.at>=refreshBoundary();
 
 const payloadCache=new Map();      // canonical params key -> {at, json}
@@ -2198,72 +2562,29 @@ const inflight=new Map();          // canonical params key -> in-progress reques
 const cacheKey=params=>JSON.stringify(Object.keys(params).sort().map(k=>[k,params[k]]));
 
 /* ── Ranges that survive a reload ────────────────────────────────────────
-   payloadCache alone dies with the document, so every reload of the hub -
-   or every first click on the Weekly tab in a new session - paid the network
-   again for data already fetched that morning. Mirroring it into localStorage
-   makes those loads instant: the report paints from disk with no request at
-   all until the next 09:00 boundary.
-   One localStorage key per range, not one blob: an oversized range then fails
-   on its own instead of taking every other cached range down with it. */
-const PERSIST_PREFIX='mss3d_weekly_payload_v3_max8:';
-/* A single range is capped well under the ~5M-character origin quota, so one
-   fat payload can never crowd out the rest. Anything larger simply is not
-   persisted - it still caches in memory for the session. */
-const PERSIST_MAX_CHARS=1500000;
-const persistKeyFor=key=>PERSIST_PREFIX+key;
+   This was localStorage: one key per range, a hard 1,500,000-character
+   ceiling per entry, and a panic path that wiped every stored range when the
+   quota ran out. The quota is ~5MB and is shared by the hub and all four
+   reports, which is why the ceiling had to exist and why a wide range
+   sometimes silently failed to persist and refetched the next morning.
 
-/** Restores this morning's ranges into payloadCache; drops anything stale. */
-function persistLoad(){
-  let restored=0;
-  try{
-    const boundary=refreshBoundary();
-    /* Backwards: removeItem() reindexes localStorage, so a forward loop would
-       skip the entry after every deletion. */
-    for(let i=localStorage.length-1;i>=0;i--){
-      const k=localStorage.key(i);
-      if(!k||k.indexOf(PERSIST_PREFIX)!==0)continue;
-      let entry=null;
-      try{entry=JSON.parse(localStorage.getItem(k));}catch(e){/* corrupt */}
-      if(!entry||!entry.json||!(entry.at>=boundary)){
-        try{localStorage.removeItem(k);}catch(e){}
-        continue;
-      }
-      payloadCache.set(k.slice(PERSIST_PREFIX.length),entry);
-      restored++;
-    }
-  }catch(e){/* storage blocked or unavailable; the memory cache still works */}
-  return restored;
+   SnapshotBoot owns the disk copy now, in IndexedDB, where none of that
+   applies. What remains here is the in-memory map a single page session uses
+   to answer repeat renders - unchanged. */
+
+/* Every render gets its own copy. renderAll() runs trimTrend(), which
+   rewrites data.trend in place, so handing out the stored object would let
+   one render edit what the next one reads. */
+function clonePayload(json){
+  try{return structuredClone(json)}catch(e){return JSON.parse(JSON.stringify(json))}
 }
 
-function persistSave(key,entry){
-  try{
-    const text=JSON.stringify(entry);
-    if(text.length>PERSIST_MAX_CHARS)return;
-    localStorage.setItem(persistKeyFor(key),text);
-  }catch(e){
-    /* Out of quota. Drop the stored ranges and keep just this one, rather
-       than leaving a cache that silently stops accepting new entries. */
-    try{
-      persistClear();
-      localStorage.setItem(persistKeyFor(key),JSON.stringify(entry));
-    }catch(e2){/* still no room: this session keeps it in memory only */}
-  }
-}
-
-function persistClear(){
-  try{
-    const doomed=[];
-    for(let i=0;i<localStorage.length;i++){
-      const k=localStorage.key(i);
-      if(k&&k.indexOf(PERSIST_PREFIX)===0)doomed.push(k);
-    }
-    doomed.forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
-  }catch(e){}
-}
-/* Every render gets its own copy. renderAll() runs trimTrend(), which rewrites
-   data.trend in place, so handing out the stored object would let one render
-   edit what the next one reads. */
-function clonePayload(json){try{return structuredClone(json)}catch(e){return JSON.parse(JSON.stringify(json))}}
+/* One-off: drop the localStorage tier this replaces, so it stops competing
+   for the origin quota with the hub's auth token. */
+try{
+  const dropped=SnapshotStore.evictLegacy(['mss3d_weekly_payload_']);
+  if(dropped)console.log('[weekly] evicted '+dropped+' legacy localStorage range(s)');
+}catch(e){}
 
 async function requestPayload(opts){
   const {mode='latest',date='',start='',end='',trend='56',selfStart='',selfEnd='',force=false}=opts||{};
@@ -2274,7 +2595,7 @@ async function requestPayload(opts){
   else if(mode==='all'){ params.all='1'; }
   if(selfStart&&selfEnd){ params.selfBenchStart=selfStart; params.selfBenchEnd=selfEnd; }
   const key=cacheKey(params),cached=payloadCache.get(key);
-  if(force){payloadCache.delete(key);try{localStorage.removeItem(persistKeyFor(key));}catch(e){}}
+  if(force){payloadCache.delete(key);}
   else if(isFresh(cached)){STATE.fromCache=true;return clonePayload(cached.json);}
   STATE.fromCache=false;
   /* Clicking a preset that the background warm-up is already fetching should
@@ -2288,7 +2609,6 @@ async function requestPayload(opts){
     const json=(await API.call('payload', params)).data;if(json.error)throw new Error(json.error);if(!json.meta||!json.iOS||!json.Android)throw new Error('Unexpected payload: required live report fields are missing');if(!json.benchmark)throw new Error('Live Benchmark payload is missing; redeploy the current Apps Script project');
     const entry={at:Date.now(),json};
     payloadCache.set(key,entry);
-    persistSave(key,entry);            // so a reload later today costs nothing
     return json;
   })();
   inflight.set(key,pending);
@@ -2296,51 +2616,97 @@ async function requestPayload(opts){
   finally{ inflight.delete(key); }
 }
 
-/* ── Preset hydration: ONE request for every window ──────────────────────
-   The previous version sent four separate requests, spaced 8 seconds apart,
-   because Apps Script answers a burst to the same /exec with an HTML
-   throttling page - which is where "Weekly request interrupted" came from.
-   One request cannot burst, so the spacing is no longer needed either.
+/* ── The snapshot: one request IS the load ───────────────────────────────
+   The order used to be backwards, and that is where "Weekly request
+   interrupted" came from.
 
-   Measured payloads are 47-73 KB per preset, so all four together are about
-   250 KB: one modest response instead of four round trips, each of which was
-   paying its own cold start.
+   loadLive() sent a single { action:'payload' } request for the selected
+   range, then 1.2 seconds later a background hydratePresets() fetched
+   { action:'payload_bundle' } to fill in the rest. But those two actions are
+   not equivalent risks. `payload` CAN miss its cache, and when it does the
+   router refuses to build inside a request - it schedules a trigger and
+   answers "BUILDING:", so the browser polls for up to 85 seconds.
+   `payload_bundle` never builds at all: it serves only what the morning warm
+   already cached. The reliable path was running second.
 
-   The backend action only SERVES what the 09:00 warmer already cached - it
-   never builds - so this can neither run long nor collide with the warmer.
-   Anything it reports as null is simply left out, and the normal single
-   request fetches it when that preset is actually selected. */
-const PRESET_WEEKS=[2,4,6,8];
-let warming=false;
-function presetCacheKey(w){
-  return cacheKey({trendDays:56,start:isoDay(w.start),end:isoDay(w.end)});
+   Now the bundle IS the first request. All five presets arrive together, so
+   2/4/6/8/10 are in payloadCache before the first click and every one of them
+   is a memory read. A second request only happens for a Single or Custom
+   date, which no bundle can contain.
+
+   And because SnapshotBoot compares stamps, the usual case is not even that:
+   a browser that already has this morning's data sends ~90 bytes and is told
+   nothing changed, or - after the first check of the day - sends nothing.
+
+   Must stay identical to WEEKLY_CACHE.presets in Router.gs. */
+const PRESET_WEEKS=[2,4,6,8,10];
+
+/** The stamp our stored copy carries. Refresh watches this for movement. */
+let SNAPSHOT_STAMP='';
+
+/** Unpacks a snapshot response into payloadCache under the exact keys
+    requestPayload() will look for. */
+function absorbSnapshot(presets){
+  let n=0;
+  Object.keys(presets||{}).forEach(k=>{
+    const item=presets[k];
+    if(!item||!item.payload)return;          // that preset was not warmed yet
+    const key=cacheKey({trendDays:56,start:item.start,end:item.end});
+    payloadCache.set(key,{at:Date.now(),json:item.payload});
+    n++;
+  });
+  return n;
 }
-async function hydratePresets(){
-  if(warming)return; warming=true;
+
+async function loadSnapshot(){
+  return SnapshotBoot.load({
+    name:'weekly',
+    request:(stamp)=>API.call('snapshot',{stamp:stamp||''},{quiet:true})
+                      .then(r=>(r&&r.data)||r),
+    extract:(res)=>res.presets,
+    render:(presets,meta)=>{
+      SNAPSHOT_STAMP=meta.stamp||SNAPSHOT_STAMP;
+      absorbSnapshot(presets);
+    },
+    /* Silent by design. The snapshot is an optimisation that runs before
+       loadLive() paints anything, so it must never write the status line,
+       the spinner or the error banner. */
+    onStatus:()=>{}
+  });
+}
+
+/**
+ * The Refresh button: "the sheet changed, go and look again".
+ *
+ * Schedules a real rebuild on the server and returns immediately, then polls
+ * the cheap stamp action until it moves. Nothing blocks - the current view
+ * stays on screen and readable for the whole rebuild.
+ */
+async function weeklyRefresh(){
+  const button=document.getElementById('weeklyRefresh');
+  if(button)button.disabled=true;
   try{
-    /* Freshness, not mere presence: a range restored from localStorage is
-       already good until the next 09:00 boundary, so after the first load of
-       the day this sends nothing at all. */
-    const missing=PRESET_WEEKS.filter(n=>!isFresh(payloadCache.get(presetCacheKey(weekWindow(n,weekAnchor())))));
-    if(!missing.length)return;
-
-    const res=await API.call('payload_bundle',{weeks:missing});
-    const presets=res&&res.data&&res.data.presets;
-    if(!presets)return;
-
-    Object.keys(presets).forEach(k=>{
-      const item=presets[k];
-      if(!item||!item.payload)return;      // backend had not cached this one yet
-      const key=cacheKey({trendDays:56,start:item.start,end:item.end});
-      const entry={at:Date.now(),json:item.payload};
-      payloadCache.set(key,entry);
-      persistSave(key,entry);              // survives reload until the next 09:00
+    const moved=await SnapshotBoot.refresh({
+      name:'weekly',
+      forceRequest:()=>API.call('snapshot',{force:'1'},{quiet:true}).then(r=>(r&&r.data)||r),
+      stampRequest:()=>API.call('stamp',{},{quiet:true}).then(r=>(r&&r.data)||r),
+      request:(stamp)=>API.call('snapshot',{stamp:stamp||''},{quiet:true}).then(r=>(r&&r.data)||r),
+      extract:(res)=>res.presets,
+      render:(presets,meta)=>{
+        SNAPSHOT_STAMP=meta.stamp||SNAPSHOT_STAMP;
+        /* A rebuild retires every range at once, including the Single and
+           Custom ones the bundle does not carry. */
+        payloadCache.clear();
+        absorbSnapshot(presets);
+      },
+      onStatus:(text,kind)=>{ if(text)setStatus(text,kind==='error'); }
     });
-  }catch(e){
-    /* Invisible by design: hydration is an optimisation. It must never write
-       the status line, the spinner or the error banner. */
-  }finally{ warming=false; }
+    if(moved)loadLive(true);
+  }finally{
+    if(button)button.disabled=false;
+  }
 }
+
 function probeLastDataDate(probe){
   const tl=(probe.trend&&probe.trend.labels)||[];
   const series=[];
@@ -2399,15 +2765,21 @@ async function loadLive(auto,force){
        window.__weeklyDebug exposes it for checking from the console. */
     setStatus('Loaded - '+clockTime(Date.now()));
     try{window.parent.postMessage({type:'mss3d:report-ready',report:'weekly'},location.origin)}catch(e){}
-    /* Warm the remaining presets once this render has settled, so the next
-       filter change is a memory read. Deliberately well after the paint: the
-       hub starts the other three reports about a second in, and stacking the
-       warm-up on top of that was enough to get this page's requests dropped. */
-    /* One request, shortly after the paint has settled, fills localStorage
-       with every preset window. Switching 2 -> 4 -> 6 -> 8 for the rest of
-       the day is then a memory read with no network at all. */
-    setTimeout(hydratePresets,1200);
-  }catch(err){console.error(err);document.body.classList.add('live-error');setStatus('Error: '+(err.message||String(err)),true);showLiveError(err);}
+    /* The presets are already in payloadCache - loadSnapshot() put them there
+       before this function was ever called. Nothing to hydrate. */
+  }catch(err){
+    console.error(err);
+    /* A queued answer that outlived the poll budget means the build is just
+       slow, not that anything broke. Say that plainly and keep the red stack
+       trace box - which is for real faults - out of it. */
+    if(err&&err.queued){
+      setStatus('Weekly data is still being prepared — press Apply again in a minute.',true);
+    }else{
+      document.body.classList.add('live-error');
+      setStatus('Error: '+(err.message||String(err)),true);
+      showLiveError(err);
+    }
+  }
   finally{STATE.loading=false;clearBusy();if(button)button.disabled=false;if(refreshButton)refreshButton.disabled=false;}
 }
 
@@ -2506,10 +2878,10 @@ window.__weeklyDebug={
   get cacheStatus(){
     const b=refreshBoundary(),next=new Date(b+86400000);
     return {
-      refreshHour:DAILY_REFRESH_HOUR,
+      refreshHour:SnapshotBoot.DATA_HOUR,
+      stamp:SNAPSHOT_STAMP,
       boundary:new Date(b).toLocaleString(),
       nextRefresh:next.toLocaleString(),
-      restoredFromDisk:RESTORED_RANGES,
       ranges:[...payloadCache.entries()].map(([k,v])=>({
         range:k,fetched:new Date(v.at).toLocaleString(),fresh:isFresh(v)
       }))
@@ -2520,12 +2892,21 @@ window.__weeklyDebug={
 
 /* Before the first load, so a range fetched earlier today is already in hand
    and loadLive() paints from it without touching the network. */
-const RESTORED_RANGES=persistLoad();
 
 installControls();
 setupSubnav();
 document.body.insertAdjacentHTML('beforeend','<div id="uaLoader"><div class="lbox"><div class="spin"></div><b>Loading Data</b><div class="pulse"></div></div></div>');
-loadLive(true);
+
+/* Snapshot first, render second.
+   Every preset the picker offers is in payloadCache before loadLive() runs,
+   so the first paint is a memory read and so is every filter change after it.
+   A failure here is not fatal: loadLive() still behaves exactly as it did,
+   it just pays a network round trip for the selected range. */
+(async()=>{
+  try{ await loadSnapshot(); }
+  catch(e){ console.warn('[weekly] snapshot unavailable, falling back:',e&&e.message); }
+  loadLive(true);
+})();
 })();
 </script>
 </body></html>
