@@ -495,6 +495,338 @@ html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover,.tablewr
   </section></main>
 
 <script>
+/**
+ * ============================================================
+ * snapshot-client.js — one cache layer for every report
+ * ------------------------------------------------------------
+ * Paste this inside a <script> tag in weekly_report.html and
+ * ua_report.html, ABOVE their existing code. It defines two globals:
+ *
+ *   SnapshotStore   IndexedDB read/write
+ *   SnapshotBoot    the paint-first-verify-after load sequence
+ *
+ * WHY INDEXEDDB AND NOT localStorage
+ *
+ * The hub and all four reports share one origin, so they share ONE
+ * localStorage quota of about 5MB. Weekly's payloads are 47-73KB each and
+ * its persistence code already has to handle running out of room: on a
+ * quota error persistSave() wipes every stored range and keeps only the one
+ * it was writing. UA's payload is around 1MB, which is why ua_report.html
+ * never even tried to persist and refetched on every single load.
+ *
+ * IndexedDB gives hundreds of megabytes, is asynchronous so it never blocks
+ * the first paint, and stores real objects - so a 1MB payload costs no
+ * JSON.stringify on write and no JSON.parse on read.
+ *
+ * WHAT THE BOOT SEQUENCE DOES
+ *
+ * Old order: ask the server, wait, then paint. A cold morning meant a
+ * spinner for 40-90 seconds and sometimes an error.
+ *
+ * New order: paint whatever is on disk immediately, THEN check whether it is
+ * still current. The check is one request that answers `unchanged` in about
+ * 90 bytes without the server opening a spreadsheet, so the usual outcome is
+ * that nothing else happens and the user never sees a loading state at all.
+ *
+ * And after the first check of the day, even that request is skipped: a copy
+ * verified after today's data hour is trusted until tomorrow.
+ * ============================================================ */
+
+(function () {
+  'use strict';
+
+  /* The hour the daily sync finishes. weekly_report.html used 9, which was
+     wrong in both directions: the sync lands 06:00-08:00, so anyone opening
+     between 07:00 and 09:00 was served a copy marked stale, and the refetch
+     it triggered landed on top of the 08:30 warm. */
+  const DATA_HOUR = 8;
+
+  const DB_NAME = 'mss3d';
+  const DB_VERSION = 1;
+  const STORE = 'snapshots';
+
+  /* ============================================================
+   * 1. IndexedDB
+   * ============================================================ */
+
+  let dbPromise = null;
+
+  function openDb() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve, reject) {
+      let req;
+      try { req = indexedDB.open(DB_NAME, DB_VERSION); }
+      catch (e) { reject(e); return; }
+
+      req.onupgradeneeded = function () {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+      /* Another tab is holding an old version open. Rather than hang, give
+         up and run without a disk cache - the report still works, it just
+         pays the network once. */
+      req.onblocked = function () { reject(new Error('IndexedDB blocked')); };
+    });
+    return dbPromise;
+  }
+
+  function tx(mode, fn) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        const t = db.transaction(STORE, mode);
+        const store = t.objectStore(STORE);
+        let out;
+        try { out = fn(store); } catch (e) { reject(e); return; }
+        t.oncomplete = function () { resolve(out && out.result !== undefined ? out.result : out); };
+        t.onerror = function () { reject(t.error); };
+        t.onabort = function () { reject(t.error || new Error('aborted')); };
+      });
+    });
+  }
+
+  const SnapshotStore = {
+    /** Returns the stored record, or null. Never throws. */
+    get: function (name) {
+      return tx('readonly', function (s) { return s.get(name); })
+        .catch(function () { return null; });
+    },
+    /** Returns true on success. Never throws. */
+    put: function (name, record) {
+      return tx('readwrite', function (s) { return s.put(record, name); })
+        .then(function () { return true; })
+        .catch(function (e) {
+          console.warn('[snapshot] could not persist:', e && e.message);
+          return false;
+        });
+    },
+    clear: function (name) {
+      return tx('readwrite', function (s) { return s.delete(name); })
+        .then(function () { return true; })
+        .catch(function () { return false; });
+    },
+    /**
+     * One-time cleanup of the localStorage tier this replaces. Safe to call
+     * on every boot; it only removes keys this project wrote.
+     */
+    evictLegacy: function (prefixes) {
+      try {
+        const doomed = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          for (let j = 0; j < prefixes.length; j++) {
+            if (k.indexOf(prefixes[j]) === 0) { doomed.push(k); break; }
+          }
+        }
+        doomed.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+        return doomed.length;
+      } catch (e) { return 0; }
+    }
+  };
+
+  /* ============================================================
+   * 2. The daily boundary
+   * ============================================================ */
+
+  /**
+   * The most recent DATA_HOUR that has actually happened.
+   *
+   * Before 08:00 the day's boundary is still ahead of us, so yesterday's is
+   * the one in force - otherwise every load between midnight and 08:00 would
+   * look stale and send a request for data that has not been replaced yet.
+   */
+  function dataBoundary() {
+    const now = new Date();
+    const b = new Date(now.getFullYear(), now.getMonth(), now.getDate(), DATA_HOUR, 0, 0, 0);
+    if (b.getTime() > now.getTime()) b.setDate(b.getDate() - 1);
+    return b.getTime();
+  }
+
+  /** True when this record was verified against the server after the boundary. */
+  function verifiedToday(record) {
+    return !!record && Number(record.checkedAt) >= dataBoundary();
+  }
+
+  /* ============================================================
+   * 3. The boot sequence
+   * ============================================================ */
+
+  /**
+   * Loads a report, painting from disk first whenever possible.
+   *
+   * @param {Object} opts
+   *   name      {string}   IndexedDB key for this report ('weekly' | 'ua')
+   *   request   {Function} (stamp) => Promise<serverResponse>
+   *   render    {Function} (data, meta) => void        MUST be synchronous-safe
+   *   onStatus  {Function} (text, kind) => void        optional
+   *   alwaysCheck {boolean} skip the once-a-day shortcut (default false)
+   *
+   * The server response is expected to be either
+   *   { unchanged:true, stamp }
+   * or
+   *   { stamp, complete, presets|datasets, retryAfter }
+   *
+   * @return {Promise<{source:string, stamp:string}>}
+   */
+  async function load(opts) {
+    const name = opts.name;
+    const say = opts.onStatus || function () {};
+
+    let stored = null;
+    try { stored = await SnapshotStore.get(name); } catch (e) { stored = null; }
+
+    /* ---- Fast path: painted from disk, no network at all ---------------
+       A copy verified after this morning's boundary is correct until
+       tomorrow, because the sheets are append-only and appended to once a
+       day. This is what almost every load after the first one hits. */
+    if (stored && stored.data && verifiedToday(stored) && !opts.alwaysCheck) {
+      opts.render(stored.data, { source: 'disk', stamp: stored.stamp, builtAt: stored.builtAt });
+      say('');
+      return { source: 'disk', stamp: stored.stamp };
+    }
+
+    /* ---- Paint anything we have, THEN verify --------------------------
+       Even a copy from last week is better than a spinner: it is on screen
+       in a few milliseconds and gets corrected a moment later if it is
+       wrong. The old code showed nothing until the server answered. */
+    let painted = false;
+    if (stored && stored.data) {
+      opts.render(stored.data, { source: 'disk-stale', stamp: stored.stamp, builtAt: stored.builtAt });
+      painted = true;
+      say('Checking for new data\u2026', 'busy');
+    } else {
+      say('Loading\u2026', 'busy');
+    }
+
+    let res;
+    try {
+      res = await opts.request(stored && stored.stamp ? stored.stamp : '');
+    } catch (err) {
+      /* A failed check when we already have something on screen is a
+         non-event. Say so quietly and keep the painted view. */
+      if (painted) {
+        say('Showing your saved copy \u2014 could not reach the server.', 'warn');
+        return { source: 'disk-stale', stamp: stored.stamp };
+      }
+      throw err;
+    }
+
+    /* ---- Still current -------------------------------------------------
+       Stamp the record so the rest of today takes the fast path above. */
+    if (res && res.unchanged) {
+      await SnapshotStore.put(name, {
+        stamp: stored.stamp,
+        builtAt: res.builtAt || stored.builtAt || 0,
+        checkedAt: Date.now(),
+        data: stored.data
+      });
+      if (!painted) opts.render(stored.data, { source: 'disk', stamp: stored.stamp });
+      say('');
+      return { source: 'disk-verified', stamp: stored.stamp };
+    }
+
+    /* ---- New data ------------------------------------------------------ */
+    const data = opts.extract ? opts.extract(res) : res;
+    opts.render(data, { source: 'network', stamp: res.stamp, builtAt: res.builtAt });
+
+    /* A partial answer is stored anyway - a browser with four of five
+       presets is better off than one with none - but NOT marked as verified,
+       so the next load checks again instead of trusting a gap. */
+    await SnapshotStore.put(name, {
+      stamp: res.stamp,
+      builtAt: res.builtAt || 0,
+      checkedAt: res.complete === false ? 0 : Date.now(),
+      data: data
+    });
+
+    if (res.complete === false) {
+      say('Some views are still being prepared\u2026', 'busy');
+      scheduleRecheck(opts, res.retryAfter || 45);
+    } else {
+      say('');
+    }
+
+    return { source: 'network', stamp: res.stamp };
+  }
+
+  /**
+   * Comes back for the rest of a partial bundle, once, quietly.
+   *
+   * Deliberately not a loop: the warm either finishes in the next minute or
+   * something is wrong, and a page that keeps polling all afternoon is how a
+   * quiet problem turns into a throttled deployment.
+   */
+  function scheduleRecheck(opts, seconds) {
+    setTimeout(function () {
+      load(Object.assign({}, opts, { alwaysCheck: true })).catch(function () {});
+    }, Math.max(10, seconds) * 1000);
+  }
+
+  /**
+   * The Refresh button: ask the server to rebuild, then poll the stamp.
+   *
+   * Nothing blocks. The current view stays on screen and readable for the
+   * whole rebuild.
+   *
+   * @param {Object} opts   same shape as load(), plus:
+   *   forceRequest {Function} () => Promise<{status, retryAfter}>
+   *   stampRequest {Function} () => Promise<{stamp}>
+   */
+  async function refresh(opts) {
+    const say = opts.onStatus || function () {};
+    const before = await SnapshotStore.get(opts.name);
+    const beforeStamp = before && before.stamp;
+
+    say('Rebuilding from the sheet\u2026', 'busy');
+
+    let ack;
+    try { ack = await opts.forceRequest(); }
+    catch (err) { say('Could not start a rebuild: ' + (err.message || err), 'error'); return false; }
+
+    if (ack && ack.status === 'THROTTLED') {
+      say('A rebuild just ran. Try again in about ' +
+          Math.ceil((ack.retryAfter || 300) / 60) + ' minute(s).', 'warn');
+      return false;
+    }
+
+    /* Poll the cheap stamp action, not the payload. Each poll is a Script
+       Property read - it never opens the workbook and never builds. */
+    const deadline = Date.now() + 4 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise(function (r) { setTimeout(r, 10000); });
+      let now;
+      try { now = await opts.stampRequest(); } catch (e) { continue; }
+      if (now && now.stamp && now.stamp !== beforeStamp) {
+        await SnapshotStore.clear(opts.name);
+        await load(Object.assign({}, opts, { alwaysCheck: true }));
+        return true;
+      }
+    }
+
+    say('The rebuild is taking longer than usual. Your current view is still accurate ' +
+        'as of the last sync.', 'warn');
+    return false;
+  }
+
+  /* ============================================================
+   * 4. Export
+   * ============================================================ */
+
+  window.SnapshotStore = SnapshotStore;
+  window.SnapshotBoot = {
+    load: load,
+    refresh: refresh,
+    dataBoundary: dataBoundary,
+    verifiedToday: verifiedToday,
+    DATA_HOUR: DATA_HOUR
+  };
+})();
+
+</script>
+
+<script>
 /* ==========================================================================
    API CONNECTION
 
@@ -561,7 +893,9 @@ function tellHub(type){
 const PERF = {
   reviewPage:   50,       // initial rows and each View More increment
   lsKey:        'aso_core_30d_v8',
-  lsMaxChars:   3500000,  // refuse to cache a core payload bigger than this
+  /* lsKey is kept only so evictLegacy can find and remove the old
+     localStorage entry. Nothing writes to it any more. lsMaxChars is gone:
+     IndexedDB has no ceiling worth guarding against. */
   staleAfterMs: 6 * 60 * 60 * 1000,
 
   /* The browser keeps 30 days locally and prefetches 45 days into memory. */
@@ -1825,23 +2159,83 @@ function sessionFingerprint(){
   for(let i=0;i<t.length;i++){ h=((h<<5)-h+t.charCodeAt(i))|0; }
   return String(h);
 }
-function cacheSave(core){
-  try{
-    const s=JSON.stringify({at:Date.now(),who:sessionFingerprint(),core:core});
-    if(s.length>PERF.lsMaxChars)return;      // too big to be worth the quota
-    localStorage.setItem(PERF.lsKey,s);
-  }catch(e){ /* private mode, or quota exceeded: caching is optional */ }
+
+/* ── Where the cached copy lives ─────────────────────────────────────────
+   This was localStorage, with lsMaxChars set to 3,500,000 - and that number
+   was the problem. The hub and all four reports share ONE ~5MB localStorage
+   quota, so a single ASO core payload was permitted to take 70% of it. When
+   it did, Weekly's stored ranges were evicted to make room and refetched the
+   next morning, and UA never attempted to persist at all.
+
+   IndexedDB is per-origin too but measured in hundreds of megabytes, stores
+   real objects with no stringify step, and is asynchronous so it never blocks
+   the first paint. The ceiling and the "too big to be worth the quota" check
+   both go away.
+
+   ASO_STORE is its own key, so it cannot collide with the weekly and ua
+   entries in the same database. */
+const ASO_STORE='aso';
+
+/** The stamp our stored copy carries. Empty until the server has published one. */
+let ASO_STAMP='';
+
+/* The stored copy boot() painted, so connect() can compare its stamp without
+   reading IndexedDB a second time. Declared here, beside ASO_STAMP, rather
+   than next to boot() at the bottom: connect() reads it, and a `let` used
+   above its declaration is a temporal-dead-zone error waiting for the first
+   person who calls connect() from anywhere new. */
+let BOOT_CACHE=null;
+
+async function cacheSave(core, stamp){
+  return SnapshotStore.put(ASO_STORE,{
+    stamp: stamp||ASO_STAMP||'',
+    who: sessionFingerprint(),
+    /* checkedAt is what lets SnapshotBoot skip the network for the rest of
+       the day. Without a stamp there is nothing to trust, so leave it at 0
+       and the next load checks again. */
+    checkedAt: (stamp||ASO_STAMP) ? Date.now() : 0,
+    builtAt: Date.now(),
+    data: core
+  });
 }
-function cacheLoad(){
+
+async function cacheLoad(){
   try{
-    const raw=localStorage.getItem(PERF.lsKey);
-    if(!raw)return null;
-    const o=JSON.parse(raw);
-    if(!o||!o.core)return null;
-    if(o.who!==sessionFingerprint())return null;   // different session; start clean
-    return o;
+    const rec=await SnapshotStore.get(ASO_STORE);
+    if(!rec||!rec.data)return null;
+    if(rec.who!==sessionFingerprint())return null;   // different session; start clean
+    return { at: rec.builtAt||0, core: rec.data, stamp: rec.stamp||'', checkedAt: rec.checkedAt||0 };
   }catch(e){ return null; }
 }
+
+/** One-off: reclaim the 3.5MB the old localStorage tier could occupy. */
+try{
+  const dropped=SnapshotStore.evictLegacy([PERF.lsKey,'aso_core_']);
+  if(dropped)console.log('[aso] evicted '+dropped+' legacy localStorage entry(ies)');
+}catch(e){}
+
+/**
+ * Asks the server whether our stored copy is still current.
+ * One Script Property read on its side, ~120 bytes on the wire.
+ */
+async function fetchStamp(){
+  const token=sessionToken();
+  if(!token)return '';
+  try{
+    const res=await fetch(API.url,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'stamp',token:token}),
+      redirect:'follow'
+    });
+    const text=(await res.text()).trim();
+    if(!res.ok||text.charAt(0)==='<')return '';
+    const data=JSON.parse(text);
+    if(!data||!data.ok)return '';
+    return (data.data&&data.data.stamp)||'';
+  }catch(e){ return ''; }
+}
+
 /* ==========================================================================
    CONNECT
    ========================================================================== */
@@ -2027,6 +2421,37 @@ async function connect(force){
   setStatus(hadData?'Refreshing…':'Loading…');
 
   try{
+    /* ── Is a fetch needed at all? ────────────────────────────────────────
+       boot() has already painted whatever was on disk. If the server's stamp
+       matches what that copy carries, the data behind it has not moved and
+       there is nothing to fetch - not the 30-day core, not the 7-day reviews,
+       not the 45-day background window. The whole load becomes one ~120-byte
+       request.
+
+       Skipped entirely on Refresh, which means "go and look again" and must
+       reach the server whatever the stamp says. */
+    if(!force&&hadData&&BOOT_CACHE&&BOOT_CACHE.stamp){
+      const serverStamp=await fetchStamp();
+      if(serverStamp&&serverStamp===BOOT_CACHE.stamp){
+        ASO_STAMP=serverStamp;
+        /* Re-stamp the stored copy as verified, so the rest of today skips
+           even this request. */
+        await cacheSave(BOOT_CACHE.core,serverStamp);
+        ensureRendered(ACTIVE);
+        prefetchViews();
+        $('loader').classList.remove('show');
+        setStatus('Loaded · '+clockTime(BOOT_CACHE.at||Date.now()));
+        tellHub('mss3d:report-ready');
+        return;
+      }
+      /* Different, or the server has not published one yet. Fall through and
+         fetch exactly as before. */
+      if(serverStamp)ASO_STAMP=serverStamp;
+    }else if(!ASO_STAMP){
+      /* No usable stored copy. Learn the stamp alongside the fetch so the
+         payload can be stored under it. */
+      fetchStamp().then(s=>{ if(s)ASO_STAMP=s; }).catch(()=>{});
+    }
     /* PHASE 1 - browser/server 30-day core window. The visual filter remains
        Last 7 Days, while 7/14/30-day switches all render from this one block. */
     const win30=rollingWindow(PERF.firstWindowDays);
@@ -2040,10 +2465,10 @@ async function connect(force){
        persist the merged result so later openings paint it in one pass. */
     try{
       await ensureReviewsForRange(rollingWindow(7));
-      cacheSave(Object.assign({},core30,{android:A,ios:I,reviewWindow:REVIEW_WINDOW}));
+      await cacheSave(Object.assign({},core30,{android:A,ios:I,reviewWindow:REVIEW_WINDOW}),ASO_STAMP);
     }catch(e){
       console.error('initial review fetch failed',e);
-      cacheSave(core30);
+      await cacheSave(core30,ASO_STAMP);
       banner('rvNote',[{level:'warn',message:'Recent reviews could not be loaded: '+(e.message||e)}]);
     }
     ensureRendered(ACTIVE);
@@ -2117,14 +2542,33 @@ $('refreshBtn').onclick=()=>connect(true);
 
 /* Cached 30-day core paints immediately; reviews always come from Apps
    Script's translation-aware window caches. */
-(function boot(){
-  const cached=cacheLoad();
+(async function boot(){
+  /* cacheLoad is asynchronous now - IndexedDB never blocks the paint - so the
+     boot function awaits it rather than reading synchronously. In practice
+     this resolves in a few milliseconds. */
+  const cached=await cacheLoad();
   if(cached){
     try{
       applyCore(cached.core);ensureRendered(ACTIVE);
-      setStatus('Cached · '+clockTime(cached.at)+' · updating…',
-        Date.now()-(cached.at||0)>PERF.staleAfterMs?'stale':null);
-    }catch(e){console.error('cached render failed',e);A=null;I=null;PARTIAL=true}
+      BOOT_CACHE=cached;
+      ASO_STAMP=cached.stamp||'';
+
+      /* Verified after this morning's data hour means nothing has changed
+         since we last checked, so the page is simply loaded - no "updating…",
+         no request. SnapshotBoot.verifiedToday owns that boundary and uses
+         08:00, matching the 09:00 warm. */
+      const settled=SnapshotBoot.verifiedToday({checkedAt:cached.checkedAt});
+      setStatus(settled
+        ? 'Loaded · '+clockTime(cached.at)
+        : 'Cached · '+clockTime(cached.at)+' · updating…',
+        (!settled&&Date.now()-(cached.at||0)>PERF.staleAfterMs)?'stale':null);
+
+      if(settled){
+        prefetchViews();
+        tellHub('mss3d:report-ready');
+        return;                       // zero network requests for this load
+      }
+    }catch(e){console.error('cached render failed',e);A=null;I=null;PARTIAL=true;BOOT_CACHE=null}
   }
   connect(false);
 })();
