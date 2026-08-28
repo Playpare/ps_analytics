@@ -21,6 +21,10 @@
     }
     .brand { margin-right: auto; font: 800 19px 'Trebuchet MS', sans-serif; letter-spacing: .01em; }
     .brand span { color: #aebdd2; font-size: 15px; font-weight: 700; }
+    .report-nav { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
+    .report-nav button { height: 38px; padding: 0 21px;
+      font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif; font-size:13px; font-weight:700;
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
     .hub-nav button {
       border: 1px solid rgba(255, 255, 255, .13); border-radius: 999px;
       padding: 9px 18px; background: #0b0c0f; color: #d7deea;
@@ -32,6 +36,10 @@
       color: #031018; border-color: transparent;
       background: linear-gradient(135deg, #00e5c3, #4d9fff);
     }
+    .hub-nav button#themeBtn { color: #071018; border-color: #ffc43d !important; background: #ffc43d;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+    .hub-nav button#themeBtn:hover { color: #071018; border-color: #ffda72 !important; background: #ffcf58; }
+    #themeBtn .theme-moon { color: #071018; font-family:'Segoe UI Symbol',sans-serif; font-weight:900; }
     .hub-nav button[disabled] { opacity: .4; cursor: not-allowed; }
     .hub-nav button[disabled]:hover { color: #a6b8d4; border-color: rgba(255, 255, 255, .13); }
     .hub-nav button#authOut { margin-left: 14px; font-weight: 700; color: #ff8ca1;
@@ -140,7 +148,7 @@
     if (document.body) document.body.classList.toggle('lt', light);
     document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
     var btn = document.getElementById('themeBtn');
-    if (btn) btn.innerHTML = light ? '\u{1F319} Dark' : '\u2600 Light';
+    if (btn) btn.innerHTML = light ? '<span class="theme-moon">\u263E</span> Dark' : '\u2600 Light';
   }
 
   function flush(){
@@ -206,10 +214,12 @@ html,body{transition:background-color .18s linear,color .18s linear}
         <span id="hubNoteText"></span>
         <button type="button" id="hubNoteAction">Sign in again</button>
       </div>
-      <button type="button" class="active" data-report="ua" aria-selected="true">UA</button>
-      <button type="button" data-report="till-date" aria-selected="false">Till Date</button>
-      <button type="button" data-report="weekly" aria-selected="false">Weekly</button>
-      <button type="button" data-report="aso" aria-selected="false">ASO</button>
+      <div class="report-nav">
+        <button type="button" class="active" data-report="ua" aria-selected="true">UA</button>
+        <button type="button" data-report="till-date" aria-selected="false">Till Date</button>
+        <button type="button" data-report="weekly" aria-selected="false">Weekly</button>
+        <button type="button" data-report="aso" aria-selected="false">ASO</button>
+      </div>
       <button type="button" id="themeBtn">&#9728; Light</button>
       <button type="button" id="authOut">Sign out</button>
     </nav>
@@ -219,24 +229,24 @@ html,body{transition:background-color .18s linear,color .18s linear}
       <iframe
         class="report-frame"
         id="report-till-date"
-        data-src="till_date_report.html?v=20260824-themed-scrollbars-v15"
+        data-src="till_date_report.html?v=20260827-ua-date-font-size-v21"
         title="Monetization report till date"></iframe>
       <iframe
         class="report-frame"
         id="report-weekly"
-        data-src="weekly_report.html?v=20260825-cache-refresh-v29"
+        data-src="weekly_report.html?v=20260827-ranked-table-heatmaps-v46"
         title="Weekly monetization report"
         hidden></iframe>
       <iframe
         class="report-frame"
         id="report-ua"
-        data-src="ua_report.html?v=20260825-negative-loader-v35"
+        data-src="ua_report.html?v=20260827-ranked-table-heatmaps-v68"
         title="User acquisition report"
         hidden></iframe>
       <iframe
         class="report-frame"
         id="report-aso"
-        data-src="aso_report.html?v=20260825-cache-refresh-v20"
+        data-src="aso_report.html?v=20260827-larger-review-text-v43"
         title="App store optimisation report"
         hidden></iframe>
     </section>
@@ -908,3 +918,4 @@ html,body{transition:background-color .18s linear,color .18s linear}
   </script>
 </body>
 </html>
+
