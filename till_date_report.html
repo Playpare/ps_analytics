@@ -121,6 +121,15 @@ body.lt .tablewrap::-webkit-scrollbar-thumb:hover,body.lt .cohort-table-wrap::-w
     #refreshBtn,.date-controls select,.date-confirm{font-size:13.5px!important;font-weight:750!important}
     .top>.brand{display:none}
     #refreshBtn{color:var(--onGrad);border-color:transparent;background:var(--grad)}
+    #refreshBtn{font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;font-weight:700!important;
+      font-size:13px!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    .top .connect{align-items:center}
+    .top .status{display:flex;align-items:center;height:34px;font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+      font-size:13px!important;font-weight:700!important;line-height:1}
+    .date-span,.date-controls select,.date-confirm{font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+      font-size:13px!important;font-weight:700!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    .date-controls select.date{height:34px!important;min-height:34px!important;padding:0 34px 0 16px!important;
+      border-radius:20px!important;line-height:34px!important;font-size:13px!important}
     .section>.slide>.sh{display:none}
     #global-filter-controls>.date-controls{display:none;margin-left:auto}
     body:has(#overview.active) #global-filter-controls>[data-scope="ov"],
@@ -289,9 +298,8 @@ html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover,.tablewr
     <button onclick="showSection('ads',this)">Ad Metrics</button>
   </nav>
   <div class="connect">
-    <button class="btn" id="refreshBtn" onclick="refreshData()">&#8635; Refresh</button>
-    
     <span id="dataStatus" class="status">Loading...</span>
+    <button class="btn" id="refreshBtn" onclick="refreshData()">&#8635; Refresh</button>
   </div>
 </header>
 
@@ -2130,7 +2138,7 @@ async function refreshData(){
     await rebuildRawFromGoogleSheet(LOAD_STAGES[0]);
     if(generation!==loadGeneration) return;
     renderActive();
-    setDataStatus(`Loaded last ${LOAD_STAGES[0]} days - ${clockTime(new Date())} · loading more…`);
+    setDataStatus('Loaded');
     try{window.parent.postMessage({type:'mss3d:report-ready',report:'tilldate'},location.origin)}catch(e){}
     loadRemainingStages(generation, 1);
   }catch(e){
@@ -2141,7 +2149,7 @@ async function refreshData(){
       await rebuildRawFromGoogleSheet(0);
       if(generation!==loadGeneration) return;
       renderActive();
-      setDataStatus(`Loaded - ${clockTime(new Date())}`);
+      setDataStatus('Loaded');
       try{window.parent.postMessage({type:'mss3d:report-ready',report:'tilldate'},location.origin)}catch(err){}
     }catch(e2){
       if(generation!==loadGeneration) return;
@@ -2180,7 +2188,7 @@ async function loadRemainingStages(generation, stageIndex){
     /* Tell the date-filter layer the dataset bounds moved, so preset windows
        re-measure against the real earliest/latest dates. */
     try{window.dispatchEvent(new CustomEvent('mss3d:dataset-updated'))}catch(e){}
-    setDataStatus(`Loaded last ${days} days - ${clockTime(new Date())}`);
+    setDataStatus('Loaded');
     loadRemainingStages(generation, stageIndex+1);
   }catch(e){
     if(generation!==loadGeneration) return;
