@@ -173,11 +173,27 @@ table.airy thead th{padding:9px 6px;}
 #tabnav{width:100%;align-self:stretch;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:flex-start;gap:10px;height:58px;padding:0 24px;background:rgba(9,10,13,.97);border-bottom:1px solid var(--borderB);}
 #tabnav .brand{margin-right:14px;font-family:'Quicksand',sans-serif;font-weight:700;font-size:16px;white-space:nowrap;}
 #tabnav .navbtn{font-family:'DM Mono',monospace;font-weight:600;font-size:11px;color:var(--t2);background:var(--card);border:1px solid var(--borderB);padding:8px 15px;border-radius:20px;cursor:pointer;}
-#tabnav .platform-select{appearance:none;-webkit-appearance:none;color:var(--t1);padding:8px 32px 8px 15px;background-color:var(--card);background-image:linear-gradient(45deg,transparent 50%,var(--t2) 50%),linear-gradient(135deg,var(--t2) 50%,transparent 50%);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;outline:0;border:2px solid rgba(166,184,212,.62);box-shadow:none;font-family:'Trebuchet MS',Arial,sans-serif!important;font-size:12.5px!important;font-weight:650!important;line-height:1;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;transition:border-color .16s ease,color .16s ease,box-shadow .16s ease;}
+#tabnav .platform-select{appearance:none;-webkit-appearance:none;color:var(--t1);padding:8px 32px 8px 15px;background-color:var(--card);background-image:linear-gradient(45deg,transparent 50%,var(--t2) 50%),linear-gradient(135deg,var(--t2) 50%,transparent 50%);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;outline:0;border:1px solid var(--borderB);box-shadow:none;font-family:'Trebuchet MS',Arial,sans-serif!important;font-size:12.5px!important;font-weight:650!important;line-height:1;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;transition:border-color .16s ease,color .16s ease,box-shadow .16s ease;}
 #tabnav .platform-select:hover{border-color:#00e5c3;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82)}
 #tabnav .platform-select:focus{border-color:#00e5c3;outline:0;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82)}
+@keyframes weeklyPlatformIn{from{opacity:0}to{opacity:1}}
 #tabnav .platform-select option{background:#0b0c0f;color:#edf2ff}
 body.lt #tabnav .platform-select option{background:#fff;color:#0d1b2e}
+.platform-drop{position:relative;display:inline-flex}
+.platform-drop-menu{display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:152px;padding:5px;
+background:#0b0c0f;border:1px solid var(--borderB);border-radius:10px;z-index:200;box-shadow:0 14px 34px rgba(0,0,0,.6)}
+.platform-drop:hover .platform-drop-menu,.platform-drop:focus-within .platform-drop-menu{display:block}
+.platform-drop.menu-dismissed .platform-drop-menu{display:none!important}
+#weeklyPlatformBtn{height:34px;min-width:130px;padding:0 34px 0 16px;text-align:left;position:relative;
+font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;font-size:13px!important;font-weight:700!important}
+#weeklyPlatformBtn::after{content:'';position:absolute;right:14px;top:50%;width:7px;height:7px;
+border-right:1.5px solid #c0ccdf;border-bottom:1.5px solid #c0ccdf;transform:translateY(-68%) rotate(45deg)}
+.platform-drop-menu button{display:block;width:100%;padding:8px 12px;border:0;border-radius:7px;background:transparent;
+color:var(--t2);text-align:left;font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+#tabnav .platform-drop-menu button{border:0!important;border-radius:4px!important;box-shadow:none!important}
+#tabnav .platform-drop-menu button:hover{border:1px solid #00e5c3!important;background:rgba(255,255,255,.06)!important;color:var(--t1);
+filter:brightness(1.12)!important;border-radius:4px!important;box-shadow:inset 0 0 0 1px rgba(0,229,195,.82),0 5px 12px rgba(0,160,138,.16)!important;transform:translateY(-2px)!important}
+#tabnav .platform-drop-menu button.active{border:0!important;border-radius:4px!important;color:var(--teal)!important;background:transparent!important;box-shadow:none!important}
 #tabnav .navbtn.active{color:#031018;background:var(--grad);border-color:transparent;}
 .navdrop{position:relative;}
 .navmenu{display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:152px;background:#0b0c0f;border:1px solid var(--borderB);border-radius:10px;padding:5px;z-index:200;box-shadow:0 14px 34px rgba(0,0,0,.6);}
@@ -232,6 +248,15 @@ body{--t2:#c0ccdf;--t3:#b5c3d7;--mute:#b5c3d7;--slate:#c0ccdf;}
 #weeklyRefresh,.date-controls select,.date-confirm{font-size:13.5px!important;font-weight:750!important}
 #tabnav>.brand{display:none}
 #weeklyRefresh{color:#031018!important;border-color:transparent!important;background:var(--grad)!important;}
+#weeklyRefresh{font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;font-weight:700!important;
+font-size:13px!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+#weeklyRefreshArea{align-items:center}
+#weeklyLiveStatus{display:flex;align-items:center;height:34px;font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+font-size:13px!important;font-weight:700!important;line-height:1;color:#c0ccdf}
+#weeklyDateHost .date-span,#weeklyDateHost select,#weeklyDateHost .date-confirm{font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+font-size:13px!important;font-weight:700!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+#weeklyDateHost .date-controls select.date{height:34px!important;min-height:34px!important;padding:0 34px 0 16px!important;
+border-radius:20px!important;line-height:34px!important;font-size:13px!important}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.grid-main{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(240px,.6fr);gap:14px;}.stack{display:grid;gap:12px;}.piebox{position:relative;height:360px;}
 /* ===== deeper UA match: KPI + card + eyebrow sizing exactly as ua_report.html ===== */
 .kpi{padding:15px 18px;}
@@ -329,6 +354,11 @@ body.lt #weeklyLiveControls .date-span{color:#5b6b85;}
    Placement Share card next to it has no data. renderPlacementShare()
    removes .no-placement as soon as the payload carries placements. */
 .ad-format-wide.no-placement{grid-template-columns:1fr!important;height:auto!important;}
+.ad-format-wide>.card:first-child{min-height:320px;padding:22px 24px;}
+.ad-format-wide>.card:first-child .src-row{margin-bottom:15px;gap:14px;}
+.ad-format-wide>.card:first-child .src-bar-track{height:27px;}
+.ad-format-wide>.card:first-child .src-name{width:125px;font-size:12.5px;}
+.ad-format-wide>.card:first-child .src-val{width:94px;font-size:13.5px;}
 </style><style>
 /* light theme — same tokens, inverted surfaces */
 body.lt{--bg:#eef1f7;--bg2:#e3e8f2;--card:#ffffff;--card2:#f5f7fc;
@@ -436,7 +466,7 @@ html::-webkit-scrollbar-track,body::-webkit-scrollbar-track,.tablewrap::-webkit-
 html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb,.tablewrap::-webkit-scrollbar-thumb,.cohort-table-wrap::-webkit-scrollbar-thumb{background:#4b535f!important;border-color:#111318!important}
 html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover,.tablewrap::-webkit-scrollbar-thumb:hover,.cohort-table-wrap::-webkit-scrollbar-thumb:hover{background:#69727f!important}
 </style>
-</head><body><div id="tabnav"><span class="brand"><span class="brandgr">playspare</span> · Monetization Report</span><button id="btn-report" class="navbtn active" type="button">Monetization Report</button><button id="btn-analytics" class="navbtn" type="button">Analytics</button><div class="navdrop" id="platform-nav"><button id="btn-platform" class="navbtn" data-toggle type="button">Platform ▾</button><div class="navmenu"><button data-platform="overview">Overview</button><button data-platform="ios">iOS</button><button data-platform="android">Android</button></div></div><div id="weeklyRefreshArea"><button id="weeklyRefresh" class="navbtn" type="button">↻ Refresh</button><span id="weeklyLiveStatus">Loading...</span></div></div><div id="weeklyFilterBar" class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Weekly</span></div><div id="weeklyDateHost"></div></div><div id="tab-report" class="tabview">
+</head><body><div id="tabnav"><span class="brand"><span class="brandgr">playspare</span> · Monetization Report</span><button id="btn-report" class="navbtn active" type="button">Monetization Report</button><button id="btn-analytics" class="navbtn" type="button">Analytics</button><div class="navdrop" id="platform-nav"><button id="btn-platform" class="navbtn" data-toggle type="button">Platform ▾</button><div class="navmenu"><button data-platform="overview">Overview</button><button data-platform="ios">iOS</button><button data-platform="android">Android</button></div></div><div id="weeklyRefreshArea"><span id="weeklyLiveStatus">Loading...</span><button id="weeklyRefresh" class="navbtn" type="button">↻ Refresh</button></div></div><div id="weeklyFilterBar" class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Weekly</span></div><div id="weeklyDateHost"></div></div><div id="tab-report" class="tabview">
 <div class="slide">
 <div class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Executive Summary</span></div>
     <div class="date">Jun 29–Jul 05, 2026 (W4)</div></div>
@@ -2149,10 +2179,13 @@ function barChart(id,labels,series){
 }
 function rowHtml(label,actual,us,bench,prev,formatter){
   const f=formatter||num,b=finite(bench),d1=b?change(actual,bench):null,d2=change(actual,prev);
-  const rowMax=Math.max(Number.EPSILON,...[actual,us,bench,prev].filter(finite).map(v=>Math.abs(v)));
+  const metricRanks=[...new Set([actual,us,bench,prev].filter(finite).map(v=>Math.abs(v)))].sort((a,b)=>a-b);
+  const metricRank=value=>{const v=Math.abs(value),i=metricRanks.indexOf(v);return metricRanks.length>1?i/(metricRanks.length-1):1};
+  const cmpRanks=[...new Set([d1,d2].filter(finite).map(v=>Math.abs(v)))].sort((a,b)=>a-b);
+  const cmpRank=value=>{const v=Math.abs(value),i=cmpRanks.indexOf(v);return cmpRanks.length>1?i/(cmpRanks.length-1):1};
   const metricRgb=/ecpm/i.test(label)?'236,10,155':/viewer/i.test(label)?'77,159,255':/imp\/dau/i.test(label)?'139,92,246':/d0/i.test(label)?'255,184,0':/d7/i.test(label)?'167,139,250':/d27/i.test(label)?'34,211,238':/^dau$/i.test(label)?'249,115,22':/arpdau/i.test(label)?'59,130,246':'139,92,246';
-  const heat=value=>finite(value)?'background:rgba('+metricRgb+','+(0.08+0.24*Math.min(1,Math.abs(value)/rowMax)).toFixed(3)+')':'';
-  const cmpCell=v=>{if(!finite(v))return '<td class="num" style="color:var(--t3)">no comp</td>';const up=v>=0,rgb=up?'77,159,255':'255,77,109',alpha=(0.09+0.22*Math.min(1,Math.abs(v))).toFixed(3);return '<td class="num" style="color:'+(up?'var(--blue)':'var(--coral)')+';background:rgba('+rgb+','+alpha+')">'+(up?'+':'-')+num(Math.abs(v)*100,0)+'%</td>';};
+  const heat=value=>finite(value)?'background:rgba('+metricRgb+','+(0.36-0.20*metricRank(value)).toFixed(3)+')':'';
+  const cmpCell=v=>{if(!finite(v))return '<td class="num" style="color:var(--t3)">no comp</td>';const up=v>=0,rgb=up?'77,159,255':'255,77,109',alpha=(0.36-0.20*cmpRank(v)).toFixed(3);return '<td class="num" style="color:'+(up?'var(--blue)':'var(--coral)')+';background:rgba('+rgb+','+alpha+')">'+(up?'+':'-')+num(Math.abs(v)*100,0)+'%</td>';};
   return '<tr><td class="fmt-name">'+label+'</td><td class="num b" style="'+heat(actual)+'">'+f(actual)+'</td><td class="num" style="color:var(--t2);'+heat(us)+'">'+(finite(us)?f(us):'\u2014')+'</td><td class="num mut" style="'+heat(bench)+'">'+(b?f(bench):'--')+'</td>'+cmpCell(d1)+'<td class="num mut" style="'+heat(prev)+'">'+f(prev)+'</td>'+cmpCell(d2)+'</tr>';
 }
 // Inserts a "US" <th> right after the current-week "Actual" column (once).
@@ -2343,7 +2376,7 @@ function renderImmersive(data,platform){
   setKpi(s,'Blended eCPM',money(blend,3),null,null,null,'Revenue / impressions x 1000');
   setKpi(s,'Blended Fill Rate',pct(fill,2,false),null,null,null,'Impression-weighted Gadsme + Anzu');
   setKpi(s,'AdMob Failover',pct(w.failover_pct,1,false),null,null,null,(finite(w.failover_pct)&&w.failover_pct<=10?'Within':'Above')+' 10% target | '+money(w.failover));
-  const table=s.querySelector('table'),tbody=table?.querySelector('tbody');if(tbody){const winner=(a,b,low)=>!finite(a)||!finite(b)?'N/A':((low?a<b:a>b)?'Gadsme':'Anzu'),rows=[['Revenue',w.gadsme,w.anzu,money,'139,92,246'],['Impressions',w.gadsme_imp,w.anzu_imp,num,'77,159,255'],['eCPM',w.gadsme_ecpm,w.anzu_ecpm,v=>money(v,3),'236,10,155'],['Fill Rate',w.gadsme_fill,w.anzu_fill,v=>pct(v,2,false),'255,184,0']];tbody.innerHTML=rows.map(r=>{const max=Math.max(Number.EPSILON,Math.abs(r[1]||0),Math.abs(r[2]||0)),shade=v=>'background:rgba('+r[4]+','+(0.08+0.24*Math.min(1,Math.abs(v||0)/max)).toFixed(3)+')',win=winner(r[1],r[2]);return '<tr><td class="fmt-name">'+r[0]+'</td><td class="num b" style="'+shade(r[1])+'">'+r[3](r[1])+'</td><td class="num b" style="'+shade(r[2])+'">'+r[3](r[2])+'</td><td class="num" style="color:var(--blue);background:rgba(77,159,255,.16);font-weight:600!important">'+win+'</td></tr>';}).join('');}
+  const table=s.querySelector('table'),tbody=table?.querySelector('tbody');if(tbody){const winner=(a,b,low)=>!finite(a)||!finite(b)?'N/A':((low?a<b:a>b)?'Gadsme':'Anzu'),rows=[['Revenue',w.gadsme,w.anzu,money,'139,92,246'],['Impressions',w.gadsme_imp,w.anzu_imp,num,'77,159,255'],['eCPM',w.gadsme_ecpm,w.anzu_ecpm,v=>money(v,3),'236,10,155'],['Fill Rate',w.gadsme_fill,w.anzu_fill,v=>pct(v,2,false),'255,184,0']];tbody.innerHTML=rows.map(r=>{const values=[...new Set([r[1],r[2]].filter(finite).map(v=>Math.abs(v)))].sort((a,b)=>a-b),shade=v=>{const i=values.indexOf(Math.abs(v||0)),t=values.length>1?i/(values.length-1):1;return'background:rgba('+r[4]+','+(0.36-0.20*t).toFixed(3)+')'},win=winner(r[1],r[2]);return '<tr><td class="fmt-name">'+r[0]+'</td><td class="num b" style="'+shade(r[1])+'">'+r[3](r[1])+'</td><td class="num b" style="'+shade(r[2])+'">'+r[3](r[2])+'</td><td class="num" style="color:var(--blue);background:rgba(77,159,255,.16);font-weight:600!important">'+win+'</td></tr>';}).join('');}
   const failoverLabel=[...s.querySelectorAll('div')].find(el=>clean(el.textContent).startsWith('AdMob Failover (')&&el.children.length===0);
   if(failoverLabel){
     failoverLabel.textContent='AdMob Failover (Current)';
@@ -2409,10 +2442,11 @@ function renderIAP(data,platform){
 function renderProductTables(s,current,previous){
   if(!s)return;const card=[...s.querySelectorAll('.card')].find(c=>clean(c.querySelector('h2')?.textContent).includes('All IAP Products')),tables=card?[...card.querySelectorAll('table')]:[];if(!tables.length)return;
   const names=[...new Set([...Object.keys(current),...Object.keys(previous)])].sort((a,b)=>(current[b]||0)-(current[a]||0)),mid=Math.ceil(names.length/2);
-  const maxPrevious=Math.max(1,...names.map(n=>previous[n]||0)),maxCurrent=Math.max(1,...names.map(n=>current[n]||0));
-  const heat=(value,max,rgb)=>'--heat-rgb:'+rgb+';--heat-alpha:'+(0.07+0.25*Math.min(1,Math.max(0,value/max))).toFixed(3)+';font-size:9.5px';
+  const previousRanks=[...new Set(names.map(n=>previous[n]||0))].sort((a,b)=>a-b),currentRanks=[...new Set(names.map(n=>current[n]||0))].sort((a,b)=>a-b);
+  const heat=(value,values,rgb)=>{const i=values.indexOf(value),t=values.length>1?i/(values.length-1):1;return'--heat-rgb:'+rgb+';--heat-alpha:'+(0.36-0.20*t).toFixed(3)+';font-size:9.5px'};
   const grid=tables[0]?.parentElement;if(grid)grid.classList.add('product-split-grid');
-  [names.slice(0,mid),names.slice(mid)].forEach((list,i)=>{if(!tables[i])return;const table=tables[i];table.classList.add('product-split-table');table.dataset.rowStart=String(i===0?1:mid+1);const tb=table.querySelector('tbody');if(tb)tb.innerHTML=list.map(n=>{const c=current[n]||0,p=previous[n]||0,d=change(c,p),wowStrength=finite(d)?Math.min(1,Math.abs(d)):0;return '<tr><td style="font-size:9.5px">'+escapeHtml(n)+'</td><td class="num mut product-value-cell" style="'+heat(p,maxPrevious,'77,159,255')+'">'+money(p)+'</td><td class="num b product-value-cell" style="'+heat(c,maxCurrent,'0,229,195')+'">'+money(c)+'</td><td class="num product-wow-cell" style="--heat-rgb:'+(finite(d)&&d>=0?'0,224,154':'255,61,103')+';--heat-alpha:'+(0.06+0.18*wowStrength).toFixed(3)+'"><span class="delta '+(finite(d)&&d>=0?'up':'down')+'">'+(finite(d)?(d>=0?'+':'-')+num(Math.abs(d)*100,0)+'%':(c?'new':'N/A'))+'</span></td></tr>';}).join('');});
+  const wowByName=Object.fromEntries(names.map(n=>[n,change(current[n]||0,previous[n]||0)])),wowRanks=[...new Set(names.map(n=>wowByName[n]).filter(finite).map(Math.abs))].sort((a,b)=>a-b);
+  [names.slice(0,mid),names.slice(mid)].forEach((list,i)=>{if(!tables[i])return;const table=tables[i];table.classList.add('product-split-table');table.dataset.rowStart=String(i===0?1:mid+1);const tb=table.querySelector('tbody');if(tb)tb.innerHTML=list.map(n=>{const c=current[n]||0,p=previous[n]||0,d=wowByName[n],wi=wowRanks.indexOf(Math.abs(d)),wowStrength=wowRanks.length>1?wi/(wowRanks.length-1):1;return '<tr><td style="font-size:9.5px">'+escapeHtml(n)+'</td><td class="num mut product-value-cell" style="'+heat(p,previousRanks,'77,159,255')+'">'+money(p)+'</td><td class="num b product-value-cell" style="'+heat(c,currentRanks,'0,229,195')+'">'+money(c)+'</td><td class="num product-wow-cell" style="--heat-rgb:'+(finite(d)&&d>=0?'0,224,154':'255,61,103')+';--heat-alpha:'+(0.36-0.20*wowStrength).toFixed(3)+'"><span class="delta '+(finite(d)&&d>=0?'up':'down')+'">'+(finite(d)?(d>=0?'+':'-')+num(Math.abs(d)*100,0)+'%':(c?'new':'N/A'))+'</span></td></tr>';}).join('');});
 }
 
 function canonicalNetworkName(raw){
@@ -2763,7 +2797,7 @@ async function loadLive(auto,force){
     /* Cached and freshly fetched renders report identically - where the payload
        came from is an implementation detail, not something the reader needs.
        window.__weeklyDebug exposes it for checking from the console. */
-    setStatus('Loaded - '+clockTime(Date.now()));
+    setStatus('Loaded');
     try{window.parent.postMessage({type:'mss3d:report-ready',report:'weekly'},location.origin)}catch(e){}
     /* The presets are already in payloadCache - loadSnapshot() put them there
        before this function was ever called. Nothing to hydrate. */
@@ -2804,13 +2838,22 @@ function setupSubnav(){
   /* Native pill select, matching the UA Negative Spend platform control. */
   const oldPlatform=document.getElementById('platform-nav');
   if(oldPlatform){
+    const wrap=document.createElement('span');wrap.className='platform-drop';wrap.id='weeklyPlatformDrop';
     const select=document.createElement('select');
-    select.id='weeklyPlatformSelect';select.className='navbtn platform-select';
+    select.id='weeklyPlatformSelect';select.hidden=true;
     select.setAttribute('aria-label','Platform');
     select.innerHTML='<option value="overview">Overview</option><option value="ios">IOS</option><option value="android">Android</option>';
-    oldPlatform.replaceWith(select);
+    wrap.innerHTML='<button id="weeklyPlatformBtn" class="navbtn" type="button" aria-haspopup="true">Overview</button>'+ 
+      '<span class="platform-drop-menu" id="weeklyPlatformDropMenu"><button type="button" data-platform="overview" class="active">Overview</button>'+ 
+      '<button type="button" data-platform="ios">IOS</button><button type="button" data-platform="android">Android</button></span>';
+    wrap.appendChild(select);oldPlatform.replaceWith(wrap);
+    const paintPlatform=choice=>{
+      const btn=document.getElementById('weeklyPlatformBtn');if(btn)btn.textContent=choice==='ios'?'IOS':choice==='android'?'Android':'Overview';
+      wrap.querySelectorAll('[data-platform]').forEach(b=>b.classList.toggle('active',b.dataset.platform===choice));
+    };
     select.onchange=()=>{
       const choice=select.value;
+      paintPlatform(choice);
       if(choice==='overview'){
         weeklyPlatform=null;weeklyReportCategory='overview';weeklyActiveTab='report';
         showTab('report');selectSub(document.getElementById('tab-report'),'overview');
@@ -2820,19 +2863,25 @@ function setupSubnav(){
         selectSub(document.getElementById('tab-analytics'),choice);
       }
     };
+    wrap.querySelectorAll('[data-platform]').forEach(btn=>btn.onclick=()=>{
+      select.value=btn.dataset.platform;select.dispatchEvent(new Event('change',{bubbles:true}));
+      wrap.classList.add('menu-dismissed');
+      document.getElementById('weeklyPlatformBtn')?.blur();
+    });
+    document.getElementById('weeklyPlatformBtn')?.addEventListener('click',()=>wrap.classList.remove('menu-dismissed'));
   }
 
   document.getElementById('btn-report')?.addEventListener('click',()=>{
     weeklyActiveTab='report';showTab('report');
     const target=weeklyPlatform||'overview';
     selectSub(document.getElementById('tab-report'),target);
-    const select=document.getElementById('weeklyPlatformSelect');if(select)select.value=target;
+    const select=document.getElementById('weeklyPlatformSelect');if(select){select.value=target;select.dispatchEvent(new Event('change',{bubbles:true}))}
   });
   document.getElementById('btn-analytics')?.addEventListener('click',()=>{
     weeklyActiveTab='analytics';showTab('analytics');
     const target=weeklyPlatform||'ios';
     selectSub(document.getElementById('tab-analytics'),target);
-    const select=document.getElementById('weeklyPlatformSelect');if(select)select.value=target;
+    const select=document.getElementById('weeklyPlatformSelect');if(select){select.value=target;select.dispatchEvent(new Event('change',{bubbles:true}))}
   });
   document.querySelectorAll('#tabnav .navbtn[data-toggle]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();const drop=btn.closest('.navdrop'),open=drop.classList.contains('open');document.querySelectorAll('.navdrop.open').forEach(d=>d.classList.remove('open'));if(!open)drop.classList.add('open');});
@@ -2860,7 +2909,10 @@ function selectSub(tab,cat){
   renderWeeklyCategory(cat);
   const nav=tab.querySelector(':scope > .subnav');
   if(nav)nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
-  tab.querySelectorAll(':scope > .slide').forEach(sl=>{sl.style.display=(sl.dataset.plat===cat)?'':'none';});
+  tab.querySelectorAll(':scope > .slide').forEach(sl=>{
+    const visible=sl.dataset.plat===cat;sl.style.display=visible?'':'none';
+    if(visible){sl.style.animation='none';sl.style.opacity='0';void sl.offsetWidth;sl.style.animation='weeklyPlatformIn .3s ease forwards'}
+  });
   // charts rendered while a slide was hidden have 0 size; nudge them to resize
   requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
 }
