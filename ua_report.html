@@ -111,6 +111,22 @@
     body.lt .platform-network th{color:#52627a}
     body.lt .platform-network td{color:#27364b}
     .platform-network select[id$="CohortChannel"]{display:none}
+    /* Every UA dropdown uses the same regular-weight interface type. */
+    select,select option,.date-controls select,.sh select.date,.chan-filter{
+      font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+      font-weight:400!important;
+      font-size:12.5px!important;
+    }
+    #connectBtn{font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;font-weight:700!important;
+      font-size:13px!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    .top .connect{align-items:center}
+    .top .status{display:flex;align-items:center;height:34px;font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+      font-size:13px!important;font-weight:700!important;line-height:1}
+    .date-span,.date-controls select,.date-confirm{font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+      font-size:13px!important;font-weight:700!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    .sh .date-controls select.date{font-size:13px!important;font-weight:700!important}
+    .date-controls select.date{width:130px!important;height:34px!important;min-height:34px!important;padding:0 34px 0 16px!important;
+      border-radius:20px!important;line-height:34px!important}
   </style>
 <style>
 body:not(.lt) .tabs button:not(.active){color:#e3e9f4}
@@ -233,7 +249,7 @@ html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover,.tablewr
   <header class="top">
     <div class="brand"><b>playspare</b> · UA</div>
 <nav class="tabs"><button class="active" data-view="overview">Overview</button><button data-view="android">Android</button><button data-view="ios">IOS</button><button data-view="legacy">Legacy</button><button data-view="negative-spend">UA Negative Spend</button></nav>
-    <div class="connect"><button id="connectBtn" class="btn primary">&#8635; Refresh</button></div><span id="status" class="status">Not connected</span>
+    <div class="connect"><span id="status" class="status">Not connected</span><button id="connectBtn" class="btn primary">&#8635; Refresh</button></div>
   </header>
 
   <main id="overview" class="view active"><section class="slide"><div class="sh"><div class="brand"><b>playspare</b> · Supermarket · AND + iOS</div><div class="date" data-date-range>Live Sheet Data</div></div><div class="sb"><div class="eyebrow">Combined User Acquisition Performance</div><div class="h1">Cost, Revenue & Return</div><div class="kpi-row five"><div class="kpi"><div class="l">Overall Spend</div><div class="v" id="overallSpend">—</div><div class="d">Selected period</div></div><div class="kpi"><div class="l">Revenue</div><div class="v" id="overallRevenue">—</div><div class="d">All revenue</div></div><div class="kpi"><div class="l">Profit</div><div class="v" id="overallProfit">—</div><div class="d">Revenue − cost</div></div><div class="kpi"><div class="l">ROI</div><div class="v" id="overallRoi">—</div><div class="d">All revenue ÷ cost</div></div><div class="kpi"><div class="l">Installs</div><div class="v" id="overallInstalls">—</div><div class="d">Android + iOS</div></div></div><div class="two mt"><article class="card"><h2>Cost & Revenue WxW · Last 6 Weeks</h2><div class="chartbox tall"><canvas id="overallWeekly"></canvas></div></article><article class="card"><h2>Cost & Revenue DxD · Last 2 Weeks</h2><div class="chartbox tall"><canvas id="overallDaily"></canvas></div></article></div></div><div class="sf"><span>UA · Combined Overview</span><span>Playspare · Game District</span></div></section></main>
@@ -998,8 +1014,7 @@ document.querySelectorAll('[data-date-range]').forEach(el=>{
       if(!await ensureHistory(filterNeedsFrom()))return;
       withFilterLoader(()=>{
         render();
-        const lbl=weekWindowLabel();
-        setStatus(select.options[select.selectedIndex].text+(lbl?' · '+lbl:''));
+        setStatus('Loaded');
       });
     }
   };
@@ -1020,7 +1035,7 @@ document.querySelectorAll('[data-date-range]').forEach(el=>{
     if(!await ensureHistory(filterNeedsFrom()))return;
     withFilterLoader(()=>{
       render();
-      setStatus('Date filter applied'+(activeRangeLabel()?' · '+activeRangeLabel():''));
+      setStatus('Loaded');
     });
   };
   el.replaceWith(box);
@@ -1066,7 +1081,7 @@ const uaPiePercentLabels={
 function appIs(row,platform){const s=String(row.app||'').toLowerCase();return platform==='ios'?/(ios|iphone|apple)/.test(s):/(and|android)/.test(s)}
 function destroy(id){if(charts[id]) charts[id].destroy()}
 function grouped(rows,key,limit){const m=new Map;rows.forEach(r=>{const label=String(r[key]??'Unknown');const x=m.get(label)||{label,cost:0,revenue:0,installs:0};x.cost+=num(r.cost??r.network_cost);x.revenue+=num(r.all_revenue??r.revenue);x.installs+=num(r.installs);m.set(label,x)});return [...m.values()].sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0)).slice(-(limit||999))}
-function combo(id,items){destroy(id);const el=$(id);if(!el)return;const roiValues=items.map(x=>x.roi??(x.cost?x.revenue/x.cost:0)).filter(v=>Number.isFinite(v)&&v>0),roiMax=roiValues.length?Math.ceil((Math.max(...roiValues)+.02)*10)/10:1;charts[id]=new Chart(el,{data:{labels:items.map(x=>shortDate(x.label)),datasets:[{type:'bar',label:'Revenue',data:items.map(x=>x.revenue),backgroundColor:COLORS.blue},{type:'bar',label:'Cost',data:items.map(x=>x.cost),backgroundColor:COLORS.teal},{type:'bar',label:'Profit',data:items.map(x=>x.profit??(x.revenue-x.cost)),backgroundColor:COLORS.pink},{type:'line',label:'ROI',data:roiValues.length?items.map(x=>x.roi??(x.cost?x.revenue/x.cost:0)):[],borderColor:COLORS.line,backgroundColor:COLORS.line,yAxisID:'roi',tension:.15,pointRadius:3}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:{duration:450},plugins:{legend:{position:'top',align:'start'},tooltip:{callbacks:{label:c=>{const name=c.dataset.label||'';return name+': '+(name==='ROI'?Number(c.raw).toFixed(2)+'x':'$'+Number(c.raw).toLocaleString('en-US',{maximumFractionDigits:2}))}}}},scales:{x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:0}},y:{beginAtZero:true,ticks:{callback:v=>compact(v)}},roi:{position:'right',beginAtZero:true,min:0,max:roiMax,grid:{drawOnChartArea:false},ticks:{callback:v=>v.toFixed(2)+'x'}}}}})}
+function combo(id,items){destroy(id);const el=$(id);if(!el)return;const roiValues=items.map(x=>x.roi??(x.cost?x.revenue/x.cost:0)).filter(v=>Number.isFinite(v)&&v>0),roiMax=roiValues.length?Math.ceil((Math.max(...roiValues)+.02)*10)/10:1;const moneyValues=items.flatMap(x=>[x.revenue,x.cost,x.profit??(x.revenue-x.cost)]).filter(Number.isFinite),moneyMax=Math.max(0,...moneyValues),moneyMin=Math.min(0,...moneyValues),moneyStep=Math.max(1,Math.pow(10,Math.floor(Math.log10(Math.max(1,moneyMax)))-1)*5),yMax=Math.ceil(moneyMax/moneyStep)*moneyStep,yMin=Math.floor(moneyMin/moneyStep)*moneyStep,belowZero=yMin<0&&yMax>0?(-yMin)/(yMax-yMin):0,roiMin=belowZero?-roiMax*belowZero/(1-belowZero):0;charts[id]=new Chart(el,{data:{labels:items.map(x=>shortDate(x.label)),datasets:[{type:'bar',label:'Revenue',data:items.map(x=>x.revenue),backgroundColor:COLORS.blue},{type:'bar',label:'Cost',data:items.map(x=>x.cost),backgroundColor:COLORS.teal},{type:'bar',label:'Profit',data:items.map(x=>x.profit??(x.revenue-x.cost)),backgroundColor:COLORS.pink},{type:'line',label:'ROI',data:roiValues.length?items.map(x=>x.roi??(x.cost?x.revenue/x.cost:0)):[],borderColor:COLORS.line,backgroundColor:COLORS.line,yAxisID:'roi',tension:.15,pointRadius:3}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:{duration:450},plugins:{legend:{position:'top',align:'start'},tooltip:{callbacks:{label:c=>{const name=c.dataset.label||'';return name+': '+(name==='ROI'?Number(c.raw).toFixed(2)+'x':'$'+Number(c.raw).toLocaleString('en-US',{maximumFractionDigits:2}))}}}},scales:{x:{ticks:{autoSkip:true,maxTicksLimit:14,maxRotation:0}},y:{min:yMin,max:yMax,ticks:{callback:v=>compact(v)}},roi:{position:'right',min:roiMin,max:roiMax,grid:{drawOnChartArea:false},ticks:{callback:v=>(Math.abs(v)<.000001?0:v).toFixed(2)+'x'}}}}})}
 /* Chart.js draws each legend entry as one run of text, so a percentage can only
    ever trail the label and the column wanders with label length. The legend is
    therefore HTML: a grid pins the number, swatch, name and percentage to their
@@ -1106,7 +1121,8 @@ function syncCardTitles(){
     let base=h.dataset.titleBase;
     if(base===undefined){
       base=h.textContent.split('·')[0].trim();
-      if(!/^Cost & Revenue/.test(base)) return;   // leave every other heading alone
+      const legacyDxd=!!h.closest('#legacy')&&/DxD$/.test(base);
+      if(!/^Cost & Revenue/.test(base)&&!legacyDxd) return;   // leave every other heading alone
       h.dataset.titleBase=base;
     }
     h.textContent=base+(name?' · '+name:'')+(span&&span!==name?' · '+span:'');
@@ -1142,7 +1158,9 @@ function visibleShareEntries(entries,valueAt){
   const total=entries.reduce((s,x)=>s+Math.max(0,num(valueAt(x))),0);
   return total?entries.filter(x=>Math.max(0,num(valueAt(x)))/total*100>=0.05):[];
 }
-function table(target,rows,columns){const el=$(target);if(!el)return;if(!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const cols=columns||Object.keys(rows[0]),numericCols=new Set(cols.filter(c=>rows.some(r=>typeof r[c]==='number')));el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th class="${numericCols.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>`<td class="${numericCols.has(c)?'num ':''}${heat(c)}">${formatCell(c,r[c])}</td>`).join('')+'</tr>').join('')+'</tbody></table>'}
+function rankScales(rows,cols){const out={};cols.forEach(c=>{out[c]=[...new Set(rows.map(r=>Number(r[c])).filter(Number.isFinite))].sort((a,b)=>a-b)});return out}
+function rankShade(value,values,rgb){const v=Number(value);if(!Number.isFinite(v)||!values?.length)return'';const rank=values.indexOf(v),t=values.length>1?rank/(values.length-1):1;return`background:rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.36-0.20*t).toFixed(3)})`}
+function table(target,rows,columns){const el=$(target);if(!el)return;if(!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const cols=columns||Object.keys(rows[0]),numericList=cols.filter(c=>rows.some(r=>typeof r[c]==='number')),numericCols=new Set(numericList),ranks=rankScales(rows,numericList);el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th class="${numericCols.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>`<td class="${numericCols.has(c)?'num ':''}" style="${numericCols.has(c)?rankShade(r[c],ranks[c],colHue(c,target)):''}">${formatCell(c,r[c])}</td>`).join('')+'</tr>').join('')+'</tbody></table>'}
 function label(s){return String(s).replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}
 function heat(c){c=String(c);if(/cost|spend/.test(c))return'heat-blue';if(/install/.test(c))return'heat-teal';if(/ad_revenue/.test(c))return'heat-pink';if(/^revenue|all_revenue|iap/.test(c))return'heat-amber';if(/roi|roas/.test(c))return'heat-green';return''}
 function formatCell(k,v){if(v==null||v==='')return'-';const key=String(k).toLowerCase();if(typeof v!=='number'){if(/week|date|day/.test(key)&&dateVal(v))return shortDate(v);return String(v)}if(key==='roi')return v.toFixed(2);if(key==='cpi'||key==='ecpi'||/cost|revenue|spend/.test(key))return tableMoney(v);if(/roas|retention|share|rate/.test(key))return (v*100).toFixed(1)+'%';return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v)}
@@ -1296,7 +1314,7 @@ function render(){syncCardTitles();const overall=filterRows(DATA.overall_data?.r
      overview' - which is why Overall read $14.2M revenue against $426.9K spend
      while Android + iOS added up to ~$594K. That tab carries zero-cost buckets
      ('Untrusted Devices', 'Organic') that are not UA performance. */
-  ['android','ios'].forEach(p=>{const ow=overall.filter(r=>appIs(r,p)),dd=daily.filter(r=>appIs(r,p)&&platformChannelAllowed(p,r.channel)),weeklyAnalysis=analysisItems(p,'weekly').filter(r=>platformChannelAllowed(p,field(r,'channel'))),dailyAnalysis=analysisItems(p,'daily').filter(r=>platformChannelAllowed(p,field(r,'channel')));combo(p+'Weekly',weeklyAnalysis.length?weeklyAnalysis:groupedWeekly(dd,6));combo(p+'Daily',dailyAnalysis.length?dailyAnalysis:grouped(dd,'day',14));setKpis(p,p);const shares=visibleShareEntries(channelAgg(dd,'network_cost'));pie(p+'SpendShare',shares.map(x=>x[0]),shares.map(x=>x[1]),'Spend Share',SIDE_PIE);renderPlatformNetwork(p,ow,dd)});logPlatformSplit(daily);
+  ['android','ios'].forEach(p=>{const ow=overall.filter(r=>appIs(r,p)),dd=daily.filter(r=>appIs(r,p)&&platformChannelAllowed(p,r.channel)),spendShareRows=daily.filter(r=>appIs(r,p)&&(platformChannelAllowed(p,r.channel)||googleAds(r))),weeklyAnalysis=analysisItems(p,'weekly').filter(r=>platformChannelAllowed(p,field(r,'channel'))),dailyAnalysis=analysisItems(p,'daily').filter(r=>platformChannelAllowed(p,field(r,'channel')));combo(p+'Weekly',weeklyAnalysis.length?weeklyAnalysis:groupedWeekly(dd,6));combo(p+'Daily',dailyAnalysis.length?dailyAnalysis:grouped(dd,'day',14));setKpis(p,p);const shares=visibleShareEntries(channelAgg(spendShareRows,'network_cost'));pie(p+'SpendShare',shares.map(x=>x[0]),shares.map(x=>x[1]),'Spend Share',SIDE_PIE);renderPlatformNetwork(p,ow,dd)});logPlatformSplit(daily);
   const rs=DATA.revenue_share||{};renderCurrentWeekPies(overall);renderPlatformRevenuePies(rs);
   const networks=daily;table('networkTable',networks,['day','app','channel','network_cost','all_revenue','roas_all_d0','all_revenue_total_d0','roas_ad_d0','ad_revenue']);const na=channelAgg(overall,'all_revenue');table('networkShareTable',na.map(([channel,total])=>({channel,total})),['channel','total']);pie('networkIapShare',na.slice(0,10).map(x=>x[0]),na.slice(0,10).map(x=>x[1]),'Revenue Share');table('revCostTable',filterRows(DATA.rev_cost_analysis?.rows||[]));
   renderGoogleAds(filterRows(DATA.campaigns_data?.rows||[]));renderLegacy();renderPrimaryKpiDeltas();renderSupplementalKpiDeltas();updateDates([...overall,...daily]);}
@@ -1347,7 +1365,7 @@ function overviewChannelAllowed(p,v){
 const LAST_ROWS={};
 function refreshPlatform(p){const r=LAST_ROWS[p];if(r)renderPlatformNetwork(p,r.overallRows,r.dailyRows)}
 function populateChannelSelect(id,channels,current){const sel=$(id);if(!sel)return;sel.innerHTML='<option value="all">All channels</option>'+channels.map(c=>`<option value="${c}">${c}</option>`).join('');sel.value=(current&&(current==='all'||channels.includes(current)))?current:'all'}
-function colHue(c){c=String(c).toLowerCase().replace(/[^a-z0-9]/g,'');if(/adrevenue|adshare/.test(c))return[236,10,155];if(/cost|spend|cpi/.test(c))return[0,229,195];if(/install/.test(c))return[77,159,255];if(/iap|revenue/.test(c))return[255,184,0];if(/roi|roas/.test(c))return[0,196,122];if(/retention|rate|d1|d7/.test(c))return[120,86,214];return[166,184,212]}
+function colHue(c,target){c=String(c).toLowerCase().replace(/[^a-z0-9]/g,'');const cohort=String(target).endsWith('CohortTable');if(cohort&&(/^(roasad)(d0|d7|d14|d30)$/.test(c)||/^roas(d0|d7|d14|d30)$/.test(c)))return[118,205,72];if(/allrevenue/.test(c))return[255,107,74];if(/adrevenue|adshare/.test(c))return[236,10,155];if(/cost|spend|cpi/.test(c))return cohort?[25,170,135]:[0,229,195];if(/install/.test(c))return[77,159,255];if(/iap|^revenue/.test(c))return[255,184,0];if(/roas.*d7|roid7/.test(c))return[118,205,72];if(/roi|roas/.test(c))return[0,196,122];if(/retention.*d7|rated7/.test(c))return[160,116,255];if(/retention|rate|d1/.test(c))return[120,86,214];return[166,184,212]}
 function weekValue(row){const k=Object.keys(row||{}).find(k=>/^weeks?$/.test(String(k).toLowerCase().replace(/[^a-z0-9]/g,'')));return k==null?null:row[k]}
 function weekSorter(rows){const keys=Object.keys(rows[0]||{}),ck=keys.find(k=>/cost|spend/i.test(k)&&rows.some(r=>typeof r[k]==='number'))||null;return(a,b)=>{const da=dateVal(weekValue(a)),db=dateVal(weekValue(b)),ta=da?da.getTime():null,tb=db?db.getTime():null;if(ta!==tb)return(ta??Infinity)-(tb??Infinity);return ck?num(b[ck])-num(a[ck]):0}}
 function aggregateCampaignRows(rows){
@@ -1385,8 +1403,8 @@ function addCampaignSeparators(id,rows){
 const shareBarLabels={
   id:'shareBarLabels',
   afterDatasetsDraw(chart){
-    const ctx=chart.ctx;ctx.save();ctx.font='500 12.5px Poppins,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    chart.data.datasets.forEach((ds,di)=>chart.getDatasetMeta(di).data.forEach((bar,i)=>{const value=Number(ds.data[i])||0;if(value<.08)return;const p=bar.getProps(['x','base','y'],true);ctx.fillStyle=di===0?'#fff':'#000000';ctx.fillText((value*100).toFixed(1)+'%',(p.x+p.base)/2,p.y)}));
+    const ctx=chart.ctx;ctx.save();ctx.font='700 13px Poppins,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    chart.data.datasets.forEach((ds,di)=>chart.getDatasetMeta(di).data.forEach((bar,i)=>{const value=Number(ds.data[i])||0;if(value<.08)return;const p=bar.getProps(['x','base','y'],true),label=(value*100).toFixed(1)+'%';if(di===1){ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.32)';ctx.strokeText(label,(p.x+p.base)/2,p.y)}ctx.fillStyle=di===0?'#fff':'#071018';ctx.fillText(label,(p.x+p.base)/2,p.y)}));
     ctx.restore()
   }
 };
@@ -1406,7 +1424,7 @@ function aggregateCohortsByWeek(rows){
   const averageMetric=k=>/roas|roi|rate|retention|share|cpi|ecpi|ratio|percent/i.test(k);
   return [...groups.values()].map(g=>{Object.keys(g.counts).forEach(k=>{if(averageMetric(k))g.row[k]/=g.counts[k]});return g.row}).sort((a,b)=>(dateVal(weekValue(a))||0)-(dateVal(weekValue(b))||0))
 }
-function richTable(target,rows,opts){opts=opts||{};const el=$(target);if(!el)return;if(!rows||!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');const excl=(opts.exclude||[]).map(norm);let cols=(opts.columns||Object.keys(rows[0])).filter(c=>!excl.includes(norm(c)));const wcol=cols.find(c=>/^weeks?$/.test(norm(c)))||null;if(wcol)cols=[wcol,...cols.filter(c=>c!==wcol)];const numericCols=cols.filter(c=>c!==wcol&&rows.some(r=>typeof r[c]==='number'));const numSet=new Set(numericCols);let sortCol=(opts.sortBy&&cols.includes(opts.sortBy))?opts.sortBy:null;if(!sortCol){const pri=[/spend|cost/,/allrevenue|^revenue|iaprevenue/,/roas|roi/,/install/];for(const rx of pri){const f=numericCols.find(c=>rx.test(norm(c)));if(f){sortCol=f;break}}if(!sortCol)sortCol=numericCols[0]}const data=rows.slice();if(typeof opts.sort==='function')data.sort(opts.sort);else if(sortCol)data.sort((a,b)=>num(b[sortCol])-num(a[sortCol]));const ranges={};numericCols.forEach(c=>{let mn=Infinity,mx=-Infinity;data.forEach(r=>{const v=Number(r[c]);if(Number.isFinite(v)){if(v<mn)mn=v;if(v>mx)mx=v}});ranges[c]=[mn,mx]});const bg=(c,v)=>{if(!numSet.has(c))return'';const val=Number(v);if(!Number.isFinite(val))return'';const[mn,mx]=ranges[c];const t=mx>mn?(val-mn)/(mx-mn):0;const[r,g,b]=colHue(c);return`background:rgba(${r},${g},${b},${(0.16+0.20*t).toFixed(3)})`};const showNum=opts.number!==false;const head='<tr>'+(showNum?'<th class="idx">#</th>':'')+cols.map(c=>`<th class="${numSet.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr>';let prevWeek=null;const bodyHtml=data.map((r,i)=>{const wk=wcol?String(r[wcol]??''):null;const brk=wcol&&i>0&&wk!==prevWeek;prevWeek=wk;return `<tr class="${brk?'wk-break':''}">`+(showNum?`<td class="idx">${i+1}</td>`:'')+cols.map(c=>`<td class="${numSet.has(c)?'num':''}${c===wcol?' wk':''}" style="${bg(c,r[c])}">${formatCell(c,r[c])}</td>`).join('')+'</tr>'}).join('');el.innerHTML=`<table><thead>${head}</thead><tbody>${bodyHtml}</tbody></table>`}
+function richTable(target,rows,opts){opts=opts||{};const el=$(target);if(!el)return;if(!rows||!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');const excl=(opts.exclude||[]).map(norm);let cols=(opts.columns||Object.keys(rows[0])).filter(c=>!excl.includes(norm(c)));const wcol=cols.find(c=>/^weeks?$/.test(norm(c)))||null;if(wcol)cols=[wcol,...cols.filter(c=>c!==wcol)];const numericCols=cols.filter(c=>c!==wcol&&rows.some(r=>typeof r[c]==='number'));const numSet=new Set(numericCols);let sortCol=(opts.sortBy&&cols.includes(opts.sortBy))?opts.sortBy:null;if(!sortCol){const pri=[/spend|cost/,/allrevenue|^revenue|iaprevenue/,/roas|roi/,/install/];for(const rx of pri){const f=numericCols.find(c=>rx.test(norm(c)));if(f){sortCol=f;break}}if(!sortCol)sortCol=numericCols[0]}const data=rows.slice();if(typeof opts.sort==='function')data.sort(opts.sort);else if(sortCol)data.sort((a,b)=>num(b[sortCol])-num(a[sortCol]));const ranks=rankScales(data,numericCols);const bg=(c,v)=>numSet.has(c)?rankShade(v,ranks[c],colHue(c,target)):'';const showNum=opts.number!==false;const head='<tr>'+(showNum?'<th class="idx">#</th>':'')+cols.map(c=>`<th class="${numSet.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr>';let prevWeek=null;const bodyHtml=data.map((r,i)=>{const wk=wcol?String(r[wcol]??''):null;const brk=wcol&&i>0&&wk!==prevWeek;prevWeek=wk;return `<tr class="${brk?'wk-break':''}">`+(showNum?`<td class="idx">${i+1}</td>`:'')+cols.map(c=>`<td class="${numSet.has(c)?'num':''}${c===wcol?' wk':''}" style="${bg(c,r[c])}">${formatCell(c,r[c])}</td>`).join('')+'</tr>'}).join('');el.innerHTML=`<table><thead>${head}</thead><tbody>${bodyHtml}</tbody></table>`}
 function aggregateOverviewRows(rows){
   const groups=new Map;
   rows.forEach(r=>{
@@ -1457,7 +1475,7 @@ function renderPlatformNetwork(p,overallRows,dailyRows){
 }/* "DxD" is day-by-day, but this grouped on the week column, so a two-week
    window produced two bars. Bucket by day where the rows carry one, and fall
    back to the week column for datasets that only have weekly granularity. */
-function renderPlatformRoas(id,rows){const byWeek=new Map;rows.forEach(r=>{const label=r.day??r.Date??r.date??r.Week??r.week;if(label==null||label==='')return;const x=byWeek.get(String(label))||{label,cost:0,d0Revenue:0,weightedRoas:0};const cost=num(r.cost??r.network_cost);x.cost+=cost;x.d0Revenue+=num(r.all_revenue_total_d0);x.weightedRoas+=num(r.roas_d0??r.roas_all_d0)*cost;byWeek.set(String(label),x)});const g=[...byWeek.values()].sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0));destroy(id);if(!$(id))return;charts[id]=new Chart($(id),{data:{labels:g.map(x=>shortDate(x.label)),datasets:[{type:'bar',label:'Spend',data:g.map(x=>x.cost),backgroundColor:COLORS.teal},{type:'line',label:'D0 ROAS',data:g.map(x=>x.cost?(x.d0Revenue?x.d0Revenue/x.cost:x.weightedRoas/x.cost):0),borderColor:COLORS.line,backgroundColor:COLORS.line,yAxisID:'roi',tension:.15,pointRadius:3}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'start',labels:{padding:26}}},scales:{y:{beginAtZero:true,ticks:{callback:compact}},roi:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{callback:v=>pct(v)}}}}})}
+function renderPlatformRoas(id,rows){const byWeek=new Map;rows.forEach(r=>{const label=r.day??r.Date??r.date??r.Week??r.week;if(label==null||label==='')return;const x=byWeek.get(String(label))||{label,cost:0,d0Revenue:0,weightedRoas:0};const cost=num(r.cost??r.network_cost);x.cost+=cost;x.d0Revenue+=num(r.all_revenue_total_d0);x.weightedRoas+=num(r.roas_d0??r.roas_all_d0)*cost;byWeek.set(String(label),x)});const g=[...byWeek.values()].sort((a,b)=>(dateVal(a.label)||0)-(dateVal(b.label)||0));destroy(id);if(!$(id))return;charts[id]=new Chart($(id),{data:{labels:g.map(x=>shortDate(x.label)),datasets:[{type:'bar',label:'Spend',data:g.map(x=>x.cost),backgroundColor:COLORS.teal},{type:'line',label:'D0 ROAS',data:g.map(x=>x.cost?(x.d0Revenue?x.d0Revenue/x.cost:x.weightedRoas/x.cost):0),borderColor:COLORS.line,backgroundColor:COLORS.line,yAxisID:'roi',tension:.15,pointRadius:3}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'start',labels:{padding:26}},tooltip:{callbacks:{label:c=>c.dataset.label==='Spend'?'Spend: $'+Number(c.raw).toLocaleString('en-US',{maximumFractionDigits:2}):'D0 ROAS: '+(Number(c.raw)*100).toFixed(2)+'%'}}},scales:{y:{beginAtZero:true,ticks:{callback:compact}},roi:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{callback:v=>pct(v)}}}}})}
 function revenueDetail(rs,p){return (rs.details||[]).find(d=>String(d.platform).toLowerCase()===(p==='ios'?'ios':'android'))}
 function currentRevenueShare(rs,p){const rows=rs.rows||[];const target=p==='ios'?'ios':'android';return rows.find(r=>String(r.platform||'').toLowerCase()===target&&String(r.label).toLowerCase()==='current week')}
 function renderPlatformRevenuePies(rs){['android','ios'].forEach(p=>{const detail=revenueDetail(rs,p),rows=detail?.rows||[];if(!rows.length)return;const channelMap={};rows.forEach(r=>{const channel=field(r,'channel')||field(r,'network')||'Unknown';channelMap[channel]=(channelMap[channel]||0)+num(field(r,'IAP_Revenue'))});const entries=visibleShareEntries(Object.entries(channelMap)).sort((a,b)=>b[1]-a[1]);pie(`${p}IapNetworkShare`,entries.map(x=>x[0]),entries.map(x=>x[1]),'IAP Revenue Share',SIDE_PIE)})}
@@ -1601,9 +1619,7 @@ async function connect(force){
       render:(payload,meta)=>{
         UA_STAMP=meta.stamp||UA_STAMP;
         applyDatasets(payload);
-        setStatus(meta.source==='network'
-          ? 'Loaded - '+clockTime((payload&&payload.updated)||Date.now())
-          : 'Loaded - '+clockTime((payload&&payload.updated)||Date.now())+' (saved copy)');
+        setStatus('Loaded');
         try{window.parent.postMessage({type:'mss3d:report-ready',report:'ua'},location.origin)}catch(e){}
       },
 
@@ -1625,7 +1641,7 @@ function openNegativeSpend(){
   if(!frame||frame.getAttribute('src'))return;
   const api=new URLSearchParams(location.search).get('negativeApi')||'';
   if(!api){setStatus('Negative Spend URL is missing from the hub.',true);return}
-  frame.src='negative_spend_report.html?v=20260825-negative-loader-v3&api='+encodeURIComponent(api);
+  frame.src='negative_spend_report.html?v=20260827-ranked-table-heatmaps-v27&api='+encodeURIComponent(api);
   frame.addEventListener('load',()=>{
     const resize=()=>{
       try{
