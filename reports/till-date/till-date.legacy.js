@@ -1344,7 +1344,23 @@ const AD_TYPE_CANON = {'all':'ALL','rewarded':'Rewarded','interstitial':'Interst
 const PLAT_CANON = {'ios':'ios','android':'android','and':'android'}; // 'and' = known typo for android
 function normalizeAdType(v){ return (typeof v==='string') ? (AD_TYPE_CANON[v.trim().toLowerCase()] || v) : v; }
 function normalizePlat(v){ return (typeof v==='string') ? (PLAT_CANON[v.trim().toLowerCase()] || v) : v; }
-function fixAppName(v){ return (typeof v==='string') ? v.replace(/3D¬Æ/g,'3D®').replace(/3DÂ®/g,'3D®') : v; }
+/* Repairs "MSS3D(R)" when the sheet hands the registered-sign back already
+   mis-decoded. U+00AE is the character that belongs there; its UTF-8 bytes
+   are C2 AE, and the two ways they come back wrong are:
+       U+00AC U+00C6   those bytes read as Mac Roman
+       U+00C2 U+00AE   those bytes read as Latin-1
+   Both are rewritten to a real U+00AE.
+
+   Everything here is escapes and ASCII on purpose. Spelled as literal
+   characters, these patterns are themselves mojibake — so any editor or tool
+   that saved this file in a non-UTF-8 encoding would mangle them a second
+   time and the repair would quietly stop matching, which is exactly the
+   failure it exists to fix. */
+function fixAppName(v){
+  return (typeof v === 'string')
+    ? v.replace(/3D\u00AC\u00C6/g, '3D\u00AE').replace(/3D\u00C2\u00AE/g, '3D\u00AE')
+    : v;
+}
 
 function setDataStatus(msg){
   const el=document.getElementById('dataStatus');
