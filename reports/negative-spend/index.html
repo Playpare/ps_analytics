@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UA Negative Spend Monitor</title>
+
+
+
+
+
+
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Quicksand:wght@500;600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap">
+  <!--THEME_BOOT-->
+</head>
+<body>
+
+<header class="top">
+  <select id="platformFilter" class="plat" title="Platform" hidden>
+    <option value="android">Android</option><option value="ios">IOS</option><option value="all">All platforms</option>
+  </select>
+  <span class="platform-drop" id="platformDrop">
+    <button id="platformFilterBtn" class="btn" type="button" aria-haspopup="true">Android</button>
+    <span class="platform-drop-menu" id="platformDropMenu">
+      <button type="button" data-platform="android" class="active">Android</button>
+      <button type="button" data-platform="ios">IOS</button>
+      <button type="button" data-platform="all">All platforms</button>
+    </span>
+  </span>
+  <button id="mapBtn" class="btn" type="button">&#9998; Campaign settings</button>
+  <div class="date" data-date-range>Live Sheet Data</div>
+  <span id="status" class="status" hidden>Loading…</span>
+</header>
+
+<!-- ===================== NEGATIVE SPEND — ONE PAGE ===================== -->
+<main id="page" class="view active"><section class="slide">
+  <div class="sb">
+    <div class="eyebrow" id="pageEyebrow">Cohort payback against cash · every card follows the platform and window</div>
+    <div class="h1" id="pageTitle">Negative Spend</div>
+
+    <!-- 0 · the five numbers that decide whether today needs action -->
+    <div class="kpi-row five">
+      <div class="kpi">
+        <div class="l">Spend at risk</div>
+        <div class="v" id="k_risk">—</div><div class="d" id="k_risk_d">—</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Days losing money</div>
+        <div class="v" id="k_negdays">—</div><div class="d" id="k_negdays_d">—</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Spend not judged</div>
+        <div class="v" id="k_unjudged">—</div><div class="d" id="k_unjudged_d">—</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Biggest cash drag</div>
+        <div class="v" id="k_drag">—</div><div class="d" id="k_drag_d">—</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Unusable install data</div>
+        <div class="v" id="k_fake">—</div><div class="d" id="k_fake_d">—</div>
+      </div>
+    </div>
+
+    <!-- 1 · the headline question -->
+    <article class="card pay mt">
+      <div class="pay-q">Will the money we spent come back?</div>
+      <div class="pay-track">
+        <div class="pay-bar"><div class="pay-fill" id="payFill"></div></div>
+        <div class="pay-mark" id="payMark"><span>1.00x break-even</span></div>
+      </div>
+      <div class="pay-lead">
+        <span class="pay-x" id="payX">—</span>
+        <span class="pay-note" id="payNote">returned at each campaign's own goal window, on cohorts old enough to judge</span>
+        <span class="chip" id="payChip"></span>
+      </div>
+      <div class="pay-line" id="payLine">—</div>
+      <div class="pay-cash">
+        <span class="badge b-warn">CASH TODAY</span>
+        <span class="v" id="cashV">—</span>
+        <span id="cashNote"></span>
+        <span class="chip" id="cashChip"></span>
+      </div>
+      <div class="pay-cash" style="border:0;padding-top:0;margin-top:4px">
+        <span class="pay-dim">— cash counts every dollar that landed today, including from users bought before this window, so it can stay positive while new cohorts fall short.</span>
+      </div>
+      <div class="pay-foot" id="payFoot"></div>
+    </article>
+
+    <!-- 1b · does it get better as the cohort ages -->
+    <article class="card mt cohort-card">
+      <div class="card-head">
+        <h2>Cohort payback ladder</h2>
+        <div class="strip-key"><span>solid line = 1.00x break-even</span><span>grey tick = target from Assumptions</span></div>
+      </div>
+      <div class="card-sub" id="ladderSub">—</div>
+      <div class="ladder" id="ladder"></div>
+    </article>
+
+    <!-- 2 · did any single day lose money -->
+    <article class="card mt">
+      <div class="card-head margin-head">
+        <h2 id="marginTitle">Daily profit and loss</h2>
+        <div class="margin-head-right">
+          <div class="margin-filters">
+            <select id="marginPeriod" class="chan-filter" title="Margin grouping">
+              <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option>
+            </select>
+            <select id="marginChannel" class="chan-filter" title="Channel"><option value="all">All channels</option></select>
+            <select id="marginCampaign" class="chan-filter" title="Campaign"><option value="all">All campaigns</option></select>
+          </div>
+          <div class="strip-key">
+            <span><i style="background:var(--teal)"></i>in profit</span>
+            <span id="marginNormKey"><i style="background:var(--amber)"></i>below its weekday norm</span>
+            <span><i style="background:var(--coral)"></i>lost money</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-sub" id="stripSub">—</div>
+      <div class="strip" id="dailyStrip"></div>
+      <div class="strip-ends"><span id="stripFrom"></span><span id="stripTo"></span></div>
+    </article>
+
+    <!-- 2b · where the money at risk actually sits -->
+    <div class="two mt">
+      <article class="card">
+        <div class="card-head">
+          <h2>Spend by decision</h2>
+        </div>
+        <div class="card-sub">Hover a bar for the exact spend behind it.</div>
+        <div class="chartbox"><canvas id="riskChart"></canvas></div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <h2>Cash profit by network</h2>
+        </div>
+        <div class="card-sub">Worst first. Anything left of zero is taking money out.</div>
+        <div class="chartbox"><canvas id="netGpChart"></canvas></div>
+      </article>
+    </div>
+
+    <!-- 3 · which network is leaking -->
+    <article class="card mt">
+      <div class="card-head">
+        <h2>Networks</h2>
+      </div>
+      <div class="card-sub">Cash and payback read the same money differently. Watch the rows where they disagree.</div>
+      <div id="networkTable" class="tablewrap"></div>
+    </article>
+
+    <!-- 4 · what to do on Monday morning -->
+    <article class="card mt">
+      <div class="card-head">
+        <h2>Campaigns to act on</h2>
+        <div class="filters">
+          <select id="campChannel" class="chan-filter" title="Network"><option value="all">All networks</option></select>
+          <select id="campCampaign" class="chan-filter" title="Campaign"><option value="all">All campaigns</option></select>
+          <select id="campRev" class="chan-filter" title="Revenue type">
+            <option value="all">All revenue types</option>
+            <option value="ad">ad revenue</option>
+            <option value="iap">IAP revenue</option>
+            <option value="allrev">all revenue</option>
+          </select>
+          <select id="campVerdict" class="chan-filter" title="Decision"><option value="all">All decisions</option></select>
+          <button id="watchAll" class="chan-filter btn-flat" type="button">Show all</button>
+        </div>
+      </div>
+      <div class="card-sub" id="watchSub">—</div>
+      <div id="watchTable" class="tablewrap"></div>
+    </article>
+
+    <!-- 5 · what changed, and how each period actually did -->
+    <article class="card mt">
+      <div class="card-head">
+        <h2>Settings history</h2>
+        <div class="filters">
+          <select id="hisChannel" class="chan-filter" title="Channel"><option value="all">All channels</option></select>
+          <select id="hisCampaign" class="chan-filter" title="Campaign"><option value="all">All campaigns</option></select>
+          <select id="hisPeriod" class="chan-filter" title="Grouping">
+            <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-sub" id="hisSub">—</div>
+      <div id="historyTable" class="tablewrap"></div>
+    </article>
+
+  </div>
+  <div class="sf"><span>UA · Negative Spend <b style="color:var(--teal)">· build B9 — rows measured on the settings running now, with their effective date</b></span><span>Playspare · Game District</span></div>
+</section></main>
+
+<div id="mapModal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="map-title-wrap">
+        <span class="map-title-icon" aria-hidden="true">&#9881;</span>
+        <div>
+          <h2>Campaign settings</h2>
+          <div class="card-sub" id="mapSub" style="margin:4px 0 0">—</div>
+        </div>
+      </div>
+      <div class="filters">
+        <select id="mapChannel" class="chan-filter" title="Channel"><option value="all">All channels</option></select>
+        <input id="mapSearch" class="chan-filter mapsearch" type="text" placeholder="Search campaign…">
+        <span id="mapUnsaved" class="map-unsaved clean"><b>0</b><span>Unsaved changes</span></span>
+        <button id="mapClose" class="btn primary" type="button">Done</button>
+        <button id="mapDismiss" type="button" title="Close without saving" aria-label="Close without saving">&times;</button>
+      </div>
+    </div>
+    <div class="modal-note">
+      One row per campaign, showing the settings running today. Change what you need and press <b>Apply</b> — nothing
+      is written until you do. The change takes effect from today's date, the period it replaces is closed off, and
+      both are kept in <b>Settings_Log</b> so the Settings history table below can show how each period did.
+    </div>
+    <div id="mapTable" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="loader" class="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading Data</b><div class="pulse"></div></div></div>
+
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
