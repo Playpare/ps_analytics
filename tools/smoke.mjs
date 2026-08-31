@@ -17,7 +17,13 @@
  * and is exactly the risk the migration introduced — that every module still
  * parses, evaluates, and wires up its handlers.
  *
- *   npm run smoke
+ *   npm run smoke                     against a local `npm run build`
+ *   npm run smoke -- --url <base>     against a deployed site
+ *
+ * The --url form is how a deploy gets checked. A build passing locally and the
+ * deployed site working are different claims: the base path, the asset URLs and
+ * the endpoints baked in from secrets are all decided by the CI build, not this
+ * one, and none of them are exercised until something loads the real thing.
  */
 
 import { chromium } from 'playwright';
@@ -27,7 +33,10 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4179;
-const BASE = `http://localhost:${PORT}`;
+
+const urlArg = process.argv.indexOf('--url');
+const REMOTE = urlArg > -1 ? process.argv[urlArg + 1].replace(/\/$/, '') : null;
+const BASE = REMOTE || `http://localhost:${PORT}`;
 
 /* The 23 functions till-date's markup calls from onclick="" attributes. They
    were implicit globals when this was an inline script; in a module they only
@@ -118,7 +127,8 @@ function startServer() {
   });
 }
 
-const server = await startServer();
+const server = REMOTE ? null : await startServer();
+if (REMOTE) console.log(`checking deployed site: ${BASE}`);
 const browser = await chromium.launch({ channel: 'msedge' });
 
 let failed = 0;
@@ -183,7 +193,7 @@ for (const page of PAGES) {
 }
 
 await browser.close();
-server.kill();
+if (server) server.kill();
 
 console.log('\n' + '='.repeat(74));
 for (const r of results) {

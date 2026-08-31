@@ -30,8 +30,19 @@ npm run dev
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the built output on :4173 |
 | `npm run smoke` | Load all six built pages in Edge and fail on any uncaught error |
+| `npm run smoke -- --url <base>` | Same checks against a deployed site |
 
-`npm run smoke` needs a `dist/`, so run `npm run build` first.
+`npm run smoke` needs a `dist/`, so run `npm run build` first. The `--url` form
+does not — point it at the deployed site to check a release:
+
+```bash
+npm run smoke -- --url https://playpare.github.io/ps_analytics/
+```
+
+A local build passing and the deployed site working are different claims: the
+base path, the asset URLs and the endpoints baked in from repository secrets
+are all decided by the CI build, and none of them are exercised until
+something loads the real thing.
 
 ## How it is put together
 
