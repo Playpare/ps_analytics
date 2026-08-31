@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MSS3D · ASO Report</title>
+
+
+
+  
+  
+  
+  
+  
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Quicksand:wght@500;600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap">
+  <!--THEME_BOOT-->
+</head>
+<body>
+  <div id="loader" class="loader"><div class="loader-in"><div class="spin"></div><b id="loaderMsg">Loading Data</b><div class="loader-pulse"></div></div></div>
+
+  <header class="top">
+    <div class="brand"><b>playspare</b> · ASO</div>
+    <nav class="tabs">
+      <button class="active" data-view="overview">Overview</button>
+      <button data-view="android">Android</button>
+      <button data-view="ios">IOS</button>
+      <span class="tabdrop"><button type="button" id="reviewMenuBtn">Reviews &#9662;</button><span class="tabdrop-menu">
+        <button type="button" data-review-platform="ios">IOS</button>
+        <button type="button" data-review-platform="android">Android</button>
+      </span></span>
+    </nav>
+    <div class="connect">
+      <span id="status" class="status">Not connected</span>
+      <button id="refreshBtn" class="btn primary">&#8635; Refresh</button>
+    </div>
+  </header>
+
+  <!-- ============================ OVERVIEW ============================ -->
+  <main id="overview" class="view active"><section class="slide">
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Android + IOS</div><div class="date" id="ovDateChip">—</div></div>
+    <div class="sb">
+      <div class="eyebrow">Both platforms · live from Google Sheets</div>
+      <div class="h1">ASO Report</div>
+      <div class="weekbar" id="ovRangeBar"></div>
+      <div id="ovWarnings"></div>
+
+      <div class="h2s">Android vs IOS <span class="tag">same window, same definitions</span></div>
+      <div class="kpi-row four" id="ovRow1"></div>
+
+      <div class="h2s">Where They Differ <span class="tag">shape of the feedback, not just the totals</span></div>
+      <div class="two">
+        <article class="card"><h2>Star Rating Mix<em>share of written reviews at each star</em></h2>
+          <div class="chartbox tall"><canvas id="ovDist"></canvas></div>
+          <div class="legend"><span style="color:var(--t3)">bars are the share of that platform's own written reviews, so the two are comparable even at different volumes</span></div>
+        </article>
+        <article class="card"><h2>Review Volume by Day<em>written reviews landing each day</em></h2>
+          <div class="chartbox tall"><canvas id="ovVolume"></canvas></div>
+          <div class="legend"><span><i style="background:#00c47a"></i>Android</span><span><i style="background:#4d9fff"></i>IOS</span></div>
+        </article>
+      </div>
+    </div>
+    <div class="sf"><span>ASO · Overview</span><span>Playspare · Game District</span></div>
+  </section></main>
+
+  <!-- ============================ ANDROID ============================ -->
+  <main id="android" class="view"><section class="slide">
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Android</div><div class="date" id="anDateChip">—</div></div>
+    <div class="sb">
+      <div class="eyebrow">Platform: Android · Google Play</div>
+      <div class="h1">Android Quality, Ratings &amp; Conversion</div>
+      <div class="weekbar" id="anRangeBar"></div>
+      <div id="anWarnings"></div>
+
+      <!-- ======================= STABILITY ======================= -->
+      <section class="sect s-coral">
+        <div class="secth"><h3>Stability</h3><span class="tag">crash &amp; ANR · latest day vs the day before</span></div>
+        <div class="kpi-row four" id="anRow2"></div>
+        <div class="two mt">
+          <article class="card"><h2>Crash Rate<em>daily, against the Play Store limit</em></h2>
+            <div class="chartbox tall"><canvas id="anCrash"></canvas></div>
+            <div class="legend"><span><i style="background:#ff4d6d"></i>Daily crash %</span><span><i style="background:#7589a8"></i>Limit 1.09%</span></div></article>
+          <article class="card"><h2>ANR Rate<em>daily, against the Play Store limit</em></h2>
+            <div class="chartbox tall"><canvas id="anAnr"></canvas></div>
+            <div class="legend"><span><i style="background:#ffb800"></i>Daily ANR %</span><span><i style="background:#7589a8"></i>Limit 0.47%</span></div></article>
+        </div>
+      </section>
+
+      <!-- ======================= RATINGS ======================= -->
+      <section class="sect s-teal">
+        <div class="secth"><h3>Ratings</h3><span class="tag">Google Play star ratings</span></div>
+        <div class="kpi-row five" id="anRow3"></div>
+        <article class="card mt"><h2>Daily Rating Performance<em>daily 1-star through 5-star ratings</em></h2>
+          <div class="chartbox tall"><canvas id="anRatingDaily"></canvas></div></article>
+      </section>
+
+      <!-- ======================= REVIEWS ======================= -->
+      <section class="sect s-blue">
+        <div class="secth"><h3>Reviews</h3><span class="tag">written reviews · translated to English</span></div>
+        <div class="kpi-row four" id="anRow4"></div>
+        <article class="card mt"><h2>Review Volume &amp; Rating · Daily<em>bars are volume, line is average rating</em></h2>
+          <div class="chartbox tall"><canvas id="anReviewVol"></canvas></div></article>
+        <div class="two mt">
+          <article class="card"><h2>What Reviews Are About<em>one theme per review · split by sentiment</em></h2>
+            <div class="chartbox xtall"><canvas id="anThemes"></canvas></div>
+            <div class="legend"><span><i style="background:#00c47a"></i>4★–5★</span><span><i style="background:#ffb800"></i>3★</span><span><i style="background:#ff4d6d"></i>1★–2★</span></div></article>
+          <article class="card"><h2>Theme Detail<em>Mixed = also raised something else</em></h2>
+            <div class="tablewrap" id="tblAnThemes"></div></article>
+        </div>
+      </section>
+
+      <!-- ======================= CONVERSION ======================= -->
+      <section class="sect s-pink">
+        <div class="secth"><h3>Store Conversion</h3><span class="tag">visitors → acquisitions</span></div>
+        <div class="kpi-row four" id="anRow5"></div>
+        <article class="card mt"><h2>Conversion Rate · Daily<em id="cvTitleA">all sources</em></h2>
+          <div class="chartbox tall"><canvas id="anCvr"></canvas></div></article>
+        <article class="card mt"><h2>Conversion by Traffic Source<em>bar length is conversion rate</em></h2>
+          <div class="chartbox tall"><canvas id="anCvrSource"></canvas></div></article>
+        <article class="card mt"><h2>Conversions · Daily by Source<em>conversion rate by traffic source</em></h2>
+          <div class="chartbox tall"><canvas id="anConvSourceDaily"></canvas></div></article>
+      </section>
+    </div>
+    <div class="sf"><span>ASO · Android</span><span>Playspare · Game District</span></div>
+  </section></main>
+
+  <!-- ============================ iOS ============================ -->
+  <main id="ios" class="view"><section class="slide">
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · IOS</div><div class="date" id="ioDateChip">—</div></div>
+    <div class="sb">
+      <div class="eyebrow">Platform: IOS · App Store</div>
+      <div class="h1">IOS Quality, Ratings &amp; Conversion</div>
+      <div class="weekbar" id="ioRangeBar"></div>
+      <div id="ioWarnings"></div>
+
+      <!-- ======================= STABILITY ======================= -->
+      <section class="sect s-coral">
+        <div class="secth"><h3>Stability</h3><span class="tag">crashes · latest day vs the day before</span></div>
+        <div class="kpi-row four" id="ioRow2"></div>
+        <div class="two mt">
+          <article class="card"><h2>Daily Crashes<em>against the period average</em></h2>
+            <div class="chartbox tall"><canvas id="ioCrash"></canvas></div>
+            <div class="legend"><span><i style="background:#ff4d6d"></i>Crashes</span><span><i style="background:#7589a8"></i>Period average</span></div></article>
+          <article class="card"><h2>7-Day Moving Average<em>smoothed, so one bad release day is not a trend</em></h2>
+            <div class="chartbox tall"><canvas id="ioMa"></canvas></div>
+            <div class="legend"><span><i style="background:#ffb800"></i>7-day average</span></div></article>
+        </div>
+      </section>
+
+      <!-- ======================= RATINGS ======================= -->
+      <section class="sect s-teal">
+        <div class="secth"><h3>Ratings</h3><span class="tag">App Store star ratings</span></div>
+        <div class="kpi-row five" id="ioRow3"></div>
+        <article class="card mt"><h2>Daily Rating Performance<em>daily 1-star through 5-star ratings</em></h2>
+          <div class="chartbox tall"><canvas id="ioRatingDaily"></canvas></div></article>
+      </section>
+
+      <!-- ======================= REVIEWS ======================= -->
+      <section class="sect s-blue">
+        <div class="secth"><h3>Reviews</h3><span class="tag">written reviews · translated to English</span></div>
+        <div class="kpi-row four" id="ioRow4"></div>
+        <article class="card mt"><h2>Review Volume &amp; Rating · Daily<em>bars are volume, line is average rating</em></h2>
+          <div class="chartbox tall"><canvas id="ioReviewVol"></canvas></div></article>
+        <div class="two mt">
+          <article class="card"><h2>What Reviews Are About<em>one theme per review · split by sentiment</em></h2>
+            <div class="chartbox xtall"><canvas id="ioThemes"></canvas></div>
+            <div class="legend"><span><i style="background:#00c47a"></i>4★–5★</span><span><i style="background:#ffb800"></i>3★</span><span><i style="background:#ff4d6d"></i>1★–2★</span></div></article>
+          <article class="card"><h2>Theme Detail<em>Mixed = also raised something else</em></h2>
+            <div class="tablewrap" id="tblIoThemes"></div></article>
+        </div>
+      </section>
+
+      <!-- ======================= CONVERSION ======================= -->
+      <section class="sect s-pink">
+        <div class="secth"><h3>Store Conversion</h3><span class="tag">impressions → converters</span></div>
+        <div class="kpi-row four" id="ioRow5"></div>
+        <article class="card mt"><h2>Conversion Rate · Daily<em id="ioTitleA">all sources</em></h2>
+          <div class="chartbox tall"><canvas id="ioCvr"></canvas></div></article>
+        <article class="card mt"><h2>Conversion by Traffic Source<em>bar length is conversion rate</em></h2>
+          <div class="chartbox tall"><canvas id="ioCvrSource"></canvas></div></article>
+        <article class="card mt"><h2>Conversions · Daily by Source<em>conversion rate by traffic source</em></h2>
+          <div class="chartbox tall"><canvas id="ioConvSourceDaily"></canvas></div></article>
+      </section>
+    </div>
+    <div class="sf"><span>ASO · IOS</span><span>Playspare · Game District</span></div>
+  </section></main>
+
+  <!-- ============================ REVIEWS ============================ -->
+  <main id="reviews" class="view"><section class="slide">
+    <div class="sh"><div class="brand"><b>playspare</b> · Supermarket · Reviews</div><div class="date" id="rvDateChip">—</div></div>
+    <div class="sb">
+      <div class="eyebrow" id="rvEyebrow">Platform: Android · Google Play</div>
+      <div class="h1" id="rvTitle">Reviews</div>
+      <div class="weekbar" id="rvRangeBar"></div>
+      <div id="rvNote"></div>
+
+      <div class="filterbar">
+        <label class="fgroup"><span>From</span><select id="fFrom"></select></label>
+        <label class="fgroup"><span>To</span><select id="fTo"></select></label>
+        <label class="fgroup"><span>Star Rating</span><select id="fStar"></select></label>
+        <label class="fgroup"><span>Theme</span><select id="fTheme"></select></label>
+        <label class="fgroup"><span>Search text</span><input id="fText" type="search" placeholder="Search reviews…"></label>
+        <button class="btn" id="fReset">Reset</button>
+        <span class="fcount" id="fCount"></span>
+      </div>
+
+      <article class="card"><h2>All Reviews<em>one row per review · verbatim text · click a column heading to sort</em></h2>
+        <div class="tablewrap" id="tblReviews"></div>
+        <div class="morebar" id="rvMore"></div></article>
+    </div>
+    <div class="sf"><span>ASO · Reviews</span><span>Playspare · Game District</span></div>
+  </section></main>
+
+
+
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSS3D · Monetization Report</title>
+
+  
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Quicksand:wght@500;600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap">
+  <!--THEME_BOOT-->
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><b>playspare</b> · MSS3D · Monetization</div>
+  <nav class="tabs">
+    <button class="active" onclick="showSection('overview',this)">Overview</button>
+    <button onclick="showSection('iap',this)">IAP Performance</button>
+    <button onclick="showSection('ads',this)">Ad Metrics</button>
+  </nav>
+  <div class="connect">
+    <span id="dataStatus" class="status">Loading...</span>
+    <button class="btn" id="refreshBtn" onclick="refreshData()">&#8635; Refresh</button>
+  </div>
+</header>
+
+<div class="subtop" id="global-filter-controls">
+  <span class="ctrl-label">Change Logs</span>
+  <div class="pill-group" id="global-changelog-pills">
+    <button class="pill active" onclick="globalToggle('changelog',true,this)">Yes</button>
+    <button class="pill" onclick="globalToggle('changelog',false,this)">No</button>
+  </div>
+  <span class="ctrl-label" style="margin-left:14px">Trend Lines</span>
+  <div class="pill-group" id="global-trendline-pills">
+    <button class="pill active" onclick="globalToggle('trendline',true,this)">Yes</button>
+    <button class="pill" onclick="globalToggle('trendline',false,this)">No</button>
+  </div>
+  <div class="date-controls" data-scope="ov"></div>
+  <div class="date-controls" data-scope="iap"></div>
+  <div class="date-controls" data-scope="ads"></div>
+</div>
+
+<!-- OVERVIEW -->
+<main id="overview" class="section active"><section class="slide">
+  <div class="sh">
+    <div class="brand"><b>playspare</b> · MSS3D · Overview</div>
+  </div>
+  <div class="sb">
+    <div class="eyebrow">Combined Monetization Performance</div>
+    <div class="h1">Revenue, ARPDAU &amp; Retention</div>
+
+    <div class="controls">
+      <span class="ctrl-label">Platform</span>
+      <div class="pill-group" id="ov-plat-pills">
+        <button class="pill active" onclick="ovFilter('plat','ios',this)">iOS</button>
+        <button class="pill" onclick="ovFilter('plat','android',this)">Android</button>
+        <button class="pill" onclick="ovFilter('plat','compare',this)">Compare</button>
+      </div>
+    </div>
+    <div class="legacy-ctl">
+      <div class="pill-group" id="ov-period-pills">
+        <button class="pill" onclick="ovFilter('per','all',this)">All</button>
+        <button class="pill" onclick="ovFilter('per','2024',this)">2024</button>
+        <button class="pill" onclick="ovFilter('per','2025',this)">2025</button>
+        <button class="pill" onclick="ovFilter('per','2026',this)">2026</button>
+        <button class="pill active" onclick="ovFilter('per','30d',this)">Last 30d</button>
+        <button class="pill" onclick="ovFilter('per','90d',this)">Last 90d</button>
+      </div>
+      <input type="date" id="ov-range-start"><input type="date" id="ov-range-end">
+      <button onclick="ovRangeApply()">Apply</button><button onclick="ovRangeClear()">Clear</button>
+    </div>
+
+    <div class="kpi-row" id="ov-kpis"></div>
+
+    <div class="stack">
+      <article class="card">
+        <h2>Blended ARPDAU (USD)</h2>
+        <div class="chartbox tall"><canvas id="c-ov-arpdau"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>LTV Trend (USD)</h2>
+        <div class="card-sub">Predicted lifetime value per install day &mdash; own Platform &amp; Country filters; respects the date filter above</div>
+        <div class="controls">
+          <span class="ctrl-label">Platform</span>
+          <div class="pill-group" id="ltv-plat-pills">
+            <button class="pill active" onclick="ltvFilter('plat','ios',this)">iOS</button>
+            <button class="pill" onclick="ltvFilter('plat','android',this)">Android</button>
+            <button class="pill" onclick="ltvFilter('plat','compare',this)">Compare</button>
+          </div>
+          <span class="ctrl-label" style="margin-left:12px">Country</span>
+          <div class="pill-group" id="ltv-country-pills">
+            <button class="pill active" onclick="ltvFilter('country','all',this)">All</button>
+            <button class="pill" onclick="ltvFilter('country','us',this)">US</button>
+          </div>
+          <span class="ctrl-label" style="margin-left:12px">Horizon</span>
+          <div class="pill-group" id="ltv-metric-pills">
+            <button class="pill active" onclick="ltvFilter('metric','d0',this)">D0</button>
+            <button class="pill" onclick="ltvFilter('metric','d7',this)">D7</button>
+            <button class="pill" onclick="ltvFilter('metric','d28',this)">D28</button>
+            <button class="pill" onclick="ltvFilter('metric','all',this)">All</button>
+          </div>
+        </div>
+        <div class="chartbox tall"><canvas id="c-ov-ltv"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Stickiness (DAU / MAU)</h2>
+        <div class="card-sub">Daily-to-monthly active user ratio &mdash; own Platform &amp; Metric filters; respects the date filter above</div>
+        <div class="controls">
+          <span class="ctrl-label">Platform</span>
+          <div class="pill-group" id="stick-plat-pills">
+            <button class="pill active" onclick="stickFilter('plat','ios',this)">iOS</button>
+            <button class="pill" onclick="stickFilter('plat','android',this)">Android</button>
+            <button class="pill" onclick="stickFilter('plat','us_ios',this)">US iOS</button>
+            <button class="pill" onclick="stickFilter('plat','us_android',this)">US Android</button>
+          </div>
+          <span class="ctrl-label" style="margin-left:12px">Metric</span>
+          <div class="pill-group" id="stick-metric-pills">
+            <button class="pill active" onclick="stickFilter('metric','stickiness',this)">Stickiness</button>
+            <button class="pill" onclick="stickFilter('metric','dau',this)">DAU</button>
+            <button class="pill" onclick="stickFilter('metric','mau',this)">MAU</button>
+          </div>
+        </div>
+        <div class="chartbox tall"><canvas id="c-ov-stick"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Whale Revenue Share per Week (%)</h2>
+        <div class="card-sub">Share of weekly IAP revenue from whales &mdash; own Platform filter (weekly data)</div>
+        <div class="controls">
+          <span class="ctrl-label">Platform</span>
+          <div class="pill-group" id="whale-plat-pills">
+            <button class="pill active" onclick="whaleFilter('ios',this)">iOS</button>
+            <button class="pill" onclick="whaleFilter('android',this)">Android</button>
+          </div>
+        </div>
+        <div class="chartbox tall"><canvas id="c-ov-whale"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Payer Retention by Cohort Week (%)</h2>
+        <div class="card-sub">Weekly cohort retention at D1 / D3 / D7 / D30 &mdash; own Platform &amp; Metric filters</div>
+        <div class="controls">
+          <span class="ctrl-label">Platform</span>
+          <div class="pill-group" id="ret-plat-pills">
+            <button class="pill active" onclick="retFilter('plat','ios',this)">iOS</button>
+            <button class="pill" onclick="retFilter('plat','android',this)">Android</button>
+            <button class="pill" onclick="retFilter('plat','us_ios',this)">US iOS</button>
+            <button class="pill" onclick="retFilter('plat','us_android',this)">US Android</button>
+          </div>
+          <span class="ctrl-label" style="margin-left:12px">Metric</span>
+          <div class="pill-group" id="ret-metric-pills">
+            <button class="pill active" onclick="retFilter('metric','all',this)">All</button>
+            <button class="pill" onclick="retFilter('metric','d1',this)">D1</button>
+            <button class="pill" onclick="retFilter('metric','d3',this)">D3</button>
+            <button class="pill" onclick="retFilter('metric','d7',this)">D7</button>
+            <button class="pill" onclick="retFilter('metric','d30',this)">D30</button>
+            <button class="pill" onclick="retFilter('metric','d7d30',this)">D7&rarr;D30</button>
+          </div>
+        </div>
+        <div class="chartbox tall"><canvas id="c-ov-ret"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>First-Time Payer Conversion by Day (%)</h2>
+        <div class="controls">
+          <span class="ctrl-label">Platform</span>
+          <div class="pill-group" id="ftp-plat-pills">
+            <button class="pill active" onclick="ftpFilter('ios',this)">iOS</button>
+            <button class="pill" onclick="ftpFilter('android',this)">Android</button>
+            <button class="pill" onclick="ftpFilter('us_ios',this)">US iOS</button>
+            <button class="pill" onclick="ftpFilter('us_android',this)">US Android</button>
+          </div>
+        </div>
+        <div class="chartbox tall"><canvas id="c-ov-ftp"></canvas></div>
+      </article>
+    </div>
+  </div>
+  <div class="sf"><span>Monetization &middot; Overview</span><span>Playspare &middot; Game District</span></div>
+</section></main>
+
+<!-- IAP -->
+<main id="iap" class="section"><section class="slide">
+  <div class="sh">
+    <div class="brand"><b>playspare</b> · MSS3D · IAP</div>
+  </div>
+  <div class="sb">
+    <div class="eyebrow">In-App Purchases &middot; iOS vs Android</div>
+    <div class="h1">ARPPU, Payers &amp; Revenue</div>
+
+    <div class="controls">
+      <span class="ctrl-label">Platform</span>
+      <div class="pill-group" id="iap-plat-pills">
+        <button class="pill" onclick="iapFilter('both',this)">Both</button>
+        <button class="pill active" onclick="iapFilter('ios',this)">iOS</button>
+        <button class="pill" onclick="iapFilter('android',this)">Android</button>
+        <button class="pill" onclick="iapFilter('us_ios',this)">US iOS</button>
+        <button class="pill" onclick="iapFilter('us_android',this)">US Android</button>
+      </div>
+    </div>
+    <div class="legacy-ctl">
+      <div class="pill-group" id="iap-period-pills">
+        <button class="pill" onclick="iapPeriod('all',this)">All</button>
+        <button class="pill" onclick="iapPeriod('2024',this)">2024</button>
+        <button class="pill" onclick="iapPeriod('2025',this)">2025</button>
+        <button class="pill" onclick="iapPeriod('2026',this)">2026</button>
+        <button class="pill active" onclick="iapPeriod('30d',this)">Last 30d</button>
+        <button class="pill" onclick="iapPeriod('90d',this)">Last 90d</button>
+      </div>
+      <input type="date" id="iap-range-start"><input type="date" id="iap-range-end">
+      <button onclick="iapRangeApply()">Apply</button><button onclick="iapRangeClear()">Clear</button>
+    </div>
+
+    <div class="kpi-row" id="iap-kpis"></div>
+
+    <div class="stack">
+      <article class="card">
+        <h2>Daily Revenue (USD)</h2>
+        <div class="card-sub">iOS revenue &middot; Android estimated revenue &mdash; daily</div>
+        <div class="chartbox tall"><canvas id="c-proceeds"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Daily Paying Users</h2>
+        <div class="card-sub">iOS paying users &middot; Android paying users (buyers) &mdash; daily</div>
+        <div class="chartbox tall"><canvas id="c-purchases"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Purchase Rate (Conversion Rate)</h2>
+        <div class="card-sub">iOS &middot; Android &middot; US iOS &middot; US Android &mdash; own Platform filter (US uses US-specific active users &amp; payers, by platform)</div>
+        <div class="controls">
+          <span class="ctrl-label">Platform</span>
+          <div class="pill-group" id="purrate-plat-pills">
+            <button class="pill active" onclick="purRateFilter('both',this)">Both</button>
+            <button class="pill" onclick="purRateFilter('ios',this)">iOS</button>
+            <button class="pill" onclick="purRateFilter('android',this)">Android</button>
+            <button class="pill" onclick="purRateFilter('us_ios',this)">US iOS</button>
+            <button class="pill" onclick="purRateFilter('us_android',this)">US Android</button>
+          </div>
+        </div>
+        <div class="chartbox tall"><canvas id="c-purrate"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Daily ARPPU (USD)</h2>
+        <div class="card-sub">Average revenue per paying user &mdash; daily</div>
+        <div class="chartbox tall"><canvas id="c-arppu"></canvas></div>
+      </article>
+    </div>
+  </div>
+  <div class="sf"><span>Monetization &middot; IAP Performance</span><span>Playspare &middot; Game District</span></div>
+</section></main>
+
+<!-- ADS -->
+<main id="ads" class="section"><section class="slide">
+  <div class="sh">
+    <div class="brand"><b>playspare</b> · MSS3D · Ads</div>
+  </div>
+  <div class="sb">
+    <div class="eyebrow">Ad Monetization &middot; All Networks</div>
+    <div class="h1">Viewer Rate, eCPM &amp; Ad Revenue</div>
+
+    <div class="controls">
+      <span class="ctrl-label">Platform</span>
+      <div class="pill-group" id="ads-plat-pills">
+        <button class="pill active" onclick="adsFilter('plat','ios',this)">iOS</button>
+        <button class="pill" onclick="adsFilter('plat','android',this)">Android</button>
+        <button class="pill" onclick="adsFilter('plat','us_ios',this)">US iOS</button>
+        <button class="pill" onclick="adsFilter('plat','us_android',this)">US Android</button>
+      </div>
+      <span class="ctrl-label" style="margin-left:12px">Ad Type</span>
+      <div class="pill-group" id="ads-type-pills">
+        <button class="pill active" onclick="adsFilter('type','all',this)">All</button>
+        <button class="pill" onclick="adsFilter('type','Rewarded',this)">Rewarded</button>
+        <button class="pill" onclick="adsFilter('type','Interstitial',this)">Interstitial</button>
+        <button class="pill" onclick="adsFilter('type','Banner',this)">Banner</button>
+        <button class="pill" onclick="adsFilter('type','App Open',this)">App Open</button>
+      </div>
+    </div>
+    <div class="legacy-ctl">
+      <div class="pill-group" id="ads-period-pills">
+        <button class="pill" onclick="adsFilter('per','all',this)">All</button>
+        <button class="pill" onclick="adsFilter('per','2024',this)">2024</button>
+        <button class="pill" onclick="adsFilter('per','2025',this)">2025</button>
+        <button class="pill" onclick="adsFilter('per','2026',this)">2026</button>
+        <button class="pill active" onclick="adsFilter('per','30d',this)">Last 30d</button>
+        <button class="pill" onclick="adsFilter('per','90d',this)">Last 90d</button>
+      </div>
+      <input type="date" id="ads-range-start"><input type="date" id="ads-range-end">
+      <button onclick="adsRangeApply()">Apply</button><button onclick="adsRangeClear()">Clear</button>
+    </div>
+
+    <div class="kpi-row" id="ads-kpis"></div>
+
+    <div class="subhead">
+      <h2>Revenue Share by Ad Type</h2>
+      <p>Each type's share of total ad revenue (type revenue &divide; ALL) &mdash; respects Platform &amp; date filter; ignores the Ad Type filter</p>
+    </div>
+    <div class="kpi-row" id="ads-revshare-kpis"></div>
+
+    <div class="stack">
+      <article class="card">
+        <h2>ARPDAU by Ad Type (USD)</h2>
+        <div class="card-sub">Per-ad-type ad revenue &divide; DAU &mdash; respects Platform, Ad Type &amp; date filter (Ad Type = All shows all four types for comparison)</div>
+        <div class="chartbox tall"><canvas id="c-arpdau-type"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Ad Viewer Rate (%)</h2>
+        <div class="chartbox tall"><canvas id="c-avr"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>eCPM (USD)</h2>
+        <div class="card-sub">Effective cost per 1,000 impressions &mdash; daily</div>
+        <div class="chartbox tall"><canvas id="c-ecpm"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Imp per DAU</h2>
+        <div class="card-sub">Average impressions per daily active user &mdash; daily</div>
+        <div class="chartbox tall"><canvas id="c-impdau"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>Est. Daily Revenue (USD)</h2>
+        <div class="card-sub">Total estimated ad revenue &mdash; daily</div>
+        <div class="chartbox tall"><canvas id="c-adrev"></canvas></div>
+      </article>
+      <article class="card">
+        <h2>DAU</h2>
+        <div class="card-sub">Daily active users &mdash; daily</div>
+        <div class="chartbox tall"><canvas id="c-dau"></canvas></div>
+      </article>
+    </div>
+
+    <div class="subhead">
+      <h2>Cohort Impressions / User</h2>
+      <p>D0 &middot; D7 &middot; D27 per install cohort &mdash; own Platform &amp; Ad Type filters below; uses the date filter from Ad Metrics above</p>
+    </div>
+    <div class="controls">
+      <span class="ctrl-label">Platform</span>
+      <div class="pill-group" id="coh-plat-pills">
+        <button class="pill active" onclick="cohFilter('plat','android',this)">Android</button>
+        <button class="pill" onclick="cohFilter('plat','ios',this)">iOS</button>
+        <button class="pill" onclick="cohFilter('plat','us_android',this)">US Android</button>
+        <button class="pill" onclick="cohFilter('plat','us_ios',this)">US iOS</button>
+      </div>
+      <span class="ctrl-label" style="margin-left:12px">Ad Type</span>
+      <div class="pill-group" id="coh-type-pills">
+        <button class="pill active" onclick="cohFilter('type','Rewarded',this)">Rewarded</button>
+        <button class="pill" onclick="cohFilter('type','Interstitial',this)">Interstitial</button>
+        <button class="pill" onclick="cohFilter('type','Banner',this)">Banner</button>
+        <button class="pill" onclick="cohFilter('type','App Open',this)">App Open</button>
+      </div>
+    </div>
+    <article class="card">
+      <h2>Daily D0, D7 &amp; D27</h2>
+      <div class="card-sub">Per install-day &mdash; each of D0/D7/D27 is shown up to its own maturity point (D0 immediately, D7 once 7+ days old, D27 once 27+ days old)</div>
+      <div class="chartbox tall"><canvas id="c-coh-trend"></canvas></div>
+    </article>
+
+    <div class="subhead">
+      <h2>Network Revenue Share</h2>
+      <p>Est. ad revenue share by mediation network &mdash; own Platform, Network &amp; date filters (independent of the Ad Metrics filters above)</p>
+      <div class="date-controls" data-scope="netrev" style="margin-left:auto"></div>
+    </div>
+    <div class="controls">
+      <span class="ctrl-label">Platform</span>
+      <div class="pill-group" id="netrev-plat-pills">
+        <button class="pill active" onclick="netRevFilter('plat','android',this)">Android</button>
+        <button class="pill" onclick="netRevFilter('plat','ios',this)">iOS</button>
+      </div>
+      <span class="ctrl-label" style="margin-left:12px">Network</span>
+      <select id="netrev-network-select" class="chan-filter" onchange="netRevFilter('network',this.value,this)">
+        <option value="all" selected>All Networks</option>
+      </select>
+    </div>
+    <div class="legacy-ctl">
+      <div class="pill-group" id="netrev-period-pills">
+        <button class="pill" onclick="netRevFilter('per','all',this)">All</button>
+        <button class="pill" onclick="netRevFilter('per','2024',this)">2024</button>
+        <button class="pill" onclick="netRevFilter('per','2025',this)">2025</button>
+        <button class="pill" onclick="netRevFilter('per','2026',this)">2026</button>
+        <button class="pill active" onclick="netRevFilter('per','30d',this)">Last 30d</button>
+        <button class="pill" onclick="netRevFilter('per','90d',this)">Last 90d</button>
+      </div>
+      <input type="date" id="netrev-range-start"><input type="date" id="netrev-range-end">
+      <button onclick="netRevRangeApply()">Apply</button><button onclick="netRevRangeClear()">Clear</button>
+    </div>
+    <div class="kpi-row" id="netrev-kpis"></div>
+    <article class="card">
+      <h2>Revenue Share by Network</h2>
+      <div class="card-sub">% of est. ad revenue per network, selected platform &amp; period &mdash; every network with revenue &gt; 0 in range</div>
+      <div class="chartbox" style="height:900px"><canvas id="c-netrev-share"></canvas></div>
+    </article>
+  </div>
+  <div class="sf"><span>Monetization &middot; Ad Metrics</span><span>Playspare &middot; Game District</span></div>
+</section></main>
+
+<div class="loader" id="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading Data</b><div class="pulse"></div></div></div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

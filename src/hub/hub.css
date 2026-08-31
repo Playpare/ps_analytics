@@ -1,0 +1,118 @@
+/* --- from index.html · block 184b66abd0 --- */
+:root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: #000; color: #edf2ff; font-family: 'Segoe UI', Arial, sans-serif; }
+    .hub { height: 100%; display: grid; grid-template-rows: 58px minmax(0, 1fr); }
+    .hub-nav {
+      position: relative; z-index: 10; display: flex; align-items: center; gap: 8px;
+      padding: 9px 18px; background: rgba(9, 10, 13, .97);
+      border-bottom: 1px solid rgba(255, 255, 255, .1);
+      box-shadow: 0 5px 22px rgba(0, 0, 0, .4);
+    }
+    .brand { margin-right: auto; font: 800 19px 'Trebuchet MS', sans-serif; letter-spacing: .01em; }
+    .brand span { color: #aebdd2; font-size: 15px; font-weight: 700; }
+    .report-nav { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
+    .report-nav button { height: 38px; padding: 0 21px;
+      font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif; font-size:13px; font-weight:700;
+      -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+    .hub-nav button {
+      border: 1px solid rgba(255, 255, 255, .13); border-radius: 999px;
+      padding: 9px 18px; background: #0b0c0f; color: #d7deea;
+      font: 700 13px/1 'Trebuchet MS', sans-serif; cursor: pointer;
+    }
+    .hub-nav button:hover { color: #edf2ff; border-color: rgba(255, 255, 255, .25); }
+    .hub-nav button:focus-visible { outline: 2px solid #00e5c3; outline-offset: 2px; }
+    .hub-nav button.active {
+      color: #031018; border-color: transparent;
+      background: linear-gradient(135deg, #00e5c3, #4d9fff);
+    }
+    .hub-nav button#themeBtn { color: #071018; border-color: #ffc43d !important; background: #ffc43d;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+    .hub-nav button#themeBtn:hover { color: #071018; border-color: #ffda72 !important; background: #ffcf58; }
+    #themeBtn .theme-moon { color: #071018; font-family:'Segoe UI Symbol',sans-serif; font-weight:900; }
+    .hub-nav button[disabled] { opacity: .4; cursor: not-allowed; }
+    .hub-nav button[disabled]:hover { color: #a6b8d4; border-color: rgba(255, 255, 255, .13); }
+    .hub-nav button#authOut { margin-left: 14px; font-weight: 700; color: #ff8ca1;
+      border-color: #ff4d6d !important; background: rgba(255,77,109,.14);
+      box-shadow: inset 0 0 0 1px rgba(255,77,109,.48) !important; }
+    .hub-nav button#authOut:hover { color: #ffd7df; border-color: #ff8ca1 !important;
+      box-shadow: inset 0 0 0 1px rgba(255,140,161,.68), 0 7px 16px rgba(255,77,109,.18) !important; }
+    .reports { position: relative; min-height: 0; }
+    .report-frame {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      border: 0; background: #000;
+    }
+    .report-frame[hidden] { display: none; }
+    /* Browsers paint an iframe without src as a white about:blank document.
+       Keep it out of the paint tree until the hub can start the real report. */
+    .report-frame:not([src]) { visibility: hidden; }
+
+    /* A report that has not been given a src yet shows this instead of black. */
+    #framePlaceholder {
+      position: absolute; inset: 0; z-index: 2; display: none; place-items: center;
+      background: #000;
+      color: #7589a8; font: 500 12px system-ui, sans-serif; letter-spacing: .1em;
+      text-transform: uppercase; pointer-events: none;
+    }
+    #framePlaceholder.show { display: grid; }
+
+    /* Non-blocking note in the nav — used when one backend is unreachable. */
+    #hubNote {
+      display: none; align-items: center; gap: 9px; margin-left: 6px;
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid rgba(255, 184, 0, .35); background: rgba(255, 184, 0, .08);
+      color: #ffb800; font: 600 11px/1.3 system-ui, sans-serif; max-width: 46vw;
+    }
+    #hubNote.show { display: flex; }
+    #hubNote span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #hubNote button {
+      padding: 4px 10px; font-size: 11px; font-weight: 600;
+      border-color: rgba(255, 184, 0, .35); background: transparent; color: #ffb800;
+    }
+
+    @media (max-width: 620px) {
+      .hub { grid-template-rows: 54px minmax(0, 1fr); }
+      .hub-nav { padding: 8px; }
+      .brand span { display: none; }
+      .hub-nav button { padding: 8px 11px; font-size: 12px; }
+      #hubNote { display: none !important; }
+    }
+
+    /* ---- light theme ---- */
+    body.lt { background: #eef1f7; color: #0d1b2e; }
+    body.lt .hub-nav { background: rgba(255, 255, 255, .95);
+      border-bottom-color: rgba(15, 30, 60, .1); box-shadow: 0 5px 22px rgba(30, 50, 90, .08); }
+    body.lt .brand span { color: #8394ad; }
+    body.lt .hub-nav button { background: #fff; color: #56657f; border-color: rgba(15, 30, 60, .14); }
+    body.lt .hub-nav button:hover { color: #0d1b2e; border-color: rgba(15, 30, 60, .3); }
+    body.lt .hub-nav button.active { color: #fff;
+      background: linear-gradient(135deg, #00b39a, #2f7fe0); border-color: transparent; }
+    /* Shared, restrained button motion across the dashboard shell. */
+    button { transition: transform .2s cubic-bezier(.2,.8,.2,1), filter .18s ease, border-color .18s ease, box-shadow .18s ease, background-color .18s ease, color .18s ease; }
+    button:not(:disabled):hover { transform: translateY(-3px) scale(1.035); filter: brightness(1.12); border-color: #00e5c3 !important; box-shadow: inset 0 0 0 1px rgba(0,229,195,.82), 0 7px 16px rgba(0,160,138,.2); }
+    button:not(:disabled):active { transform: translateY(1px) scale(.94); transition-duration: .07s; }
+    @media (prefers-reduced-motion: reduce) { button { transition: none !important; } button:hover,button:active { transform: none !important; } }
+    body.lt .report-frame { background: #eef1f7; }
+    body.lt #framePlaceholder { background: #eef1f7; color: #8394ad; }
+    html[data-theme=light] { background: #eef1f7; }
+
+    /* ---- login gate ---- */
+    #authGate { position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center; background: #000; }
+    #authGate.done { display: none; }
+    #authBox { width: 340px; background: #0b0c0f; border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 14px; padding: 28px 26px; }
+    #authBox h1 { font: 750 17px system-ui, sans-serif; margin: 0 0 4px; }
+    #authBox p.sub { font-size: 11px; color: #7589a8; margin: 0 0 18px;
+      letter-spacing: .12em; text-transform: uppercase; }
+    #authBox label { display: block; font-size: 11px; color: #7589a8; margin: 12px 0 5px;
+      letter-spacing: .08em; text-transform: uppercase; }
+    #authBox input { width: 100%; background: #070809; border: 1px solid rgba(255, 255, 255, .14);
+      color: #edf2ff; border-radius: 8px; padding: 9px 11px; font-size: 13px; outline: 0; }
+    #authBox input:focus { border-color: #00e5c3; }
+    #authBox button { width: 100%; margin-top: 18px; border: 0; border-radius: 999px; padding: 11px;
+      background: linear-gradient(135deg, #00e5c3, #4d9fff); color: #031018;
+      font: 700 13px system-ui, sans-serif; cursor: pointer; }
+    #authBox button:disabled { opacity: .5; cursor: not-allowed; }
+    #authMsg { margin-top: 12px; font-size: 11px; line-height: 1.6; color: #ff4d6d;
+      min-height: 15px; white-space: pre-line; }

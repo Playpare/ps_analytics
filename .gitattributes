@@ -1,0 +1,13 @@
+# The build runs on Linux in CI and on Windows locally. Normalising to LF in
+# the repository keeps those two from producing diffs that are nothing but
+# line endings.
+* text=auto eol=lf
+
+# Generated, and large. Collapsed in diffs and excluded from language stats so
+# the repo reads as what it is rather than as one enormous JSON file.
+package-lock.json linguist-generated=true -diff
+
+# The extracted report bodies are moved code, not authored code. Marking them
+# keeps GitHub's language breakdown honest about what is actually maintained
+# here by hand.
+reports/*/*.legacy.js linguist-vendored=true
