@@ -1,0 +1,163 @@
+/* --- from ua_report.html · block 0da64b4be9 --- */
+:root{--bg:#000;--card:#0b0c0f;--card2:#070809;--border:rgba(255,255,255,.08);--borderB:rgba(255,255,255,.14);--t1:#edf2ff;--t2:#a6b8d4;--t3:#7589a8;--teal:#00e5c3;--blue:#4d9fff;--pink:#ec0a9b;--green:#00c47a;--amber:#ffb800;--coral:#ff4d6d;--grad:linear-gradient(135deg,#00e5c3,#4d9fff);--r:14px;--sh:0 8px 40px rgba(0,0,0,.6)}
+    *{box-sizing:border-box;margin:0;padding:0}html{background:#000;overflow-x:hidden}body{min-width:980px;overflow-x:hidden;background:#000;color:var(--t1);font-family:Poppins,system-ui,sans-serif;padding-bottom:35px}.mono{font-family:'DM Mono',monospace}.top{position:sticky;top:0;z-index:50;height:58px;padding:0 24px;display:flex;align-items:center;gap:10px;background:rgba(9,10,13,.97);border-bottom:1px solid var(--borderB)}.brand{font:700 16px Quicksand,sans-serif;margin-right:10px}.brand b{background:var(--grad);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}.tabs{display:flex;gap:5px}.tabs button,.btn{border:1px solid var(--borderB);border-radius:20px;background:var(--card);color:var(--t2);padding:8px 13px;font:600 11px 'DM Mono';cursor:pointer}.tabs button.active,.btn.primary{color:#031018;border-color:transparent;background:var(--grad)}.connect{margin-left:auto;display:flex;gap:6px}.connect input{width:225px;background:var(--card2);color:var(--t1);border:1px solid var(--borderB);border-radius:8px;padding:7px 9px;font:10px 'DM Mono'}.connect input.key{width:125px}.status{font:500 10px 'DM Mono',monospace;color:var(--t3);max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.view{display:none}.view.active{display:block}.slide{width:min(1520px,100%);min-height:855px;margin:34px auto 0;background:var(--bg);box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column}.sh{height:58px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;background:rgba(9,10,13,.9);border-bottom:1px solid var(--border)}.sh .date{color:#020d1a;padding:7px 16px;border-radius:20px;background:var(--grad);font:600 11px 'DM Mono'}.sb{flex:1;padding:18px 40px 22px}.eyebrow{color:var(--t3);font:500 11px 'DM Mono';letter-spacing:.16em;text-transform:uppercase}.h1{font:800 27px Syne;margin:4px 0 15px}.grid-main{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(240px,.6fr);gap:14px}.stack{display:grid;gap:12px}.card,.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh)}.card{padding:15px 17px}.card h2{font:700 15px Syne;margin-bottom:9px}.kpi{padding:15px 18px;border-left:3px solid var(--teal);display:flex;flex-direction:column;justify-content:center}.kpi:nth-child(even){border-left-color:var(--blue)}.kpi .l{color:var(--t3);font:500 9.5px 'DM Mono';text-transform:uppercase}.kpi .v{font:500 24px 'DM Mono';margin:5px 0}.kpi .d{color:var(--green);font:500 10px 'DM Mono'}.chartbox{height:250px;position:relative}.chartbox.tall{height:300px}.mt{margin-top:14px}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.piegrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}/* Slides end where their content ends - the old fixed floor left dead black
+   under the last card. The Overview is the exception: it fills the window so
+   its cards cover the page rather than stopping halfway down. */
+    .slide{min-height:0}
+    #overview .slide{min-height:calc(100vh - 58px)}
+    /* The legend is a sibling of .piebox, never a child: Chart.js sizes the
+       canvas from its parent, so a legend inside that parent whose height
+       changes with the canvas creates a resize loop - the chart collapses andSS
+       the page flickers as it redraws forever. */
+    .piebox{height:245px;position:relative} 
+    /* align-items:flex-start keeps .piebox at its own fixed height, so the
+       legend's height can never feed back into the canvas size. */
+    .pie-row{display:flex;gap:18px;align-items:flex-start}
+    .pie-row>.piebox{flex:1 1 58%;min-width:0}
+    .pie-row>.pie-legend{flex:1 1 42%;min-width:0}
+    .pie-legend{display:grid;grid-template-columns:1fr;gap:3px 20px;font:400 12.5px Poppins,system-ui,sans-serif;padding:8px 2px 0;align-content:start;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+    .pie-legend.two-col{grid-template-columns:1fr 1fr}
+    .pl-row{display:grid;grid-template-columns:auto 10px minmax(0,1fr) auto;align-items:center;gap:7px;min-width:0}
+    .pl-n{color:#7589a8;text-align:right;min-width:15px}
+    .pl-sw{width:10px;height:10px;border-radius:3px}
+    .pl-lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)}
+    .pl-pc{text-align:right;font-variant-numeric:tabular-nums;color:var(--t1)}
+    body.lt .pl-n{color:#5b6b85}.sf{height:32px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);color:var(--t3);font:9.5px 'DM Mono'}.tablewrap{overflow:auto;max-height:510px;border:1px solid var(--border);border-radius:8px}table{width:100%;border-collapse:collapse;font-size:10px}th{position:sticky;top:0;z-index:2;background:#11151b;color:var(--t2);text-align:left;padding:8px 7px;font:500 9px 'DM Mono';white-space:nowrap;border-bottom:1px solid var(--borderB)}td{padding:7px;border-bottom:1px solid var(--border);white-space:nowrap}td.num{text-align:right;font-family:'DM Mono'}tbody tr:hover td{background:rgba(255,255,255,.035)}.heat-blue{background:rgba(77,159,255,.18)}.heat-teal{background:rgba(0,229,195,.16)}.heat-pink{background:rgba(236,10,155,.17)}.heat-green{background:rgba(0,196,122,.18)}.heat-amber{background:rgba(255,184,0,.16)}.empty{height:500px;display:grid;place-items:center;color:var(--t3);font:12px 'DM Mono';text-align:center;line-height:1.8}.error{color:var(--coral)}
+    .view{opacity:0;transform:translateY(8px)}.view.active{animation:viewIn .3s ease forwards}@keyframes viewIn{to{opacity:1;transform:none}}
+    .view.active > .slide > .sh{position:sticky;top:58px;z-index:49;box-shadow:0 8px 20px rgba(0,0,0,.28);backdrop-filter:blur(10px)}
+    .sh .date{border:0;outline:0;cursor:pointer}.sh select.date{appearance:none;-webkit-appearance:none;padding-right:34px;background-image:linear-gradient(45deg,transparent 50%,#020d1a 50%),linear-gradient(135deg,#020d1a 50%,transparent 50%),linear-gradient(135deg,#00e5c3,#4d9fff);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%,0 0;background-size:5px 5px,5px 5px,100% 100%;background-repeat:no-repeat}.sh select.date option{background:#0b0c0f;color:#edf2ff}.date-controls{display:flex;align-items:center;gap:6px}.date-span{color:#7589a8;font:600 10px 'DM Mono',monospace;white-space:nowrap;letter-spacing:.02em}body.lt .date-span{color:#5b6b85}.date-span:empty{display:none}.date-controls input[type=date]{display:none;color:#020d1a;padding:7px 10px;border:0;border-radius:20px;background:linear-gradient(135deg,#00e5c3,#4d9fff);font:600 10px 'DM Mono';outline:0}.date-confirm{display:none;border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:7px 13px;background:#0b0c0f;color:#edf2ff;font:600 10px 'DM Mono';cursor:pointer}.date-confirm:hover{border-color:#00e5c3;color:#00e5c3}.date-controls.single .single-date,.date-controls.custom .range-date,.date-controls.single .date-confirm,.date-controls.custom .date-confirm{display:block}
+    #networks .slide{width:100%;max-width:none;margin:0;box-shadow:none}#networks .sb{width:100%;padding:18px 0 22px}#networks .eyebrow,#networks .h1{margin-left:24px;margin-right:24px}#networks .sb>.card:first-of-type{width:100%;border-left:0;border-right:0;border-radius:0;padding-left:24px;padding-right:24px}#networks .two,#networks .sb>.card.mt{margin-left:24px;margin-right:24px}#networks .sh{padding-left:24px;padding-right:24px}
+    .slide{width:100%;max-width:none;margin:0;box-shadow:none}.sb{padding-left:24px;padding-right:24px}.sh{padding-left:24px;padding-right:24px}.piebox{height:470px;min-height:470px}.piegrid .chartbox.tall{height:420px;min-height:420px}.piegrid{gap:20px}.stack>.card:has(canvas){min-height:420px}.stack>.card:has(canvas) .piebox{height:350px}.two .chartbox.tall{height:410px}.page-pies{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin:0 0 18px}.page-pies>.card{min-height:430px}.page-pies .piebox,.page-pies .chartbox{height:470px;min-height:470px}.two:has(> :only-child){grid-template-columns:1fr}.stack:empty{display:none}th.num{text-align:right}th.num,td.num{font-variant-numeric:tabular-nums}
+    .loader{position:fixed;inset:58px 0 0;z-index:100;display:none;place-items:center;background:rgba(0,0,0,.82);backdrop-filter:blur(8px)}.loader.show{display:grid}.loaderbox{text-align:center;color:var(--t2);font:11px 'DM Mono'}.spinner{width:54px;height:54px;margin:0 auto 14px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--teal);border-right-color:var(--blue);border-radius:50%;animation:spin .75s linear infinite}.pulse{width:120px;height:3px;margin:12px auto 0;border-radius:3px;background:linear-gradient(90deg,transparent,var(--teal),var(--blue),transparent);background-size:200% 100%;animation:flow 1.1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@keyframes flow{to{background-position:-200% 0}}
+
+/* --- from ua_report.html · block 4a86a30f92 --- */
+/* --- UA report Android/iOS layout tweaks --- */
+    .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .mt{margin-top:28px}
+    .stack{row-gap:28px}
+    .h1,.card h2,.card-title,.subhead h2{font-family:'Segoe UI',Arial,sans-serif}
+    body{font-family:'Segoe UI',Arial,sans-serif}
+    .eyebrow,.card-sub,.kpi .l,.sf{font-family:'Segoe UI',Arial,sans-serif}
+    .top,.top .brand,.top button,.sh .brand{font-family:'Trebuchet MS',Arial,sans-serif}
+    .top button{font-size:12.5px;font-weight:650}
+    .sh>.brand{display:none}.sh{justify-content:flex-end}
+    .date-controls,.date-controls *,.sh .date{font-family:'Trebuchet MS',Arial,sans-serif!important}
+    :root{--t2:#c0ccdf;--t3:#b5c3d7}
+    .status,.date-span,.card-sub,.eyebrow,.sf,.mut{color:#c0ccdf!important;font-weight:600!important}
+    #connectBtn,.date-controls select,.date-confirm{font-size:13.5px!important;font-weight:750!important}
+    .top>.brand{display:none}
+    #connectBtn{color:#031018;border-color:transparent;background:var(--grad);font-family:'Trebuchet MS',Arial,sans-serif}
+    .kpi-row.three{grid-template-columns:repeat(3,1fr)}
+    .kpi-row.four{grid-template-columns:repeat(4,1fr)}
+    .kpi-row.five{grid-template-columns:repeat(5,1fr)}
+    .kpi .v.neg{color:var(--coral)}
+    .kpi-row .kpi{padding:16px 20px}
+    .kpi-row .kpi .v{font-size:26px}
+    .kpi .d{font-size:11.5px}
+    .kpi .d.delta-up{color:var(--green)}
+    .kpi .d.delta-down{color:var(--coral)}
+    .kpi .d.delta-flat{color:var(--t3)}
+    .card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:9px}
+    .card-head h2{margin:0}
+    .chan-filter{background:var(--card2);color:var(--t1);border:1px solid var(--borderB);border-radius:8px;padding:6px 26px 6px 10px;font:600 10px 'DM Mono';cursor:pointer;outline:0;max-width:190px;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--t2) 50%),linear-gradient(135deg,var(--t2) 50%,transparent 50%);background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+    .chan-filter:hover{border-color:var(--teal)}
+    .chan-filter option{background:#0b0c0f;color:#edf2ff}
+    td.wk{font-family:'DM Mono';color:var(--t2);white-space:nowrap;letter-spacing:.02em}
+    tr.wk-break td{border-top:2px solid rgba(0,229,195,.35)}
+    tr.channel-break td{border-top:2px solid rgba(0,229,195,.62)}
+    /* compact the IAA vs IAP share table so Channel / Ad Share / IAP Share sit close */
+    .share-table{height:calc(100% - 30px);max-height:none;display:flex}
+    .share-table table{width:100%;min-width:0;height:100%}
+    .share-table tbody tr{height:1%}
+    .share-table th,.share-table td{padding-left:10px;padding-right:40px}
+    .share-table th:last-child,.share-table td:last-child{padding-right:14px}
+    .share-chart{height:500px;max-height:none;position:relative;padding:14px 12px;overflow:hidden}
+    /* row-number column for conditionally formatted tables */
+    th.idx,td.idx{width:34px;min-width:34px;text-align:right;color:var(--t3);background:#11151b}
+    /* Spend Share / IAP Revenue Share pies: side legend needs more height */
+    .piebox.pie-side{height:500px;min-height:500px}
+    .piebox.pie-side + .pie-legend{font-size:12.5px;gap:6px 20px}
+    .piebox.pie-side + .pie-legend .pl-sw{width:12px;height:12px}
+    .pie-row:has(canvas[id$="CurrentWeekPie"]) .pie-legend{font-size:12.5px;gap:6px 20px}
+    .pie-row:has(canvas[id$="CurrentWeekPie"]) .pl-sw{width:12px;height:12px}
+    .campaign-controls{display:flex;align-items:center;gap:8px}
+    /* Give the full-width platform DxD chart a longer vertical plotting area. */
+    .platform-network .chartbox.dxd-chart{height:360px;min-height:360px}
+    /* Show the complete six-week cohort table instead of hiding later weeks
+       behind the generic table wrapper's vertical scrollbar. */
+    .platform-network .cohort-table{max-height:none;overflow-x:auto;overflow-y:visible}
+    /* Larger type and softer heat fills make dense performance tables easier
+       to scan on both dashboard themes. */
+    .tablewrap td.num{font-size:11.5px}
+    .tablewrap th.num{font-size:10.5px}
+    .platform-network table{font-size:11.5px}
+    .platform-network th{font-size:10.5px;padding:10px 9px;color:#b8c5d9}
+    .platform-network td{padding:9px;color:#d7deea;font-weight:400}
+    .platform-network td.num{font-family:Poppins,system-ui,sans-serif;font-size:12.5px;font-weight:400;letter-spacing:.01em}
+    .platform-network th.num{font-family:Poppins,system-ui,sans-serif;font-size:11.5px;font-weight:400;letter-spacing:.01em}
+    .kpi .v{font-family:Poppins,system-ui,sans-serif;font-weight:400}
+    .platform-network td.wk{color:#b8c5d9}
+    body.lt .platform-network th{color:#52627a}
+    body.lt .platform-network td{color:#27364b}
+    .platform-network select[id$="CohortChannel"]{display:none}
+    /* Every UA dropdown uses the same regular-weight interface type. */
+    select,select option,.date-controls select,.sh select.date,.chan-filter{
+      font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+      font-weight:400!important;
+      font-size:12.5px!important;
+    }
+    #connectBtn{font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;font-weight:700!important;
+      font-size:13px!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    .top .connect{align-items:center}
+    .top .status{display:flex;align-items:center;height:34px;font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+      font-size:13px!important;font-weight:700!important;line-height:1}
+    .date-span,.date-controls select,.date-confirm{font-family:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif!important;
+      font-size:13px!important;font-weight:700!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    .sh .date-controls select.date{font-size:13px!important;font-weight:700!important}
+    .date-controls select.date{width:130px!important;height:34px!important;min-height:34px!important;padding:0 34px 0 16px!important;
+      border-radius:20px!important;line-height:34px!important}
+
+/* --- from ua_report.html · block f8392029ad --- */
+body:not(.lt) .tabs button:not(.active){color:#e3e9f4}
+html,body{scrollbar-width:thin;scrollbar-color:#4d9fff #070809}
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:12px;height:12px;display:block}
+html::-webkit-scrollbar-track,body::-webkit-scrollbar-track{background:#070809;border-left:1px solid rgba(255,255,255,.06)}
+html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#00bfa8,#4d7fd8);border:3px solid #070809;border-radius:999px}
+html::-webkit-scrollbar-thumb:hover,body::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#8b7cf6,#4d9fff)}
+body.lt{scrollbar-color:#5274a8 #e7ecf6}body.lt::-webkit-scrollbar-track{background:#e7ecf6;border-left-color:rgba(15,30,60,.1)}body.lt::-webkit-scrollbar-thumb{border-color:#e7ecf6}
+.tablewrap{scrollbar-width:thin;scrollbar-color:rgba(166,184,212,.58) rgba(255,255,255,.045)}
+.tablewrap::-webkit-scrollbar{width:10px;height:10px}
+.tablewrap::-webkit-scrollbar-track{background:rgba(255,255,255,.045);border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb{background:rgba(166,184,212,.58);border:2px solid #11151b;border-radius:8px}
+.tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(215,222,234,.76)}
+body.lt .tablewrap{scrollbar-color:rgba(82,98,122,.55) rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-track{background:rgba(15,30,60,.055)}
+body.lt .tablewrap::-webkit-scrollbar-thumb{background:rgba(82,98,122,.55);border-color:#e7ecf6}
+body.lt .tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(39,54,75,.7)}
+/* light theme — same tokens, inverted surfaces */
+body.lt{--bg:#eef1f7;--card:#ffffff;--card2:#f5f7fc;
+  --border:rgba(15,30,60,.09);--borderB:rgba(15,30,60,.16);
+  --t1:#0d1b2e;--t2:#56657f;--t3:#8394ad;
+  --teal:#00b39a;--blue:#2f7fe0;--pink:#c2077f;--green:#00a065;
+  --amber:#d99400;--coral:#e23a59;
+  --grad:linear-gradient(135deg,#00b39a,#2f7fe0);
+  --sh:0 8px 30px rgba(30,50,90,.12);}
+body.lt tbody tr:hover td{background:rgba(15,30,60,.04)}
+body.lt th,body.lt th.idx,body.lt td.idx{background:#e7ecf6}
+
+/* --- from ua_report.html · block 36d9c5441e --- */
+/* light mode: surfaces that were painted with literal hex, not variables */
+html[data-theme=light]{background:#eef1f7}
+body.lt{background:#eef1f7;color:#0d1b2e}
+body.lt .top,
+body.lt .sh{background:rgba(255,255,255,.95)}
+body.lt th,
+body.lt .tablewrap thead th,
+body.lt th.idx,
+body.lt td.idx{background:#e7ecf6;color:#56657f}
+body.lt .sh select.date option,
+body.lt .chan-filter option{background:#ffffff;color:#0d1b2e}
+body.lt .date-confirm{background:#ffffff;color:#0d1b2e;border-color:rgba(15,30,60,.16)}
+body.lt .loader{background:rgba(238,241,247,.85)}
+body.lt .spinner{border-color:rgba(15,30,60,.12);border-top-color:var(--teal);border-right-color:var(--blue)}
+body.lt .empty{color:#8394ad}
