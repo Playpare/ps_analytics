@@ -150,10 +150,13 @@ What changed beyond the move:
 - **Chart.js came from three different places** — a 272 KB copy committed
   beside the reports, cdnjs, and jsdelivr. It is one npm dependency, bundled
   once and shared by all five reports.
-- **55 KB of dead code removed.** Weekly carried two
-  `<script type="application/x-static-disabled">` blocks left over from when
-  it was an Excel export. Browsers never ran them; every visitor downloaded
-  them anyway.
+- **77 KB of dead code removed**, all of it in Weekly. Two
+  `<script type="application/x-static-disabled">` blocks (55 KB) left over from
+  when it was an Excel export — browsers never ran them; every visitor
+  downloaded them anyway. Plus `const AD` and `const AD2` (22 KB of April–July
+  readings) and the chart code that drew them: both IIFEs open with
+  `if(window.WEEKLY_LIVE_CONFIG)return;`, and that flag is set unconditionally
+  at the top of the file, so neither had drawn anything in a long time.
 - **Google Fonts was five separate requests** with slightly different weight
   sets. One request now, carrying the union.
 - **Four hand-edited cache-busting strings** (`?v=20260827-…-v68`) are one
