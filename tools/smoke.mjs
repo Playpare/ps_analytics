@@ -112,12 +112,18 @@ function startServer() {
     { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] }
   );
 
+  /* Vite colours its banner, so "Local:" arrives as "Local" + an ANSI reset +
+     ":" and a literal substring match never fires — the run then dies on the
+     30s timeout with the server plainly running in the captured output. Strip
+     the escapes before matching, and match the URL rather than the label,
+     which is the part that cannot be restyled. */
+  const plain = (s) => s.replace(/\u001b\[[0-9;]*m/g, '');
   let out = '';
   return new Promise((ok, no) => {
     const timer = setTimeout(() => no(new Error('preview did not start in 30s:\n' + out)), 30000);
     proc.stdout.on('data', (d) => {
       out += d.toString();
-      if (out.includes('Local:')) { clearTimeout(timer); ok(proc); }
+      if (plain(out).includes(`localhost:${PORT}`)) { clearTimeout(timer); ok(proc); }
     });
     proc.stderr.on('data', (d) => { out += d.toString(); });
     proc.on('exit', (code) => {
