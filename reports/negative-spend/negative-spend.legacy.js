@@ -554,7 +554,12 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const shortDate=iso=>{const d=isoToDate(iso);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):String(iso)};
 const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function isoToDate(iso){if(!iso)return null;const p=String(iso).split('-');const d=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(d)?null:d}
-function isoShift(iso,days){const d=isoToDate(iso);d.setDate(d.getDate()+days);return toISO(d)}
+/* isoToDate returns null for a blank or unparseable date, so this has to cope
+   with one. It used to call setDate() on it and throw, which is how an empty
+   payload took the whole report down from inside initDateFilters - including,
+   after the module split, glance.js, which never got imported because the
+   throw aborted this file's evaluation. */
+function isoShift(iso,days){const d=isoToDate(iso);if(!d)return '';d.setDate(d.getDate()+days);return toISO(d)}
 function toISO(d){const m=String(d.getMonth()+1).padStart(2,'0'),y=String(d.getDate()).padStart(2,'0');return d.getFullYear()+'-'+m+'-'+y}
 function setStatus(s,isError){$('status').textContent=s;$('status').classList.toggle('error',!!isError)}
 function loadedNow(){LAST_LOAD_TIME=new Date().toLocaleTimeString('en-US');setLoadedStatus()}
@@ -596,7 +601,7 @@ function boot(){
   const cached=readLocal();
   if(cached){
     FINGERPRINT=cached.fingerprint;
-    applyPayload(cached.payload,true);
+    if(!applyPayload(cached.payload,true))return;
     setStatus('Showing your last load · checking for new data…');
   }else{
     showLoader(true);
@@ -625,8 +630,13 @@ function fetchSnapshot(fp){
         return;
       }
       FINGERPRINT=res.fingerprint;
+      /* Apply first, cache second. Writing an empty snapshot to localStorage is
+         what made this failure survive a reload: the bad copy was reloaded and
+         crashed again before anything could replace it. And loadedNow() would
+         overwrite the explanation applyPayload just wrote with the word
+         "Loaded", which is the least true thing the page could say. */
+      if(!applyPayload(res.payload,false))return;
       writeLocal(res.fingerprint,res.payload);
-      applyPayload(res.payload,false);
       showLoader(false);
       loadedNow();
     })
@@ -648,7 +658,13 @@ function readLocal(){
     const raw=localStorage.getItem('uansm_snapshot');
     if(!raw)return null;
     const obj=JSON.parse(raw);
-    return (obj&&obj.payload&&obj.payload.days)?obj:null;
+    /* `.days` alone is not enough: an empty array is truthy, so a snapshot
+       built while the RAW column mapping was wrong - every row dropped, days
+       empty - passed this guard, was painted from cache on every load, and
+       killed the page in isoShift() before it could ever fetch a good one.
+       Reloading could not recover it; the bad copy was the thing being
+       reloaded. A snapshot with no days is not a cache hit. */
+    return (obj&&obj.payload&&obj.payload.days&&obj.payload.days.length)?obj:null;
   }catch(e){return null}
 }
 function writeLocal(fp,payload){
@@ -657,6 +673,20 @@ function writeLocal(fp,payload){
 }
 
 function applyPayload(payload,fromCache){
+  /* A payload with no days is not a quiet edge case - it means the server read
+     the sheet and found nothing it could use, which today meant the RAW column
+     mapping had moved and every row was dropped for a bad date. Say that,
+     rather than painting a page of em-dashes and leaving somebody to guess.
+     Returning here also keeps the rest of this file evaluating, so the
+     sections that live in other modules still load. */
+  if(!payload||!payload.days||!payload.days.length){
+    DATA=null;
+    showLoader(false);
+    setStatus('No usable rows in the sheet. Every row was dropped - usually the '+
+      'RAW columns have moved, or the date column is text rather than dates. '+
+      'Run checkSpan() in Apps Script: if bad dates equals the row count, that is it.',true);
+    return false;
+  }
   DATA=payload;
   SLICE=null;
   WINDOW_CACHE.clear();
@@ -669,6 +699,7 @@ function applyPayload(payload,fromCache){
   populateSelectors();
   render();
   try{window.parent.postMessage({type:'mss3d:report-ready',report:'ua-negative-spend'},location.origin)}catch(e){}
+  return true;
 }
 
 /** Buckets detail rows by day index so a window is a slice, not a scan. */
