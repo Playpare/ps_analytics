@@ -42,16 +42,6 @@ body.lt {
 #glanceHead .aside { color: var(--t3); font-size: 12.5px }
 #glanceHead .aside b { color: var(--t2); font-weight: 600 }
 
-/* The five KPI tiles this section replaces.
- *
- * They are hidden rather than deleted so the markup and every function that
- * fills them stay intact and the change is one line to reverse. The reason
- * they cannot stay on screen is not that they are redundant - it is that
- * "Spend at risk" and the new "Cut" tile answer the same question on
- * different bases and print different numbers, which is the fault this whole
- * section exists to remove. Two of the five said something the new tiles do
- * not; those two now appear as a line under the headline. */
-#page .kpi-row.five { display: none }
 
 /* ---------- the three decisions ---------- */
 .acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0 18px }
@@ -179,3 +169,22 @@ body.lt .tip { box-shadow: 0 8px 26px rgba(30, 50, 90, .16) }
 .tip .r b { font-family: 'DM Mono', monospace; font-weight: 500 }
 
 @media (max-width: 1000px) { .acts { grid-template-columns: 1fr } }
+
+/* ---------------------------------------------------------------------------
+ * Break-even
+ * ------------------------------------------------------------------------- */
+#beCard .be-now { text-align: right }
+#beCard .be-now span { display: block; font: 600 26px 'Segoe UI', sans-serif; letter-spacing: -.02em }
+#beCard .be-now em { font-style: normal; color: var(--t3); font-size: 11.5px }
+#beCard .be-now.under span { color: var(--g-bad) }
+#beCard .be-now.over  span { color: var(--g-good) }
+.be-plot { padding: 4px 18px 0 }
+.be-plot svg { display: block; width: 100%; height: 190px; overflow: visible }
+.be-foot {
+  padding: 12px 18px 16px; color: var(--t2); font-size: 12.5px; line-height: 1.6;
+  border-top: 1px solid var(--border); margin-top: 10px;
+}
+.be-foot b { color: var(--t1); font-weight: 600 }
+.be-foot .warn { color: var(--g-warn) }
+.be-foot .bad  { color: var(--g-bad) }
+#perfTable .g-rank { color: var(--t3); font-size: 11.5px; padding-right: 4px }

@@ -696,7 +696,10 @@ function applyPayload(payload,fromCache){
   indexSettings();
   SPAN_CACHE.clear();
   initDateFilters(!fromCache);
-  populateSelectors();
+  /* populateSelectors() filled the filter dropdowns on the campaigns card, the
+     margin chart and the decision picker. All three are gone, and it throws on
+     the first missing element - which killed applyPayload before render() ever
+     ran. The settings modal has its own populateMapChannels() and is unaffected. */
   render();
   try{window.parent.postMessage({type:'mss3d:report-ready',report:'ua-negative-spend'},location.origin)}catch(e){}
   return true;
@@ -1265,20 +1268,17 @@ function render(){
   if(!DATA)return;
   const W=computeWindow();
   const P=computePreviousWindow(W);
-  populateMarginFilters();
   if(typeof Chart!=='undefined'){
     Chart.defaults.color=cssVar('--t2','#a6b8d4');
     Chart.defaults.borderColor=cssVar('--border','rgba(255,255,255,.08)');
   }
   $('pageTitle').textContent='Negative Spend · '+(PLAT_LABEL[PLATFORM]||PLATFORM);
-  renderTopCards(W,P);
-  renderPayback(W,P);
-  renderLadder(W);
-  renderDailyStrip(W);
-  renderCharts(W);
-  renderNetworks(W);
-  renderWatchlist(W);
-  renderHistory(W);
+  /* renderTopCards, renderPayback, renderLadder, renderDailyStrip, renderCharts,
+     renderNetworks, renderWatchlist, renderHistory and populateSelectors used to
+     run here. Their markup is gone, so calling them would throw on a missing
+     element. The functions themselves are left in place for now rather than
+     deleted in the same change that removes their callers - that keeps this diff
+     about the page, and makes the deletion a separate, obvious follow-up. */
   /* The glance section and performance table, from glance.js. Called from
      inside this one render pass on purpose: they read the same W every other
      section reads, so they cannot end up describing a different window than
