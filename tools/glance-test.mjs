@@ -228,6 +228,46 @@ const chips = await page.evaluate(() => {
 ['cut', 'passing', 'under target', 'over budget', 'no budget cap'].forEach((v) =>
   ok(chips.includes(v), `verdict "${v}" appears`, 'saw: ' + [...new Set(chips)].join(', ')));
 
+/* ---------------------------------------------------------------------------
+ * An empty payload must not take the page down.
+ *
+ * This is the failure that cost a full day. A snapshot built while the RAW
+ * column mapping was wrong had every row dropped, so `days` came back empty.
+ * readLocal's guard was `obj.payload.days` — and an empty array is truthy — so
+ * the browser cached it, painted from it on every load, and threw in isoShift()
+ * before it could fetch a good one. Reloading could not help: the poison was
+ * the thing being reloaded. The throw also aborted this file's module
+ * evaluation, which meant glance.js was never imported at all.
+ *
+ * One uncaught TypeError, three symptoms, none of them pointing at the cause.
+ * ------------------------------------------------------------------------- */
+{
+  const ctx2 = await browser.newContext();
+  const p2 = await ctx2.newPage();
+  const empty = [];
+  p2.on('pageerror', (e) => empty.push(e.message));
+  await p2.addInitScript(() => { try { sessionStorage.setItem('mss3d_token', 'test-token'); } catch (e) {} });
+  await p2.route('**/exec**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, fingerprint: 'empty-1',
+        payload: { ...PAYLOAD, days: [], rows: [], campaigns: [], channels: [] } }) }));
+  await p2.goto(`${BASE}/reports/negative-spend/?api=${encodeURIComponent('https://x/exec')}`,
+    { waitUntil: 'load' });
+  await p2.waitForTimeout(1500);
+
+  const status = await p2.textContent('#status').catch(() => '');
+  ok(empty.length === 0, 'empty payload does not throw', empty.join(' | '));
+  ok(/no usable rows/i.test(status || ''),
+    'empty payload explains itself', `status read: "${(status || '').slice(0, 80)}"`);
+
+  /* And the poison must not be cached for next time. */
+  const cached = await p2.evaluate(() => localStorage.getItem('uansm_snapshot'));
+  const cachedDays = cached ? (JSON.parse(cached).payload?.days?.length ?? 0) : 0;
+  ok(cachedDays === 0 || cached === null,
+    'an empty snapshot is not treated as a cache hit', `cached days: ${cachedDays}`);
+  await ctx2.close();
+}
+
 /* A rendered screenshot on every run. The assertions above check numbers and
    they cannot see a collided label, a bar off its track, or a chart drawn
    behind its own gridlines. */
