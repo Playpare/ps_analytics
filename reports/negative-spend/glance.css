@@ -1,0 +1,181 @@
+/* ---------------------------------------------------------------------------
+ * glance.css — the decision summary and the performance table.
+ *
+ * Everything here is scoped to the new sections. The report's own tokens are
+ * reused unchanged for surfaces and text; the only new values are five marks,
+ * and they exist because the report's --coral/--amber/--green/--blue/--teal
+ * are tuned as TEXT accents and sit outside the OKLCH lightness band for use
+ * as fills on this surface.
+ *
+ * Both groups were run through a palette validator rather than eyeballed:
+ *
+ *   status  --g-bad / --g-warn / --g-good     band PASS, chroma PASS,
+ *                                             contrast PASS, CVD 7.0 protan
+ *                                             (floor band) — legal only
+ *                                             because every status also
+ *                                             carries an icon and a word
+ *   series  --g-cost / --g-rev                ALL CHECKS PASS, both surfaces
+ * ------------------------------------------------------------------------- */
+
+:root {
+  --g-bad:  #e23a59;
+  --g-warn: #c78400;
+  --g-good: #00a065;
+  --g-none: #5a6779;
+  --g-cost: #2f7fe0;
+  --g-rev:  #00a58f;
+  --g-grid: rgba(255, 255, 255, .07);
+}
+body.lt {
+  --g-bad:  #c32f4c;
+  --g-warn: #a06a00;
+  --g-good: #008151;
+  --g-none: #6b7789;
+  --g-grid: rgba(15, 30, 60, .09);
+}
+
+/* ---------- headline ---------- */
+#glanceHead { margin: 2px 0 4px }
+#glanceHead .gh { font: 650 24px 'Segoe UI', Arial, sans-serif; letter-spacing: -.01em }
+#glanceHead .gh .lost { color: var(--g-bad) }
+#glanceHead .gs { color: var(--t2); font-size: 13px; line-height: 1.55; margin-top: 4px; max-width: 78ch }
+#glanceHead .aside { color: var(--t3); font-size: 12.5px }
+#glanceHead .aside b { color: var(--t2); font-weight: 600 }
+
+/* The five KPI tiles this section replaces.
+ *
+ * They are hidden rather than deleted so the markup and every function that
+ * fills them stay intact and the change is one line to reverse. The reason
+ * they cannot stay on screen is not that they are redundant - it is that
+ * "Spend at risk" and the new "Cut" tile answer the same question on
+ * different bases and print different numbers, which is the fault this whole
+ * section exists to remove. Two of the five said something the new tiles do
+ * not; those two now appear as a line under the headline. */
+#page .kpi-row.five { display: none }
+
+/* ---------- the three decisions ---------- */
+.acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0 18px }
+.acts:empty { display: none }
+.act {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 15px 17px 14px; border-top: 3px solid var(--tone);
+}
+.act.a1 { --tone: var(--g-warn) } .act.a2 { --tone: var(--g-bad) } .act.a3 { --tone: var(--g-good) }
+.act .hd {
+  display: flex; align-items: center; gap: 7px; color: var(--tone);
+  font: 700 11px 'Segoe UI', sans-serif; letter-spacing: .11em; text-transform: uppercase;
+}
+.act .amt { font: 600 26px 'Segoe UI', sans-serif; margin: 7px 0 2px; letter-spacing: -.02em }
+.act .amt.quiet { color: var(--t3); font-weight: 500 }
+.act .g-why { color: var(--t2); font-size: 13px; line-height: 1.5 }
+.act .who { color: var(--t3); font-size: 12px; margin-top: 8px; line-height: 1.55 }
+.act .who b { color: var(--t2); font-weight: 600 }
+.act .fix {
+  margin-top: 10px; border: 1px solid var(--borderB); background: transparent;
+  color: var(--t2); border-radius: 999px; padding: 5px 12px;
+  font: 600 11.5px 'Segoe UI', sans-serif; cursor: pointer;
+}
+.act .fix:hover { color: var(--t1); border-color: var(--tone) }
+.g-ic { width: 15px; height: 15px; flex: none }
+
+/* ---------- performance table ---------- */
+#perfCard .chead { display: flex; align-items: flex-end; gap: 16px; padding: 15px 18px 13px; flex-wrap: wrap }
+#perfCard .chead h2 { font: 650 15px Syne, 'Segoe UI', sans-serif }
+#perfCard .chead .note { color: var(--t3); font-size: 12px; margin-top: 3px }
+#perfCard .chead .spacer { flex: 1 }
+#perfCard .ctrls { display: flex; align-items: center; gap: 10px }
+.seg { display: inline-flex; border: 1px solid var(--borderB); border-radius: 999px; overflow: hidden }
+.seg button {
+  border: 0; background: transparent; color: var(--t2); cursor: pointer;
+  padding: 6px 13px; font: 600 12px 'Segoe UI', sans-serif;
+}
+.seg button + button { border-left: 1px solid var(--borderB) }
+.seg button[aria-pressed=true] { background: var(--t1); color: var(--bg) }
+.seg button:hover:not([aria-pressed=true]) { color: var(--t1) }
+.keys { display: flex; align-items: center; gap: 13px; color: var(--t3); font-size: 11.5px }
+.key { display: inline-flex; align-items: center; gap: 6px }
+.key i { width: 15px; height: 2.5px; border-radius: 2px; background: var(--k); display: inline-block }
+
+#perfTable table { width: 100%; border-collapse: collapse; font-size: 13px }
+#perfTable th {
+  text-align: left; color: var(--t3); font: 600 10.5px 'Segoe UI', sans-serif;
+  letter-spacing: .08em; text-transform: uppercase; padding: 9px 14px;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  background: var(--card2); white-space: nowrap;
+}
+#perfTable th em {
+  display: block; font-style: normal; font-weight: 400; letter-spacing: .02em;
+  text-transform: none; font-size: 10.5px; color: var(--t3); opacity: .72; margin-top: 3px;
+}
+#perfTable th.n, #perfTable td.n { text-align: right }
+#perfTable td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle }
+#perfTable tbody tr:last-child td { border-bottom: 0 }
+#perfTable tr.grow { cursor: pointer }
+#perfTable tr.grow:hover td { background: rgba(255, 255, 255, .03) }
+body.lt #perfTable tr.grow:hover td { background: rgba(15, 30, 60, .035) }
+#perfTable tr.grow.on td { background: rgba(47, 127, 224, .10) }
+#perfTable tr.camp td { background: rgba(255, 255, 255, .015) }
+body.lt #perfTable tr.camp td { background: rgba(15, 30, 60, .02) }
+#perfTable td.n { font-family: 'DM Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums }
+#perfTable .neg { color: var(--g-bad) } #perfTable .pos { color: var(--g-good) }
+
+.g-nm { display: flex; align-items: center; gap: 9px; font-weight: 600 }
+.g-nm .tw { width: 13px; color: var(--t3); font-size: 10px; flex: none; transition: transform .16s }
+.g-nm.open .tw { transform: rotate(90deg) }
+#perfTable tr.camp .g-nm { font-weight: 400; padding-left: 22px; color: var(--t2); font-size: 12.5px }
+#perfTable tr.camp .g-nm > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 330px; display: block }
+.g-nm small { display: block; color: var(--t3); font-weight: 400; font-size: 11px; margin-top: 2px }
+
+/* spend cell: the number, then how much of the budget it used */
+.g-spend b { font-weight: 400; display: block }
+.g-spend .bar { display: flex; align-items: center; gap: 7px; justify-content: flex-end; margin-top: 4px }
+.g-spend .t { position: relative; width: 56px; height: 6px; border-radius: 3px; background: var(--g-grid); flex: none; overflow: hidden }
+.g-spend .f { position: absolute; left: 0; top: 0; height: 100%; border-radius: 3px; background: var(--tone) }
+.g-spend .lb { font: 400 11px 'Segoe UI', sans-serif; color: var(--t3) }
+.g-spend.s-ok { --tone: var(--g-good) } .g-spend.s-near { --tone: var(--g-warn) } .g-spend.s-over { --tone: var(--g-bad) }
+.g-spend .nocap { display: block; margin-top: 4px; font: 400 11px 'Segoe UI', sans-serif; color: var(--g-warn) }
+.g-blend { color: var(--t3); cursor: help }
+
+/* roas vs target: a bullet where the target is the 100% mark */
+.g-bul { display: flex; align-items: center; gap: 9px; justify-content: flex-end }
+.g-bul .t { position: relative; width: 70px; height: 7px; border-radius: 4px; background: var(--g-grid); flex: none }
+.g-bul .f { position: absolute; left: 0; top: 0; height: 100%; border-radius: 4px; background: var(--tone) }
+.g-bul .mk { position: absolute; top: -3px; left: 71%; width: 2px; height: 13px; background: var(--t2); border-radius: 1px }
+.g-bul .g-v { font-family: 'DM Mono', monospace; font-size: 12.5px; min-width: 72px; text-align: right }
+.g-bul.gb-good { --tone: var(--g-good) } .g-bul.gb-warn { --tone: var(--g-warn) } .g-bul.gb-bad { --tone: var(--g-bad) }
+.g-dash { color: var(--t3); font-size: 12px }
+
+.g-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3.5px 10px 3.5px 8px;
+  border-radius: 999px; font: 650 11.5px 'Segoe UI', sans-serif; white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  background: color-mix(in srgb, var(--tone) 14%, transparent); color: var(--tone);
+}
+.g-chip .g-ic { width: 13px; height: 13px }
+.g-chip.c-bad { --tone: var(--g-bad) } .g-chip.c-warn { --tone: var(--g-warn) }
+.g-chip.c-good { --tone: var(--g-good) } .g-chip.c-none { --tone: var(--g-none) }
+
+/* ---------- detail chart ---------- */
+#perfCard .detail { border-top: 1px solid var(--border); padding: 16px 18px 18px; display: none }
+#perfCard .detail.on { display: block }
+.dhead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; flex-wrap: wrap }
+.dhead h3 { font: 650 13.5px 'Segoe UI', sans-serif }
+.dhead .m { color: var(--t3); font-size: 12px }
+.dhead .spacer { flex: 1 }
+.dhead .cmode { margin-left: 10px }
+.dhead .cmode button { padding: 5px 11px; font-size: 11.5px }
+.plot { position: relative }
+.plot svg { display: block; width: 100%; height: 210px; overflow: visible }
+.tip {
+  position: absolute; pointer-events: none; opacity: 0; transition: opacity .1s; z-index: 5;
+  background: var(--card2); border: 1px solid var(--borderB); border-radius: 9px;
+  padding: 8px 11px; font-size: 12px; min-width: 156px; box-shadow: 0 8px 26px rgba(0, 0, 0, .45);
+}
+body.lt .tip { box-shadow: 0 8px 26px rgba(30, 50, 90, .16) }
+.tip.on { opacity: 1 }
+.tip .d { color: var(--t3); font-size: 11px; margin-bottom: 5px }
+.tip .r { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 3px }
+.tip .r span { color: var(--t2) }
+.tip .r b { font-family: 'DM Mono', monospace; font-weight: 500 }
+
+@media (max-width: 1000px) { .acts { grid-template-columns: 1fr } }
