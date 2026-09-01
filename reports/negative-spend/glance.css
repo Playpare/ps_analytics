@@ -107,7 +107,7 @@ body.lt #perfTable tr.grow:hover td { background: rgba(15, 30, 60, .035) }
 #perfTable tr.camp td { background: rgba(255, 255, 255, .015) }
 body.lt #perfTable tr.camp td { background: rgba(15, 30, 60, .02) }
 #perfTable td.n { font-family: 'DM Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums }
-#perfTable .neg { color: var(--g-bad) } #perfTable .pos { color: var(--g-good) }
+#perfTable .g-neg { color: var(--g-bad) } #perfTable .g-pos { color: var(--g-good) }
 
 .g-nm { display: flex; align-items: center; gap: 9px; font-weight: 600 }
 .g-nm .tw { width: 13px; color: var(--t3); font-size: 10px; flex: none; transition: transform .16s }
@@ -163,7 +163,7 @@ body.lt #perfTable tr.camp td { background: rgba(15, 30, 60, .02) }
 }
 body.lt .tip { box-shadow: 0 8px 26px rgba(30, 50, 90, .16) }
 .tip.on { opacity: 1 }
-.tip .d { color: var(--t3); font-size: 11px; margin-bottom: 5px }
+.tip .g-d { color: var(--t3); font-size: 11px; margin-bottom: 5px }
 .tip .r { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 3px }
 .tip .r span { color: var(--t2) }
 .tip .r b { font-family: 'DM Mono', monospace; font-weight: 500 }
@@ -176,8 +176,8 @@ body.lt .tip { box-shadow: 0 8px 26px rgba(30, 50, 90, .16) }
 #beCard .be-now { text-align: right }
 #beCard .be-now span { display: block; font: 600 26px 'Segoe UI', sans-serif; letter-spacing: -.02em }
 #beCard .be-now em { font-style: normal; color: var(--t3); font-size: 11.5px }
-#beCard .be-now.under span { color: var(--g-bad) }
-#beCard .be-now.over  span { color: var(--g-good) }
+#beCard .be-now.is-under span { color: var(--g-bad) }
+#beCard .be-now.is-over span { color: var(--g-good) }
 .be-plot { padding: 4px 18px 0 }
 .be-plot svg { display: block; width: 100%; height: 190px; overflow: visible }
 .be-foot {
@@ -185,6 +185,39 @@ body.lt .tip { box-shadow: 0 8px 26px rgba(30, 50, 90, .16) }
   border-top: 1px solid var(--border); margin-top: 10px;
 }
 .be-foot b { color: var(--t1); font-weight: 600 }
-.be-foot .warn { color: var(--g-warn) }
-.be-foot .bad  { color: var(--g-bad) }
+.be-foot .g-warn { color: var(--g-warn) }
+.be-foot .g-bad  { color: var(--g-bad) }
 #perfTable .g-rank { color: var(--t3); font-size: 11.5px; padding-right: 4px }
+
+
+/* ---------------------------------------------------------------------------
+ * Payback g-ladder
+ *
+ * One row per cohort age. Colour carries STATUS - is this age above or below
+ * the target set for it - and nothing else. The old g-ladder gave each row its
+ * own hue (teal, blue, purple), which looked deliberate but said nothing: the
+ * age is already the row label, so spending colour on it leaves status with
+ * no channel of its own.
+ * ------------------------------------------------------------------------- */
+.g-ladder { padding: 6px 18px 14px; display: grid; gap: 12px }
+.g-lad-row { display: grid; grid-template-columns: 58px 1fr 92px; align-items: center; gap: 14px }
+.g-lad-age { color: var(--t2); font: 600 12.5px 'Segoe UI', sans-serif }
+.g-lad-track {
+  position: relative; height: 26px; border-radius: 7px; overflow: hidden;
+  background: var(--g-grid); cursor: help;
+}
+.g-lad-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 7px; background: var(--tone) }
+.g-lad-row.s-good { --tone: var(--g-good) }
+.g-lad-row.s-near { --tone: var(--g-warn) }
+.g-lad-row.s-bad  { --tone: var(--g-bad) }
+/* break-even is the line everything is aimed at, so it is the solid one */
+.g-lad-be   { position: absolute; top: 0; width: 2px; height: 100%; background: var(--t1); opacity: .55 }
+.g-lad-tgt  { position: absolute; top: 0; width: 0; height: 100%; border-left: 2px dashed var(--t3) }
+.g-lad-val  { text-align: right; font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500 }
+.g-lad-row.s-good .g-lad-val { color: var(--g-good) }
+.g-lad-row.s-near .g-lad-val { color: var(--g-warn) }
+.g-lad-row.s-bad  .g-lad-val { color: var(--g-bad) }
+.g-lad-key { padding: 0 18px 10px; color: var(--t3); font-size: 11.5px; display: flex; gap: 16px }
+.g-lad-key i { display: inline-block; width: 14px; vertical-align: middle; margin-right: 5px }
+.g-lad-key .be i { border-top: 2px solid var(--t1); opacity: .55 }
+.g-lad-key .tg i { border-top: 2px dashed var(--t3) }

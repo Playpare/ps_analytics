@@ -336,7 +336,7 @@ function renderTable(m) {
       <td>${spark(net._cost, net._rev, m.days)}</td>
       <td class="n">${spendCell(net, true)}</td>
       <td class="n">${money(net.allRev)}</td>
-      <td class="n ${net.cashGap < 0 ? 'neg' : 'pos'}">${money(net.cashGap)}</td>
+      <td class="n ${net.cashGap < 0 ? 'g-neg' : 'pos'}">${money(net.cashGap)}</td>
       <td class="n">${bullet(net)}</td>
       <td>${chip(net.verdict)}</td></tr>`;
 
@@ -348,7 +348,7 @@ function renderTable(m) {
         <td>${spark(c._cost, c._rev, m.days)}</td>
         <td class="n">${spendCell(c, false)}</td>
         <td class="n">${money(c.allRev)}</td>
-        <td class="n ${c.cashGap < 0 ? 'neg' : 'pos'}">${money(c.cashGap)}</td>
+        <td class="n ${c.cashGap < 0 ? 'g-neg' : 'pos'}">${money(c.cashGap)}</td>
         <td class="n">${bullet(c)}</td>
         <td>${chip(c.verdict)}</td></tr>`;
     });
@@ -529,7 +529,7 @@ function drawDetail(m) {
   const o = sel.o;
   $('pdTitle').textContent = sel.title;
   $('pdMeta').innerHTML = `${money(o.cost)} spent · ${money(o.allRev)} back · ` +
-    `<span class="${o.cashGap < 0 ? 'neg' : 'pos'}">${money(o.cashGap)} cash</span>` +
+    `<span class="${o.cashGap < 0 ? 'g-neg' : 'pos'}">${money(o.cashGap)} cash</span>` +
     (o.goal && o.goal !== '—' ? ` · judged on ${esc(o.goal)}` : '') +
     (o.budgetOnly ? ' · budget, not ROAS' : '');
   $('pdRef').textContent = note;
@@ -544,7 +544,7 @@ function drawDetail(m) {
     cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.setAttribute('opacity', '.5');
     if (p.y == null) dot.setAttribute('opacity', '0');
     else { dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); dot.setAttribute('opacity', '1'); }
-    tip.innerHTML = `<div class="d">${esc(p.label)}</div>` +
+    tip.innerHTML = `<div class="g-d">${esc(p.label)}</div>` +
       p.rows.map((kv) => `<div class="r"><span>${kv[0]}</span><b>${kv[1]}</b></div>`).join('');
     tip.classList.add('on');
     tip.style.left = Math.min(p.x / W * bb.width + 16, bb.width - 190) + 'px';
@@ -565,7 +565,7 @@ function drawDetail(m) {
  * the cohorts just bought are still under water. Payback counts only what the
  * window's own cohorts returned by their goal day.
  *
- * The blend is the same one the removed ladder used: revenue at each age over
+ * The blend is the same one the removed g-ladder used: revenue at each age over
  * the spend old enough to have reached it. Spend that has not aged that far is
  * excluded rather than counted as a zero - dividing matured revenue by
  * unmatured spend is the classic way to make a healthy account look broken.
@@ -619,10 +619,35 @@ function renderBreakEven(m) {
 
   const now = $('beNow');
   now.textContent = last.ratio.toFixed(3) + 'x';
-  now.parentElement.className = 'be-now ' + (last.ratio >= 1 ? 'over' : 'under');
-  $('beNote').textContent =
-    'Every dollar of spend old enough to judge, against what it had returned by day ' +
-    last.day + '. ' + money(last.cost) + ' of spend, ' + money(last.rev) + ' back.';
+  now.parentElement.className = 'be-now ' + (last.ratio >= 1 ? 'is-over' : 'under');
+  $('beNowSub').textContent = 'by day ' + last.day;
+  $('beNote').textContent = 'Cohorts old enough to judge, blended across the window.';
+
+  /* ---- g-ladder: one row per cohort age ----
+     Deliberately short on words. The old version wrote a sentence under every
+     bar - target, mature days, what the ratio means - which is four lines of
+     prose to carry three numbers. Those numbers are on the bar; the sentence
+     is in the tooltip for whoever wants it. */
+  const A = B().data.assumptions;
+  const TGT = { 0: A.target_d0, 7: A.target_d7, 28: A.target_d28 };
+  const scale = Math.max(1.15, ...pts.map((p) => p.ratio), ...Object.values(TGT)) * 1.06;
+  $('beLadder').innerHTML = pts.map((p) => {
+    const tgt = TGT[p.day];
+    const cls = p.ratio >= 1 ? 's-good' : (tgt != null && p.ratio >= tgt) ? 's-near' : 's-bad';
+    const tip = money(p.rev) + ' back on ' + money(p.cost) + ' spent' +
+      (tgt != null ? ' \u00b7 target ' + tgt.toFixed(2) + 'x' : '');
+    return `<div class="g-lad-row ${cls}">
+      <div class="g-lad-age">Day ${p.day}</div>
+      <div class="g-lad-track" title="${esc(tip)}">
+        <div class="g-lad-fill" style="width:${(Math.min(p.ratio, scale) / scale * 100).toFixed(1)}%"></div>
+        ${tgt != null ? `<div class="g-lad-tgt" style="left:${(tgt / scale * 100).toFixed(1)}%"></div>` : ''}
+        <div class="g-lad-be" style="left:${(1 / scale * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="g-lad-val">${p.ratio.toFixed(3)}x</div>
+    </div>`;
+  }).join('') +
+  `<div class="g-lad-key"><span class="be"><i></i>1.00x break-even</span>
+     <span class="tg"><i></i>target for that day</span></div>`;
 
   /* ---- plot ---- */
   const plot = $('bePlot'), svg = $('beSvg');
@@ -694,23 +719,21 @@ function renderBreakEven(m) {
   if (last.ratio >= 1) {
     verdict = '<b>Already past break-even.</b> Spend at this age has returned more than it cost.';
   } else if (!fit || !fit.day) {
-    verdict = '<b class="bad">No break-even in sight.</b> The curve is flat or falling between the ' +
+    verdict = '<b class="g-bad">No break-even in sight.</b> The curve is flat or falling between the ' +
       'measured points, so nothing here projects a crossing.';
   } else if (fit.day > HORIZON) {
-    verdict = '<b class="bad">Break-even projected past day ' + HORIZON + '.</b> That is far enough out ' +
+    verdict = '<b class="g-bad">Break-even projected past day ' + HORIZON + '.</b> That is far enough out ' +
       'to treat as "not paying back" rather than as a date.';
   } else {
-    verdict = '<b class="warn">Break-even projected around day ' + Math.round(fit.day) + '</b>, ' +
+    verdict = '<b class="g-warn">Break-even projected around day ' + Math.round(fit.day) + '</b>, ' +
       (fit.day <= 30 ? 'which is inside a normal payback window.'
                      : 'which is a long wait - worth checking the targets are set for it.');
   }
-  $('beFoot').innerHTML = verdict +
-    ' Currently <b>' + money(shortfall) + '</b> short of break-even on ' + money(last.cost) +
-    ' of judgeable spend.' +
+  $('beFoot').innerHTML = verdict + ' <b>' + money(shortfall) + '</b> still out on ' +
+    money(last.cost) + ' of judgeable spend.' +
     '<br><span style="color:var(--t3)">Measured at day ' + pts.map((p) => p.day).join(', ') +
-    '; everything past day ' + last.day + ' is a projection fitted to those ' + pts.length +
-    ' points, not a measurement. Campaigns judged on budget alone are excluded - their ' +
-    'install and revenue data is not reliable enough to grade payback on.</span>';
+    '; the dashed curve past day ' + last.day + ' is a projection, not a measurement. ' +
+    'Budget-judged campaigns are excluded.</span>';
 }
 
 /* ---------------------------------------------------------------------------
