@@ -41,6 +41,54 @@
     <div class="eyebrow" id="pageEyebrow">Cohort payback against cash · every card follows the platform and window</div>
     <div class="h1" id="pageTitle">Negative Spend</div>
 
+    <!-- ===================================================================
+         The glance section and the performance table, filled by glance.js.
+         They sit above everything because they answer the question a UA
+         manager opens the page with - what needs a decision today - and the
+         cards below are the working behind that answer.
+
+         Both are empty containers on purpose: if glance.js fails to load the
+         page is exactly what it was before, rather than showing a broken
+         half-rendered summary.
+         =================================================================== -->
+    <div id="glanceHead"></div>
+    <div id="glanceActs" class="acts"></div>
+    <section id="perfCard" class="card mt" hidden>
+      <div class="chead">
+        <div>
+          <h2>Performance</h2>
+          <div class="note">Click a network to open its campaigns. Click any row for its trend.</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="ctrls">
+          <div class="keys" id="perfKeys"></div>
+          <div class="seg" id="perfGrain" role="group" aria-label="Trend grain">
+            <button type="button" data-g="daily" aria-pressed="false">Daily</button>
+            <button type="button" data-g="weekly" aria-pressed="true">Weekly</button>
+            <button type="button" data-g="monthly" aria-pressed="false">Monthly</button>
+          </div>
+        </div>
+      </div>
+      <div id="perfTable"></div>
+      <div class="detail" id="perfDetail">
+        <div class="dhead">
+          <h3 id="pdTitle">—</h3>
+          <span class="m" id="pdMeta"></span>
+          <div class="spacer"></div>
+          <span class="m" id="pdRef"></span>
+          <div class="seg cmode" id="perfMode" role="group" aria-label="What the chart shows">
+            <button type="button" data-m="roas" aria-pressed="false">ROAS vs target</button>
+            <button type="button" data-m="budget" aria-pressed="false">Spend vs budget</button>
+            <button type="button" data-m="money" aria-pressed="false">Cost vs revenue</button>
+          </div>
+        </div>
+        <div class="plot" id="pdPlot">
+          <svg id="pdSvg" viewBox="0 0 900 210" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div class="tip" id="pdTip"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- 0 · the five numbers that decide whether today needs action -->
     <div class="kpi-row five">
       <div class="kpi">
