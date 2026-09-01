@@ -317,7 +317,8 @@ function bullet(o) {
  * ------------------------------------------------------------------------- */
 function renderTable(m) {
   const head = `<table><thead><tr>
-    <th style="width:26%">Network / campaign</th>
+    <th class="n" style="width:34px">#</th>
+    <th style="width:24%">Network / campaign</th>
     <th style="width:11%">Trend<em>cost vs revenue</em></th>
     <th class="n" style="width:15%">Spend<em>against budget</em></th>
     <th class="n">Revenue<em>came back</em></th>
@@ -329,6 +330,7 @@ function renderTable(m) {
   m.networks.forEach((net, ni) => {
     const open = OPEN.has(net.name);
     html += `<tr class="grow${SELECTED === 'n:' + net.name ? ' on' : ''}" data-k="n:${esc(net.name)}">
+      <td class="n g-rank">${ni + 1}</td>
       <td><div class="g-nm${open ? ' open' : ''}"><span class="tw">▶</span><span>${esc(net.name)}
         <small>${net.campaigns.length} campaign${net.campaigns.length > 1 ? 's' : ''}${net.goal ? ' · goal ' + esc(net.goal) : ''}</small></span></div></td>
       <td>${spark(net._cost, net._rev, m.days)}</td>
@@ -338,9 +340,10 @@ function renderTable(m) {
       <td class="n">${bullet(net)}</td>
       <td>${chip(net.verdict)}</td></tr>`;
 
-    if (open) net.campaigns.slice().sort((a, b2) => b2.cost - a.cost).forEach((c) => {
+    if (open) net.campaigns.slice().sort((a, b2) => b2.cost - a.cost).forEach((c, ci) => {
       html += `<tr class="grow camp${SELECTED === 'c:' + c.campaign + '||' + c.channel ? ' on' : ''}"
           data-k="c:${esc(c.campaign)}||${esc(c.channel)}">
+        <td class="n g-rank">${ni + 1}.${ci + 1}</td>
         <td><div class="g-nm"><span>${esc(shortName(c.campaign))}<small>goal ${esc(c.goal)}</small></span></div></td>
         <td>${spark(c._cost, c._rev, m.days)}</td>
         <td class="n">${spendCell(c, false)}</td>
@@ -426,7 +429,14 @@ function drawDetail(m) {
   $('perfMode').querySelectorAll('button').forEach((b2) =>
     b2.setAttribute('aria-pressed', String(b2.dataset.m === mode)));
 
-  const W = 900, H = 210, PL = 58, PR = 14, PT = 12, PB = 26;
+  /* The viewBox is set to the plot's real pixel width, and the SVG no longer
+     carries preserveAspectRatio="none". With that attribute a 900-unit box was
+     stretched to whatever width the card happened to be, scaling X and Y by
+     different amounts - which stretches the text and the axis labels along with
+     the marks. One unit is one pixel now, so type is type. */
+  const H = 210, PL = 58, PR = 14, PT = 12, PB = 26;
+  const W = Math.max(560, Math.round($('pdPlot').clientWidth || 900));
+  $('pdSvg').setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   const iw = W - PL - PR, ih = H - PT - PB;
   const cost = bucketise(sel.o._cost, m.days), rev = bucketise(sel.o._rev, m.days);
   const n = cost.length;
@@ -547,6 +557,163 @@ function drawDetail(m) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Break-even
+ *
+ * Cash and cohort payback are different questions and the page has to carry
+ * both. Cash counts every dollar that landed inside the window, including from
+ * users bought long before it, so on a growing account it reads positive while
+ * the cohorts just bought are still under water. Payback counts only what the
+ * window's own cohorts returned by their goal day.
+ *
+ * The blend is the same one the removed ladder used: revenue at each age over
+ * the spend old enough to have reached it. Spend that has not aged that far is
+ * excluded rather than counted as a zero - dividing matured revenue by
+ * unmatured spend is the classic way to make a healthy account look broken.
+ * ------------------------------------------------------------------------- */
+function paybackPoints(rows) {
+  const sum = (f) => rows.reduce((s, c) => s + (f(c) || 0), 0);
+  const at = (day, cost, rev) => {
+    const c = sum(cost), r = sum(rev);
+    return { day, ratio: c > 0 ? r / c : null, cost: c, rev: r };
+  };
+  return [
+    at(0,  (c) => c.cost,   (c) => (c.adD0 || 0) + (c.iapD0 || 0)),
+    at(7,  (c) => c.cost7,  (c) => (c.adD7 || 0) + (c.iapD7 || 0)),
+    at(28, (c) => c.cost28, (c) => (c.adD28 || 0) + (c.iapD28 || 0)),
+  ].filter((p) => p.ratio != null && p.cost > 0);
+}
+
+/**
+ * Where the curve crosses 1.00x, fitted as ratio = a*ln(day+1) + b.
+ *
+ * A log curve is the usual shape for cumulative LTV and it fits three points
+ * without pretending to more precision than three points carry. The result is
+ * a projection, not a measurement, and is labelled as one everywhere it
+ * appears: two of the three inputs are D0 and D7, so a break-even predicted at
+ * day 200 rests almost entirely on the slope between day 7 and day 28.
+ */
+function projectBreakEven(points) {
+  if (points.length < 2) return null;
+  const xs = points.map((p) => Math.log(p.day + 1)), ys = points.map((p) => p.ratio);
+  const n = xs.length;
+  const mx = xs.reduce((a, b2) => a + b2, 0) / n, my = ys.reduce((a, b2) => a + b2, 0) / n;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) { num += (xs[i] - mx) * (ys[i] - my); den += (xs[i] - mx) ** 2; }
+  if (den === 0) return null;
+  const a = num / den, b = my - a * mx;
+  if (a <= 0) return { a, b, day: null };            // flat or falling: never
+  const day = Math.exp((1 - b) / a) - 1;
+  return { a, b, day: isFinite(day) && day > 0 ? day : null };
+}
+
+function renderBreakEven(m) {
+  const card = $('beCard');
+  const judged = m.rows.filter((c) => c.goal && c.goal !== '\u2014' && !c.budgetOnly);
+  const pts = paybackPoints(judged);
+  if (pts.length < 2) { card.hidden = true; return; }
+  card.hidden = false;
+
+  const last = pts[pts.length - 1];
+  const fit = projectBreakEven(pts);
+  const HORIZON = 180;
+
+  const now = $('beNow');
+  now.textContent = last.ratio.toFixed(3) + 'x';
+  now.parentElement.className = 'be-now ' + (last.ratio >= 1 ? 'over' : 'under');
+  $('beNote').textContent =
+    'Every dollar of spend old enough to judge, against what it had returned by day ' +
+    last.day + '. ' + money(last.cost) + ' of spend, ' + money(last.rev) + ' back.';
+
+  /* ---- plot ---- */
+  const plot = $('bePlot'), svg = $('beSvg');
+  const H = 190, PL = 46, PR = 90, PT = 14, PB = 26;
+  const W = Math.max(560, Math.round(plot.clientWidth || 900));
+  const iw = W - PL - PR, ih = H - PT - PB;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+  const maxDay = Math.min(HORIZON, Math.max(35, fit && fit.day ? fit.day * 1.15 : 35));
+  const maxY = Math.max(1.15, last.ratio * 1.25, 1.15);
+  const x = (d) => PL + Math.min(d, maxDay) / maxDay * iw;
+  const y = (r) => PT + ih - Math.min(r, maxY) / maxY * ih;
+
+  let g = '';
+  for (let k = 0; k <= 4; k++) {
+    const v = maxY * k / 4, yy = y(v);
+    g += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) +
+         '" stroke="var(--g-grid)" stroke-width="1"/>' +
+         '<text x="' + (PL - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="end" font-size="10" ' +
+         'font-family="DM Mono,monospace" fill="var(--t3)">' + v.toFixed(2) + '</text>';
+  }
+  /* break-even is the only line on this chart anybody is aiming at */
+  g += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(1).toFixed(1) + '" y2="' + y(1).toFixed(1) +
+       '" stroke="var(--t2)" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+       '<text x="' + (W - PR + 7) + '" y="' + (y(1) + 3.5).toFixed(1) + '" font-size="11" ' +
+       'fill="var(--t2)">1.00x break-even</text>';
+
+  const measured = pts.map((p, i) => (i ? 'L' : 'M') + x(p.day).toFixed(1) + ' ' + y(p.ratio).toFixed(1)).join(' ');
+  let proj = '';
+  if (fit && fit.a > 0) {
+    const seg = [];
+    for (let d = last.day; d <= maxDay; d += Math.max(1, maxDay / 90)) {
+      seg.push((seg.length ? 'L' : 'M') + x(d).toFixed(1) + ' ' + y(fit.a * Math.log(d + 1) + fit.b).toFixed(1));
+    }
+    proj = '<path d="' + seg.join(' ') + '" fill="none" stroke="var(--g-rev)" stroke-width="2" ' +
+           'stroke-dasharray="6 4" opacity=".75"/>';
+  }
+  /* Day 0 sits on the left edge, so a centred label above it lands on top of
+     the y-axis numbers - "0.29" and "0.18" printed as "0.290.18". Labels that
+     close to the axis are anchored to the right of their dot instead. */
+  const dots = pts.map((p) => {
+    const px = x(p.day), near = px - PL < 26;
+    return '<circle cx="' + px.toFixed(1) + '" cy="' + y(p.ratio).toFixed(1) + '" r="4.5" ' +
+      'fill="var(--g-rev)" stroke="var(--card)" stroke-width="2"/>' +
+      '<text x="' + (near ? px + 9 : px).toFixed(1) + '" y="' +
+      (near ? y(p.ratio) + 3.5 : y(p.ratio) - 11).toFixed(1) + '" ' +
+      'text-anchor="' + (near ? 'start' : 'middle') + '" ' +
+      'font-size="10.5" font-family="DM Mono,monospace" fill="var(--t2)">' + p.ratio.toFixed(2) + '</text>';
+  }).join('');
+  const ticks = [0, 7, 28, Math.round(maxDay)].filter((d, i, a) => a.indexOf(d) === i && d <= maxDay)
+    .map((d) => '<text x="' + x(d).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" font-size="10" ' +
+      'fill="var(--t3)">day ' + d + '</text>').join('');
+
+  let cross = '';
+  if (fit && fit.day && fit.day <= maxDay) {
+    cross = '<line x1="' + x(fit.day).toFixed(1) + '" x2="' + x(fit.day).toFixed(1) + '" y1="' + PT +
+            '" y2="' + (PT + ih) + '" stroke="var(--g-good)" stroke-width="1" stroke-dasharray="3 3"/>' +
+            '<circle cx="' + x(fit.day).toFixed(1) + '" cy="' + y(1).toFixed(1) +
+            '" r="4" fill="var(--g-good)" stroke="var(--card)" stroke-width="2"/>';
+  }
+
+  svg.innerHTML = g + proj +
+    '<path d="' + measured + '" fill="none" stroke="var(--g-rev)" stroke-width="2.5" stroke-linejoin="round"/>' +
+    cross + dots + ticks;
+
+  /* ---- the sentence under it ---- */
+  const shortfall = last.cost * (1 - last.ratio);
+  let verdict;
+  if (last.ratio >= 1) {
+    verdict = '<b>Already past break-even.</b> Spend at this age has returned more than it cost.';
+  } else if (!fit || !fit.day) {
+    verdict = '<b class="bad">No break-even in sight.</b> The curve is flat or falling between the ' +
+      'measured points, so nothing here projects a crossing.';
+  } else if (fit.day > HORIZON) {
+    verdict = '<b class="bad">Break-even projected past day ' + HORIZON + '.</b> That is far enough out ' +
+      'to treat as "not paying back" rather than as a date.';
+  } else {
+    verdict = '<b class="warn">Break-even projected around day ' + Math.round(fit.day) + '</b>, ' +
+      (fit.day <= 30 ? 'which is inside a normal payback window.'
+                     : 'which is a long wait - worth checking the targets are set for it.');
+  }
+  $('beFoot').innerHTML = verdict +
+    ' Currently <b>' + money(shortfall) + '</b> short of break-even on ' + money(last.cost) +
+    ' of judgeable spend.' +
+    '<br><span style="color:var(--t3)">Measured at day ' + pts.map((p) => p.day).join(', ') +
+    '; everything past day ' + last.day + ' is a projection fitted to those ' + pts.length +
+    ' points, not a measurement. Campaigns judged on budget alone are excluded - their ' +
+    'install and revenue data is not reliable enough to grade payback on.</span>';
+}
+
+/* ---------------------------------------------------------------------------
  * Wiring
  * ------------------------------------------------------------------------- */
 function wireOnce() {
@@ -584,9 +751,22 @@ window.__nsBridge.onRender = function (W) {
   if (!stillThere) SELECTED = MODEL.networks.length ? 'n:' + MODEL.networks[0].name : null;
 
   renderHead(MODEL);
+  renderBreakEven(MODEL);
   renderTable(MODEL);
   drawDetail(MODEL);
 };
+
+/* Both charts size their viewBox from the container, so a resize has to redraw
+   them or the type ends up scaled after all - which is the bug the viewBox
+   change was made to fix. */
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (!MODEL) return;
+    try { renderBreakEven(MODEL); drawDetail(MODEL); } catch (e) {}
+  }, 150);
+});
 
 /* Exposed for the smoke test, which asserts the tiles and the table agree —
    the one invariant this file exists to hold. */

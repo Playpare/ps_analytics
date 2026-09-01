@@ -53,6 +53,24 @@
          =================================================================== -->
     <div id="glanceHead"></div>
     <div id="glanceActs" class="acts"></div>
+
+    <!-- Cohort payback against break-even, with a projection. This is the one
+         thing the removed sections carried that nothing else did: cash can read
+         positive while the cohorts you just bought are still under water. -->
+    <section id="beCard" class="card mt" hidden>
+      <div class="chead">
+        <div>
+          <h2>Will this money come back?</h2>
+          <div class="note" id="beNote">—</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="be-now"><span id="beNow">—</span><em>returned so far</em></div>
+      </div>
+      <div class="be-plot" id="bePlot">
+        <svg id="beSvg" aria-hidden="true"></svg>
+      </div>
+      <div class="be-foot" id="beFoot"></div>
+    </section>
     <section id="perfCard" class="card mt" hidden>
       <div class="chead">
         <div>
@@ -83,158 +101,26 @@
           </div>
         </div>
         <div class="plot" id="pdPlot">
-          <svg id="pdSvg" viewBox="0 0 900 210" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <svg id="pdSvg" viewBox="0 0 900 210" aria-hidden="true"></svg>
           <div class="tip" id="pdTip"></div>
         </div>
       </div>
     </section>
 
-    <!-- 0 · the five numbers that decide whether today needs action -->
-    <div class="kpi-row five">
-      <div class="kpi">
-        <div class="l">Spend at risk</div>
-        <div class="v" id="k_risk">—</div><div class="d" id="k_risk_d">—</div>
-      </div>
-      <div class="kpi">
-        <div class="l">Days losing money</div>
-        <div class="v" id="k_negdays">—</div><div class="d" id="k_negdays_d">—</div>
-      </div>
-      <div class="kpi">
-        <div class="l">Spend not judged</div>
-        <div class="v" id="k_unjudged">—</div><div class="d" id="k_unjudged_d">—</div>
-      </div>
-      <div class="kpi">
-        <div class="l">Biggest cash drag</div>
-        <div class="v" id="k_drag">—</div><div class="d" id="k_drag_d">—</div>
-      </div>
-      <div class="kpi">
-        <div class="l">Unusable install data</div>
-        <div class="v" id="k_fake">—</div><div class="d" id="k_fake_d">—</div>
-      </div>
-    </div>
+    <!-- The five KPI tiles, the payback bar, the cohort ladder, the daily
+         strip, the two decision charts, the networks table, the campaigns
+         list and the settings history all used to sit here.
 
-    <!-- 1 · the headline question -->
-    <article class="card pay mt">
-      <div class="pay-q">Will the money we spent come back?</div>
-      <div class="pay-track">
-        <div class="pay-bar"><div class="pay-fill" id="payFill"></div></div>
-        <div class="pay-mark" id="payMark"><span>1.00x break-even</span></div>
-      </div>
-      <div class="pay-lead">
-        <span class="pay-x" id="payX">—</span>
-        <span class="pay-note" id="payNote">returned at each campaign's own goal window, on cohorts old enough to judge</span>
-        <span class="chip" id="payChip"></span>
-      </div>
-      <div class="pay-line" id="payLine">—</div>
-      <div class="pay-cash">
-        <span class="badge b-warn">CASH TODAY</span>
-        <span class="v" id="cashV">—</span>
-        <span id="cashNote"></span>
-        <span class="chip" id="cashChip"></span>
-      </div>
-      <div class="pay-cash" style="border:0;padding-top:0;margin-top:4px">
-        <span class="pay-dim">— cash counts every dollar that landed today, including from users bought before this window, so it can stay positive while new cohorts fall short.</span>
-      </div>
-      <div class="pay-foot" id="payFoot"></div>
-    </article>
+         They are gone because the sections above answer the same questions
+         in one place, and because two of them actively disagreed with it:
+         "Spend at risk" read mature cohorts and goal-window revenue while
+         the campaigns table read the whole window and all revenue, so the
+         page printed two different answers to "what should I cut" without
+         saying which was which.
 
-    <!-- 1b · does it get better as the cohort ages -->
-    <article class="card mt cohort-card">
-      <div class="card-head">
-        <h2>Cohort payback ladder</h2>
-        <div class="strip-key"><span>solid line = 1.00x break-even</span><span>grey tick = target from Assumptions</span></div>
-      </div>
-      <div class="card-sub" id="ladderSub">—</div>
-      <div class="ladder" id="ladder"></div>
-    </article>
-
-    <!-- 2 · did any single day lose money -->
-    <article class="card mt">
-      <div class="card-head margin-head">
-        <h2 id="marginTitle">Daily profit and loss</h2>
-        <div class="margin-head-right">
-          <div class="margin-filters">
-            <select id="marginPeriod" class="chan-filter" title="Margin grouping">
-              <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option>
-            </select>
-            <select id="marginChannel" class="chan-filter" title="Channel"><option value="all">All channels</option></select>
-            <select id="marginCampaign" class="chan-filter" title="Campaign"><option value="all">All campaigns</option></select>
-          </div>
-          <div class="strip-key">
-            <span><i style="background:var(--teal)"></i>in profit</span>
-            <span id="marginNormKey"><i style="background:var(--amber)"></i>below its weekday norm</span>
-            <span><i style="background:var(--coral)"></i>lost money</span>
-          </div>
-        </div>
-      </div>
-      <div class="card-sub" id="stripSub">—</div>
-      <div class="strip" id="dailyStrip"></div>
-      <div class="strip-ends"><span id="stripFrom"></span><span id="stripTo"></span></div>
-    </article>
-
-    <!-- 2b · where the money at risk actually sits -->
-    <div class="two mt">
-      <article class="card">
-        <div class="card-head">
-          <h2>Spend by decision</h2>
-        </div>
-        <div class="card-sub">Hover a bar for the exact spend behind it.</div>
-        <div class="chartbox"><canvas id="riskChart"></canvas></div>
-      </article>
-      <article class="card">
-        <div class="card-head">
-          <h2>Cash profit by network</h2>
-        </div>
-        <div class="card-sub">Worst first. Anything left of zero is taking money out.</div>
-        <div class="chartbox"><canvas id="netGpChart"></canvas></div>
-      </article>
-    </div>
-
-    <!-- 3 · which network is leaking -->
-    <article class="card mt">
-      <div class="card-head">
-        <h2>Networks</h2>
-      </div>
-      <div class="card-sub">Cash and payback read the same money differently. Watch the rows where they disagree.</div>
-      <div id="networkTable" class="tablewrap"></div>
-    </article>
-
-    <!-- 4 · what to do on Monday morning -->
-    <article class="card mt">
-      <div class="card-head">
-        <h2>Campaigns to act on</h2>
-        <div class="filters">
-          <select id="campChannel" class="chan-filter" title="Network"><option value="all">All networks</option></select>
-          <select id="campCampaign" class="chan-filter" title="Campaign"><option value="all">All campaigns</option></select>
-          <select id="campRev" class="chan-filter" title="Revenue type">
-            <option value="all">All revenue types</option>
-            <option value="ad">ad revenue</option>
-            <option value="iap">IAP revenue</option>
-            <option value="allrev">all revenue</option>
-          </select>
-          <select id="campVerdict" class="chan-filter" title="Decision"><option value="all">All decisions</option></select>
-          <button id="watchAll" class="chan-filter btn-flat" type="button">Show all</button>
-        </div>
-      </div>
-      <div class="card-sub" id="watchSub">—</div>
-      <div id="watchTable" class="tablewrap"></div>
-    </article>
-
-    <!-- 5 · what changed, and how each period actually did -->
-    <article class="card mt">
-      <div class="card-head">
-        <h2>Settings history</h2>
-        <div class="filters">
-          <select id="hisChannel" class="chan-filter" title="Channel"><option value="all">All channels</option></select>
-          <select id="hisCampaign" class="chan-filter" title="Campaign"><option value="all">All campaigns</option></select>
-          <select id="hisPeriod" class="chan-filter" title="Grouping">
-            <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option>
-          </select>
-        </div>
-      </div>
-      <div class="card-sub" id="hisSub">—</div>
-      <div id="historyTable" class="tablewrap"></div>
-    </article>
+         The one thing they carried that nothing else did - cohort payback
+         against break-even - is now the break-even card above, with a
+         projection the ladder never had. -->
 
   </div>
   <div class="sf"><span>UA · Negative Spend <b style="color:var(--teal)">· build B9 — rows measured on the settings running now, with their effective date</b></span><span>Playspare · Game District</span></div>
