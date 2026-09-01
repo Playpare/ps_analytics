@@ -2,13 +2,14 @@
   "name": "ps-analytics",
   "version": "1.0.0",
   "private": true,
-  "description": "Playspare MSS3D analytics hub — UA, Weekly, Till Date, ASO and Negative Spend reports over Google Apps Script backends.",
+  "description": "Playspare MSS3D analytics hub \u00e2\u20ac\u201d UA, Weekly, Till Date, ASO and Negative Spend reports over Google Apps Script backends.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "glance": "node tools/glance-test.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

@@ -209,7 +209,21 @@ const decisionLabel=v=>WATCH_LABEL[v]||QUIET_LABEL[v]||v;
 const decisionBadge=v=>WATCH_BADGE[v]||QUIET_BADGE[v]||'b-mute';
 const WATCH_TOP=25;
 
-let DATA=null, FINGERPRINT='', DATE_FILTER='w2', RANGE_START='', RANGE_END='', PLATFORM='android', LAST_LOAD_TIME='';
+/* The window the page opens on.
+ *
+ * This was 'w2'. Two weeks cannot answer the question the page asks: a D7
+ * verdict needs cohorts that have reached day 7 and a D28 verdict cohorts that
+ * have reached day 28, and a fortnight contains none of the latter. That is
+ * why the payback ladder read 0.000x, why "spend not judged" was 100% of the
+ * window, and why "Spend at risk" said $0.00 directly above a list of
+ * campaigns to cut. None of those were bugs in the arithmetic - the window was
+ * simply too narrow to have an opinion.
+ *
+ * 13 weeks is the shortest window that can judge both. Where the sheet holds
+ * less history than that, the page shows what exists and says so rather than
+ * padding the gap.
+ */
+let DATA=null, FINGERPRINT='', DATE_FILTER='w13', RANGE_START='', RANGE_END='', PLATFORM='android', LAST_LOAD_TIME='';
 let LAST_SNAPSHOT_SYNC=0;
 let ROWS_BY_DAY=[], DAY_MS=[], WINDOW_CACHE=new Map();
 let SLICE=null;                       /* server-computed rows for a deep custom range */
@@ -540,7 +554,12 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const shortDate=iso=>{const d=isoToDate(iso);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):String(iso)};
 const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function isoToDate(iso){if(!iso)return null;const p=String(iso).split('-');const d=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(d)?null:d}
-function isoShift(iso,days){const d=isoToDate(iso);d.setDate(d.getDate()+days);return toISO(d)}
+/* isoToDate returns null for a blank or unparseable date, so this has to cope
+   with one. It used to call setDate() on it and throw, which is how an empty
+   payload took the whole report down from inside initDateFilters - including,
+   after the module split, glance.js, which never got imported because the
+   throw aborted this file's evaluation. */
+function isoShift(iso,days){const d=isoToDate(iso);if(!d)return '';d.setDate(d.getDate()+days);return toISO(d)}
 function toISO(d){const m=String(d.getMonth()+1).padStart(2,'0'),y=String(d.getDate()).padStart(2,'0');return d.getFullYear()+'-'+m+'-'+y}
 function setStatus(s,isError){$('status').textContent=s;$('status').classList.toggle('error',!!isError)}
 function loadedNow(){LAST_LOAD_TIME=new Date().toLocaleTimeString('en-US');setLoadedStatus()}
@@ -582,7 +601,7 @@ function boot(){
   const cached=readLocal();
   if(cached){
     FINGERPRINT=cached.fingerprint;
-    applyPayload(cached.payload,true);
+    if(!applyPayload(cached.payload,true))return;
     setStatus('Showing your last load · checking for new data…');
   }else{
     showLoader(true);
@@ -611,8 +630,13 @@ function fetchSnapshot(fp){
         return;
       }
       FINGERPRINT=res.fingerprint;
+      /* Apply first, cache second. Writing an empty snapshot to localStorage is
+         what made this failure survive a reload: the bad copy was reloaded and
+         crashed again before anything could replace it. And loadedNow() would
+         overwrite the explanation applyPayload just wrote with the word
+         "Loaded", which is the least true thing the page could say. */
+      if(!applyPayload(res.payload,false))return;
       writeLocal(res.fingerprint,res.payload);
-      applyPayload(res.payload,false);
       showLoader(false);
       loadedNow();
     })
@@ -634,7 +658,13 @@ function readLocal(){
     const raw=localStorage.getItem('uansm_snapshot');
     if(!raw)return null;
     const obj=JSON.parse(raw);
-    return (obj&&obj.payload&&obj.payload.days)?obj:null;
+    /* `.days` alone is not enough: an empty array is truthy, so a snapshot
+       built while the RAW column mapping was wrong - every row dropped, days
+       empty - passed this guard, was painted from cache on every load, and
+       killed the page in isoShift() before it could ever fetch a good one.
+       Reloading could not recover it; the bad copy was the thing being
+       reloaded. A snapshot with no days is not a cache hit. */
+    return (obj&&obj.payload&&obj.payload.days&&obj.payload.days.length)?obj:null;
   }catch(e){return null}
 }
 function writeLocal(fp,payload){
@@ -643,6 +673,20 @@ function writeLocal(fp,payload){
 }
 
 function applyPayload(payload,fromCache){
+  /* A payload with no days is not a quiet edge case - it means the server read
+     the sheet and found nothing it could use, which today meant the RAW column
+     mapping had moved and every row was dropped for a bad date. Say that,
+     rather than painting a page of em-dashes and leaving somebody to guess.
+     Returning here also keeps the rest of this file evaluating, so the
+     sections that live in other modules still load. */
+  if(!payload||!payload.days||!payload.days.length){
+    DATA=null;
+    showLoader(false);
+    setStatus('No usable rows in the sheet. Every row was dropped - usually the '+
+      'RAW columns have moved, or the date column is text rather than dates. '+
+      'Run checkSpan() in Apps Script: if bad dates equals the row count, that is it.',true);
+    return false;
+  }
   DATA=payload;
   SLICE=null;
   WINDOW_CACHE.clear();
@@ -655,6 +699,7 @@ function applyPayload(payload,fromCache){
   populateSelectors();
   render();
   try{window.parent.postMessage({type:'mss3d:report-ready',report:'ua-negative-spend'},location.origin)}catch(e){}
+  return true;
 }
 
 /** Buckets detail rows by day index so a window is a slice, not a scan. */
@@ -1043,6 +1088,13 @@ function initDateFilters(announce){
         '<option value="w6">Last 6 weeks</option>'+
         '<option value="w8">Last 8 weeks</option>'+
         '<option value="w10">Last 10 weeks</option>'+
+        /* 13 weeks = 91 days, the shortest window that can carry a D28 verdict:
+           a D28 cohort needs 28 days to mature, so anything narrower judges D7
+           at best and reports nothing for the rest. Presets snap to complete
+           Monday-Sunday weeks, so this can begin up to 97 days back - inside
+           the 120 days of detail the server ships, which is why it costs no
+           extra request. */
+        '<option value="w13">Last 13 weeks</option>'+
         '<option value="custom">Custom range</option>'+
         '<option value="all">All loaded dates</option>'+
       '</select>'+
@@ -1227,6 +1279,14 @@ function render(){
   renderNetworks(W);
   renderWatchlist(W);
   renderHistory(W);
+  /* The glance section and performance table, from glance.js. Called from
+     inside this one render pass on purpose: they read the same W every other
+     section reads, so they cannot end up describing a different window than
+     the tables beneath them. Optional - the page works without the module. */
+  if(window.__nsBridge&&window.__nsBridge.onRender){
+    try{window.__nsBridge.onRender(W)}
+    catch(e){console.error('[glance] render failed:',e)}
+  }
   if(!$('mapModal').hidden)renderMapTable();
   syncDateControls();
 }
@@ -3419,4 +3479,99 @@ document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&DATA&&Date.now()-LAST_SNAPSHOT_SYNC>15000)refreshSnapshot();
 });
 $('mapSearch').oninput=ev=>{MAP_SEARCH=ev.target.value;renderMapTable()};
+
+/* ===========================================================================
+ * Bridge to glance.js
+ * ---------------------------------------------------------------------------
+ * The glance section and the performance table live in their own module. This
+ * is the only surface they are allowed to touch, and it exists so that:
+ *
+ *   - a reviewer can see, in one place, exactly what the new sections depend
+ *     on, without reading 3,900 lines to find out;
+ *   - the new sections reuse THIS file's domain functions rather than
+ *     reimplementing them. A summary that computes its own verdicts will
+ *     eventually disagree with the table under it, which is precisely the
+ *     fault the new section exists to fix - the live KPI reads "$0.00 at risk"
+ *     above a list of campaigns to cut because two verdict engines answer the
+ *     same question differently;
+ *   - whoever breaks this file up later knows what is load-bearing from
+ *     outside it.
+ *
+ * Nothing here is new logic. dailySeriesByCampaign is the one addition, and
+ * only because the existing dailyCostByCampaign returns cost alone while a
+ * cost-and-revenue sparkline needs both.
+ * ======================================================================== */
+
+/**
+ * Per-campaign daily cost and revenue across the current window, as arrays
+ * aligned to a shared day list so a chart can index straight into them.
+ *
+ * Same walk as dailyCostByCampaign, same platform filter, same SLICE
+ * handling - deliberately, so the two cannot drift on which rows count.
+ *
+ * @return {{days:string[], byKey:Map<string,{cost:number[],rev:number[]}>}}
+ */
+function dailySeriesByCampaign(){
+  const idx=windowIdx(),days=idx.days,byDay=SLICE?SLICE.byDay:ROWS_BY_DAY;
+  const campaigns=SLICE?SLICE.campaigns:DATA.campaigns;
+  const channels=SLICE?SLICE.channels:DATA.channels;
+  const out={days:[],byKey:new Map()};
+  if(idx.si<0)return out;
+
+  for(let di=idx.si;di<=idx.ei;di++)out.days.push(days[di]);
+  const n=out.days.length;
+
+  for(let di=idx.si;di<=idx.ei;di++){
+    const slot=di-idx.si;
+    (byDay[di]||[]).forEach(r=>{
+      const camp=campaigns[r[0]];if(!camp)return;
+      if(PLATFORM!=='all'&&String(camp[2]||'').toLowerCase()!==PLATFORM)return;
+      const key=camp[0]+'||'+channels[camp[1]];
+      let m=out.byKey.get(key);
+      if(!m){m={cost:new Array(n).fill(0),rev:new Array(n).fill(0)};out.byKey.set(key,m)}
+      m.cost[slot]+=r[2];
+      m.rev[slot]+=r[4]+r[5];      // ad + iap, the same "all revenue" used above
+    });
+  }
+  return out;
+}
+
+window.__nsBridge={
+  /* live state, read through getters so the module never holds a stale copy */
+  get data(){return DATA},
+  get platform(){return PLATFORM},
+  get dateFilter(){return DATE_FILTER},
+
+  /* window + rows */
+  computeWindow:computeWindow,
+  overallCampaigns:overallCampaigns,
+  filteredCampaigns:filteredCampaigns,
+  dailySeriesByCampaign:dailySeriesByCampaign,
+
+  /* domain - reused, never reimplemented */
+  paybackOf:paybackOf,
+  judgedRows:judgedRows,
+  judgeModeAt:judgeModeAt,
+  liveBudget:liveBudget,
+  settingOn:settingOn,
+  isHistoricalRange:isHistoricalRange,
+
+  /* formatting, so the new sections render numbers identically */
+  money:money, pctOf:pctOf, esc:esc,
+  shortDate:shortDate, dmy:dmy, isoShift:isoShift, todayISO:todayISO,
+
+  /* opens the existing Campaign settings modal, optionally pre-filtered, so a
+     tile that says "6 campaigns have no cap" can hand the user straight to
+     the place where a cap is set */
+  openSettings:function(channel){
+    if(channel){FILTERS.mapChannel=channel;MAP_SEARCH=''; }
+    const btn=$('mapBtn');
+    if(btn)btn.click();
+  },
+
+  /* the new sections ask to be redrawn from here, so there is one render
+     order rather than two competing ones */
+  onRender:null
+};
+
 boot();

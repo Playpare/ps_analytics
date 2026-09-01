@@ -16,3 +16,9 @@ import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';
 
 import './negative-spend.legacy.js';
+
+/* After the report, never before: glance.js registers itself on the bridge
+   that negative-spend.legacy.js publishes at the end of its own evaluation.
+   Imported first, it would find no bridge to attach to and the new sections
+   would silently never render. */
+import './glance.js';
