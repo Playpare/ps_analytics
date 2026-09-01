@@ -1248,6 +1248,14 @@ function render(){
   renderNetworks(W);
   renderWatchlist(W);
   renderHistory(W);
+  /* The glance section and performance table, from glance.js. Called from
+     inside this one render pass on purpose: they read the same W every other
+     section reads, so they cannot end up describing a different window than
+     the tables beneath them. Optional - the page works without the module. */
+  if(window.__nsBridge&&window.__nsBridge.onRender){
+    try{window.__nsBridge.onRender(W)}
+    catch(e){console.error('[glance] render failed:',e)}
+  }
   if(!$('mapModal').hidden)renderMapTable();
   syncDateControls();
 }
@@ -3440,4 +3448,99 @@ document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&DATA&&Date.now()-LAST_SNAPSHOT_SYNC>15000)refreshSnapshot();
 });
 $('mapSearch').oninput=ev=>{MAP_SEARCH=ev.target.value;renderMapTable()};
+
+/* ===========================================================================
+ * Bridge to glance.js
+ * ---------------------------------------------------------------------------
+ * The glance section and the performance table live in their own module. This
+ * is the only surface they are allowed to touch, and it exists so that:
+ *
+ *   - a reviewer can see, in one place, exactly what the new sections depend
+ *     on, without reading 3,900 lines to find out;
+ *   - the new sections reuse THIS file's domain functions rather than
+ *     reimplementing them. A summary that computes its own verdicts will
+ *     eventually disagree with the table under it, which is precisely the
+ *     fault the new section exists to fix - the live KPI reads "$0.00 at risk"
+ *     above a list of campaigns to cut because two verdict engines answer the
+ *     same question differently;
+ *   - whoever breaks this file up later knows what is load-bearing from
+ *     outside it.
+ *
+ * Nothing here is new logic. dailySeriesByCampaign is the one addition, and
+ * only because the existing dailyCostByCampaign returns cost alone while a
+ * cost-and-revenue sparkline needs both.
+ * ======================================================================== */
+
+/**
+ * Per-campaign daily cost and revenue across the current window, as arrays
+ * aligned to a shared day list so a chart can index straight into them.
+ *
+ * Same walk as dailyCostByCampaign, same platform filter, same SLICE
+ * handling - deliberately, so the two cannot drift on which rows count.
+ *
+ * @return {{days:string[], byKey:Map<string,{cost:number[],rev:number[]}>}}
+ */
+function dailySeriesByCampaign(){
+  const idx=windowIdx(),days=idx.days,byDay=SLICE?SLICE.byDay:ROWS_BY_DAY;
+  const campaigns=SLICE?SLICE.campaigns:DATA.campaigns;
+  const channels=SLICE?SLICE.channels:DATA.channels;
+  const out={days:[],byKey:new Map()};
+  if(idx.si<0)return out;
+
+  for(let di=idx.si;di<=idx.ei;di++)out.days.push(days[di]);
+  const n=out.days.length;
+
+  for(let di=idx.si;di<=idx.ei;di++){
+    const slot=di-idx.si;
+    (byDay[di]||[]).forEach(r=>{
+      const camp=campaigns[r[0]];if(!camp)return;
+      if(PLATFORM!=='all'&&String(camp[2]||'').toLowerCase()!==PLATFORM)return;
+      const key=camp[0]+'||'+channels[camp[1]];
+      let m=out.byKey.get(key);
+      if(!m){m={cost:new Array(n).fill(0),rev:new Array(n).fill(0)};out.byKey.set(key,m)}
+      m.cost[slot]+=r[2];
+      m.rev[slot]+=r[4]+r[5];      // ad + iap, the same "all revenue" used above
+    });
+  }
+  return out;
+}
+
+window.__nsBridge={
+  /* live state, read through getters so the module never holds a stale copy */
+  get data(){return DATA},
+  get platform(){return PLATFORM},
+  get dateFilter(){return DATE_FILTER},
+
+  /* window + rows */
+  computeWindow:computeWindow,
+  overallCampaigns:overallCampaigns,
+  filteredCampaigns:filteredCampaigns,
+  dailySeriesByCampaign:dailySeriesByCampaign,
+
+  /* domain - reused, never reimplemented */
+  paybackOf:paybackOf,
+  judgedRows:judgedRows,
+  judgeModeAt:judgeModeAt,
+  liveBudget:liveBudget,
+  settingOn:settingOn,
+  isHistoricalRange:isHistoricalRange,
+
+  /* formatting, so the new sections render numbers identically */
+  money:money, pctOf:pctOf, esc:esc,
+  shortDate:shortDate, dmy:dmy, isoShift:isoShift, todayISO:todayISO,
+
+  /* opens the existing Campaign settings modal, optionally pre-filtered, so a
+     tile that says "6 campaigns have no cap" can hand the user straight to
+     the place where a cap is set */
+  openSettings:function(channel){
+    if(channel){FILTERS.mapChannel=channel;MAP_SEARCH=''; }
+    const btn=$('mapBtn');
+    if(btn)btn.click();
+  },
+
+  /* the new sections ask to be redrawn from here, so there is one render
+     order rather than two competing ones */
+  onRender:null
+};
+
 boot();
