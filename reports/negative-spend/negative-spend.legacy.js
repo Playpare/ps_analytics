@@ -209,7 +209,21 @@ const decisionLabel=v=>WATCH_LABEL[v]||QUIET_LABEL[v]||v;
 const decisionBadge=v=>WATCH_BADGE[v]||QUIET_BADGE[v]||'b-mute';
 const WATCH_TOP=25;
 
-let DATA=null, FINGERPRINT='', DATE_FILTER='w2', RANGE_START='', RANGE_END='', PLATFORM='android', LAST_LOAD_TIME='';
+/* The window the page opens on.
+ *
+ * This was 'w2'. Two weeks cannot answer the question the page asks: a D7
+ * verdict needs cohorts that have reached day 7 and a D28 verdict cohorts that
+ * have reached day 28, and a fortnight contains none of the latter. That is
+ * why the payback ladder read 0.000x, why "spend not judged" was 100% of the
+ * window, and why "Spend at risk" said $0.00 directly above a list of
+ * campaigns to cut. None of those were bugs in the arithmetic - the window was
+ * simply too narrow to have an opinion.
+ *
+ * 13 weeks is the shortest window that can judge both. Where the sheet holds
+ * less history than that, the page shows what exists and says so rather than
+ * padding the gap.
+ */
+let DATA=null, FINGERPRINT='', DATE_FILTER='w13', RANGE_START='', RANGE_END='', PLATFORM='android', LAST_LOAD_TIME='';
 let LAST_SNAPSHOT_SYNC=0;
 let ROWS_BY_DAY=[], DAY_MS=[], WINDOW_CACHE=new Map();
 let SLICE=null;                       /* server-computed rows for a deep custom range */
@@ -1043,6 +1057,13 @@ function initDateFilters(announce){
         '<option value="w6">Last 6 weeks</option>'+
         '<option value="w8">Last 8 weeks</option>'+
         '<option value="w10">Last 10 weeks</option>'+
+        /* 13 weeks = 91 days, the shortest window that can carry a D28 verdict:
+           a D28 cohort needs 28 days to mature, so anything narrower judges D7
+           at best and reports nothing for the rest. Presets snap to complete
+           Monday-Sunday weeks, so this can begin up to 97 days back - inside
+           the 120 days of detail the server ships, which is why it costs no
+           extra request. */
+        '<option value="w13">Last 13 weeks</option>'+
         '<option value="custom">Custom range</option>'+
         '<option value="all">All loaded dates</option>'+
       '</select>'+

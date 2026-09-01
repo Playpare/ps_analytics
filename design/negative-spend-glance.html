@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Negative Spend · proposed design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+ * Tokens are the dashboard's own. Two groups are snapped one step down from
+ * the live values, because the live ones are tuned as TEXT accents and sit
+ * outside the OKLCH lightness band for use as marks on this surface:
+ *
+ *   status   --bad / --warn / --good     band PASS, chroma PASS, contrast PASS,
+ *                                        CVD 7.0 protan (floor band) — legal
+ *                                        because every status also carries an
+ *                                        icon and a word, never colour alone
+ *   series   --cost / --rev              ALL CHECKS PASS on both surfaces
+ *
+ * Both were run through the palette validator rather than eyeballed.
+ * ------------------------------------------------------------------------- */
+:root{
+  --bg:#000;--card:#0b0c0f;--card2:#070809;
+  --border:rgba(255,255,255,.08);--borderB:rgba(255,255,255,.14);
+  --t1:#edf2ff;--t2:#c0ccdf;--t3:#8ea0ba;
+  --teal:#00e5c3;
+  --bad:#e23a59; --warn:#c78400; --good:#00a065; --none:#5a6779;
+  --cost:#2f7fe0; --rev:#00a58f;
+  --grid:rgba(255,255,255,.07);
+  --r:14px;
+}
+html[data-theme=light]{
+  --bg:#eef1f7;--card:#fff;--card2:#f5f7fc;
+  --border:rgba(15,30,60,.09);--borderB:rgba(15,30,60,.16);
+  --t1:#0d1b2e;--t2:#56657f;--t3:#7386a1;
+  --bad:#c32f4c;--warn:#a06a00;--good:#008151;--none:#6b7789;
+  --grid:rgba(15,30,60,.09);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);
+  font-family:'Segoe UI',Poppins,system-ui,sans-serif;padding:26px 24px 70px}
+.wrap{max-width:1300px;margin:0 auto}
+.num{font-family:'DM Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- headline ---------- */
+.eyebrow{color:var(--t3);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600}
+h1{font-size:26px;font-weight:650;margin:6px 0 4px;letter-spacing:-.01em}
+h1 .lost{color:var(--bad)}
+.sub{color:var(--t2);font-size:13.5px;line-height:1.55;max-width:64ch}
+
+/* ---------- the three decisions ---------- */
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0 16px}
+.act{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 17px 15px;border-top:3px solid var(--tone)}
+.act.a1{--tone:var(--warn)} .act.a2{--tone:var(--bad)} .act.a3{--tone:var(--good)}
+.act .hd{display:flex;align-items:center;gap:7px;color:var(--tone);
+  font-size:11px;font-weight:700;letter-spacing:.11em;text-transform:uppercase}
+.ic{width:15px;height:15px;flex:none}
+.act .amt{font-size:27px;font-weight:600;margin:7px 0 2px;letter-spacing:-.02em}
+.act .amt.quiet{color:var(--t3);font-weight:500}
+.act .why{color:var(--t2);font-size:13px;line-height:1.5}
+.act .who{color:var(--t3);font-size:12px;margin-top:8px;line-height:1.5}
+.act .who b{color:var(--t2);font-weight:600}
+
+/* ---------- card + controls ---------- */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.chead{display:flex;align-items:flex-end;gap:16px;padding:15px 18px 13px;flex-wrap:wrap}
+.chead h2{font-size:14.5px;font-weight:650}
+.chead .note{color:var(--t3);font-size:12px;margin-top:3px}
+.chead .spacer{flex:1}
+.ctrls{display:flex;align-items:center;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--borderB);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--t2);cursor:pointer;
+  padding:6px 13px;font:600 12px 'Segoe UI',sans-serif}
+.seg button+button{border-left:1px solid var(--borderB)}
+.seg button[aria-pressed=true]{background:var(--t1);color:var(--bg)}
+.seg button:hover:not([aria-pressed=true]){color:var(--t1)}
+.keys{display:flex;align-items:center;gap:13px;color:var(--t3);font-size:11.5px}
+.key{display:inline-flex;align-items:center;gap:6px}
+.key i{width:15px;height:2.5px;border-radius:2px;background:var(--k);display:inline-block}
+
+/* ---------- table ---------- */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--t3);font-size:10.5px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;padding:9px 14px;border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);background:var(--card2);white-space:nowrap}
+th.n,td.n{text-align:right}
+th em{display:block;font-style:normal;font-weight:400;letter-spacing:.02em;
+  text-transform:none;font-size:10.5px;color:var(--t3);opacity:.72;margin-top:3px}
+
+/* spend cell: the number, then how much of the budget it used */
+.spend b{font-weight:400;display:block}
+.spend .bar{display:flex;align-items:center;gap:7px;justify-content:flex-end;margin-top:4px}
+.spend .t{position:relative;width:56px;height:6px;border-radius:3px;background:var(--grid);flex:none;overflow:hidden}
+.spend .f{position:absolute;left:0;top:0;height:100%;border-radius:3px;background:var(--tone)}
+.spend .lb{font-size:11px;color:var(--t3);font-family:'Segoe UI',sans-serif}
+.spend.s-ok{--tone:var(--good)} .spend.s-near{--tone:var(--warn)} .spend.s-over{--tone:var(--bad)}
+.spend .nocap{font-size:11px;color:var(--warn);font-family:'Segoe UI',sans-serif;
+  display:block;margin-top:4px}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tr.row{cursor:pointer}
+tr.row:hover td{background:rgba(255,255,255,.03)}
+html[data-theme=light] tr.row:hover td{background:rgba(15,30,60,.035)}
+tr.row.on td{background:rgba(47,127,224,.10)}
+tr.camp td{background:rgba(255,255,255,.015)}
+html[data-theme=light] tr.camp td{background:rgba(15,30,60,.02)}
+tr.camp:hover td{background:rgba(255,255,255,.038)}
+td.n{font-family:'DM Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.neg{color:var(--bad)} .pos{color:var(--good)}
+
+.nm{display:flex;align-items:center;gap:9px;font-weight:600}
+.nm .tw{width:13px;color:var(--t3);font-size:10px;flex:none;transition:transform .16s}
+.nm.open .tw{transform:rotate(90deg)}
+tr.camp .nm{font-weight:400;padding-left:22px;color:var(--t2);font-size:12.5px}
+tr.camp .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px;display:block}
+.nm small{display:block;color:var(--t3);font-weight:400;font-size:11px;margin-top:2px}
+
+/* roas vs target: a bullet, target is the 100% mark */
+.bul{display:flex;align-items:center;gap:9px;justify-content:flex-end}
+.bul .t{position:relative;width:74px;height:7px;border-radius:4px;background:var(--grid);flex:none}
+.bul .f{position:absolute;left:0;top:0;height:100%;border-radius:4px;background:var(--tone)}
+.bul .mk{position:absolute;top:-3px;width:2px;height:13px;background:var(--t2);border-radius:1px;left:71%}
+.bul .v{font-family:'DM Mono',monospace;font-size:12.5px;min-width:74px;text-align:right}
+.bul.b-good{--tone:var(--good)} .bul.b-warn{--tone:var(--warn)} .bul.b-bad{--tone:var(--bad)}
+.dash{color:var(--t3);font-size:12px}
+
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3.5px 10px 3.5px 8px;
+  border-radius:999px;font-size:11.5px;font-weight:650;white-space:nowrap;
+  border:1px solid color-mix(in srgb,var(--tone) 45%,transparent);
+  background:color-mix(in srgb,var(--tone) 14%,transparent);color:var(--tone)}
+.chip .ic{width:13px;height:13px}
+.chip.c-bad{--tone:var(--bad)} .chip.c-warn{--tone:var(--warn)}
+.chip.c-good{--tone:var(--good)} .chip.c-none{--tone:var(--none)}
+
+/* ---------- detail chart ---------- */
+.detail{border-top:1px solid var(--border);padding:16px 18px 18px;display:none}
+.detail.on{display:block}
+.dhead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.dhead h3{font-size:13.5px;font-weight:650}
+.dhead .m{color:var(--t3);font-size:12px}
+.dhead .spacer{flex:1}
+.dhead .cmode{margin-left:12px}
+.dhead .cmode button{padding:5px 11px;font-size:11.5px}
+.plot{position:relative}
+.plot svg{display:block;width:100%;height:210px;overflow:visible}
+.tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .1s;
+  background:var(--card2);border:1px solid var(--borderB);border-radius:9px;
+  padding:8px 11px;font-size:12px;min-width:150px;box-shadow:0 8px 26px rgba(0,0,0,.45);z-index:5}
+html[data-theme=light] .tip{box-shadow:0 8px 26px rgba(30,50,90,.16)}
+.tip.on{opacity:1}
+.tip .d{color:var(--t3);font-size:11px;margin-bottom:5px}
+.tip .r{display:flex;align-items:center;gap:7px;justify-content:space-between;margin-top:3px}
+.tip .r span{display:flex;align-items:center;gap:6px;color:var(--t2)}
+.tip .r b{font-family:'DM Mono',monospace;font-weight:500}
+.tip .r i{width:9px;height:9px;border-radius:2px;background:var(--k)}
+
+.foot{margin-top:16px;padding:13px 16px;border-radius:11px;
+  border:1px solid var(--border);background:var(--card);color:var(--t2);
+  font-size:12.5px;line-height:1.65}
+.foot b{color:var(--t1);font-weight:600}
+.legendnote{margin-top:24px;padding-top:15px;border-top:1px dashed var(--border);
+  color:var(--t3);font-size:11.5px;line-height:1.75}
+.legendnote b{color:var(--t2)}
+
+.themebtn{position:fixed;right:18px;top:16px;z-index:9;border:1px solid var(--borderB);
+  background:var(--card);color:var(--t2);border-radius:999px;padding:7px 15px;
+  font:600 12px 'Segoe UI',sans-serif;cursor:pointer}
+.themebtn:hover{color:var(--t1);border-color:var(--teal)}
+@media (max-width:900px){.acts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<button class="themebtn" id="tbtn" type="button">Light</button>
+<div class="wrap">
+
+  <div class="eyebrow">Negative Spend · Android · last 90 days</div>
+  <h1 id="headline">—</h1>
+  <p class="sub">Three things need a decision today. The table below is the
+    same money, broken down as far as you want to take it.</p>
+
+  <!-- Every number in these three tiles is computed from the same campaign
+       rows the table renders, by the same verdict function. That is the whole
+       point: a summary that can disagree with the table underneath it is worse
+       than no summary, and disagreeing is exactly what the current dashboard
+       does when its KPI reads "$0.00 at risk" above a list of three campaigns
+       to cut. -->
+  <section class="acts">
+    <article class="act a1">
+      <div class="hd">
+        <svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 1.6 1.4 13.2h13.2L8 1.6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M8 6.2v3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="8" cy="11.2" r=".95" fill="currentColor"/>
+        </svg>No budget cap
+      </div>
+      <div class="amt" id="t1amt">—</div>
+      <div class="why" id="t1why"></div>
+      <div class="who" id="t1who"></div>
+    </article>
+
+    <article class="act a2">
+      <div class="hd">
+        <svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M5.4 8h5.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>Cut
+      </div>
+      <div class="amt" id="t2amt">—</div>
+      <div class="why" id="t2why"></div>
+      <div class="who" id="t2who"></div>
+    </article>
+
+    <article class="act a3">
+      <div class="hd">
+        <svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2.2 10.6 6 6.6l2.7 2.5 4.9-5.4" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10.4 3.5h3.4v3.3" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>Scale
+      </div>
+      <div class="amt" id="t3amt">—</div>
+      <div class="why" id="t3why"></div>
+      <div class="who" id="t3who"></div>
+    </article>
+  </section>
+
+  <!-- ================= one table, two grains ================= -->
+  <section class="card">
+    <div class="chead">
+      <div>
+        <h2>Performance</h2>
+        <div class="note">Click a network to open its campaigns. Click any row for its trend.</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="ctrls">
+        <div class="keys">
+          <span class="key" style="--k:var(--cost)"><i></i>Cost</span>
+          <span class="key" style="--k:var(--rev)"><i></i>Revenue</span>
+          <span class="key">the gap between them is cash</span>
+        </div>
+        <div class="seg" role="group" aria-label="Trend grain">
+          <button type="button" data-g="daily" aria-pressed="false">Daily</button>
+          <button type="button" data-g="weekly" aria-pressed="true">Weekly</button>
+          <button type="button" data-g="monthly" aria-pressed="false">Monthly</button>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <!-- Every header carries a plain-English second line. The point of this
+           page is that somebody who does not buy media can be shown it and
+           still follow the argument, and "ROAS" alone does not survive that.
+           "Back per $1" is the report's own wording, from the campaign table
+           further down the live page. -->
+      <thead>
+        <tr>
+          <th style="width:26%">Network / campaign</th>
+          <th style="width:12%">90-day trend<em>cost vs revenue</em></th>
+          <th class="n" style="width:15%">Spend<em>against budget</em></th>
+          <th class="n">Revenue<em>came back</em></th>
+          <th class="n">Cash<em>revenue − spend</em></th>
+          <th class="n" style="width:17%">Back per $1<em>against target</em></th>
+          <th>Needs</th>
+        </tr>
+      </thead>
+      <tbody id="tb"></tbody>
+    </table>
+
+    <div class="detail" id="detail">
+      <div class="dhead">
+        <h3 id="dTitle">—</h3>
+        <span class="m" id="dMeta"></span>
+        <div class="spacer"></div>
+        <span class="m" id="dRef"></span>
+        <span class="m" id="dGrain"></span>
+        <!-- Which question the chart answers. It opens on whichever test the
+             row is judged by, and this is how you ask the other one. -->
+        <div class="seg cmode" role="group" aria-label="What the chart shows">
+          <button type="button" data-m="roas"   aria-pressed="false">ROAS vs target</button>
+          <button type="button" data-m="budget" aria-pressed="false">Spend vs budget</button>
+          <button type="button" data-m="money"  aria-pressed="false">Cost vs revenue</button>
+        </div>
+      </div>
+      <div class="plot" id="plot">
+        <svg id="svg" viewBox="0 0 900 210" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="tip" id="tip"></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">
+    <b>Why 90 days and not two weeks.</b> A D7 verdict needs cohorts that have
+    reached day 7, and a D28 verdict cohorts that have reached day 28. The old
+    two-week default contained none of the latter, which is why every payback
+    figure on the page read zero. Ninety days is the shortest window that judges
+    both — and it fits inside the 100 days the server already ships, so it costs
+    no extra request.
+  </p>
+
+  <p class="legendnote">
+    <b>Mockup.</b> Network names, campaign names, the $0.80 D7 target, Google&nbsp;Ads
+    being judged on budget alone and TikTok's unusable install data are all real.
+    The 90-day figures are illustrative — judge the layout and the reading order,
+    not the numbers.<br>
+    <b>Colour.</b> Cost/revenue pair validated on both surfaces: all checks pass.
+    Status fills pass band, chroma and contrast, with CVD separation in the floor
+    band — which is why every status carries an icon and a word, and both series
+    are named in the key rather than left to colour.
+  </p>
+
+</div>
+
+<script>
+/* ===========================================================================
+ * Data. Shaped to look like the real account: one dominant budget-only
+ * network, two ROAS-judged networks with campaigns on both sides of target,
+ * and one network whose install data cannot be used.
+ * ======================================================================== */
+const DAYS = 90;
+const TODAY = new Date(2026, 7, 30);          // fixed so the mockup is stable
+
+/* Deterministic noise — a seeded PRNG, so every reload and every screenshot
+   shows the same series. */
+function rng(seed){ let s = seed; return () => (s = s*1664525 + 1013904223 >>> 0) / 4294967296; }
+
+function series(seed, base, drift, vol){
+  const r = rng(seed), out = [];
+  for (let i = 0; i < DAYS; i++){
+    const trend = base * (1 + drift * (i/DAYS));
+    const week  = 1 + 0.13 * Math.sin(i / 7 * 2 * Math.PI);
+    out.push(Math.max(0, trend * week * (1 + (r()-0.5) * vol)));
+  }
+  return out;
+}
+
+/* judge: 'budget' = no ROAS verdict (Google Ads); 'both' = ROAS + budget.
+   fake: install data unusable. */
+const NETWORKS = [
+  { name:'Google Ads', judge:'budget', note:'install count unusable · eCPI $0.02',
+    campaigns:[
+      { name:'…_overall_Supermarket_Hybrid_9Aug', goal:'D7', budget:30000, seed:11, base:980, drift:.30, vol:.30, roas:null },
+      { name:'…_overall_Supermarket_tIAP_13Sept', goal:'D7', budget:null, seed:12, base:640, drift:.22, vol:.32, roas:null },
+      { name:'…_overall_Supermarket ARO 6June',   goal:'D7', budget:null, seed:13, base:470, drift:.10, vol:.30, roas:null },
+      { name:'…_US_Supermarket taichi 5Sep25',    goal:'D30',budget:null, seed:14, base:225, drift:.45, vol:.35, roas:null },
+      { name:'…_Middle-East_Supermarket ARO 20June',goal:'D7',budget:null,seed:15, base:186, drift:-.10,vol:.33, roas:null },
+      { name:'…_overall_Supermarket_TAICHI2.0_11June',goal:'D30',budget:null,seed:16,base:183,drift:.05,vol:.34, roas:null },
+      { name:'…_US_Supermarket_tIAP_13Sept',      goal:'D7', budget:null, seed:17, base:110, drift:.18, vol:.36, roas:null },
+    ]},
+  { name:'Applovin', judge:'both', note:null,
+    campaigns:[
+      { name:'PS_AND_Supermarket_Simulator_BLDROASD7_23Sep2024', goal:'D7', budget:null, seed:21, base:452, drift:-.18, vol:.28, roas:0.41, target:0.80 },
+      { name:'PS_AND_Supermarket_Simulator_D7 Ad ROAS_3Sep2024', goal:'D7', budget:40000, seed:22, base:296, drift:.26, vol:.26, roas:0.86, target:0.80 },
+    ]},
+  { name:'Mintegral', judge:'both', note:null,
+    campaigns:[
+      { name:'PS_AND_Supermarket_HybridD7_14March', goal:'D7', budget:null, seed:31, base:166, drift:-.06, vol:.30, roas:0.72, target:0.80 },
+    ]},
+  { name:'TikTok for Business', judge:'both', note:'install count unusable · eCPI $0.00', fake:true,
+    campaigns:[
+      { name:'PS_AND_Supermarket_TT_ROAS_2Jul', goal:'D7', budget:null, seed:41, base:12, drift:.05, vol:.45, roas:null },
+    ]},
+];
+
+/* Build cost + revenue series and totals. Revenue tracks the campaign's ROAS
+   where it has one; a budget-only campaign still earns, it just is not graded. */
+NETWORKS.forEach(net => {
+  net.campaigns.forEach(c => {
+    c.cost = series(c.seed, c.base, c.drift, c.vol);
+    const ratio = c.roas != null ? c.roas : (net.fake ? 0.15 : 0.62);
+    const rr = rng(c.seed + 500);
+    c.rev = c.cost.map(v => v * ratio * (1 + (rr()-0.5) * 0.34));
+    c.spend = c.cost.reduce((a,b)=>a+b,0);
+    c.revenue = c.rev.reduce((a,b)=>a+b,0);
+    c.cash = c.revenue - c.spend;
+  });
+  net.cost = net.campaigns[0].cost.map((_,i) => net.campaigns.reduce((s,c)=>s+c.cost[i],0));
+  net.rev  = net.campaigns[0].rev .map((_,i) => net.campaigns.reduce((s,c)=>s+c.rev [i],0));
+  net.spend   = net.campaigns.reduce((s,c)=>s+c.spend,0);
+  net.revenue = net.campaigns.reduce((s,c)=>s+c.revenue,0);
+  net.cash    = net.revenue - net.spend;
+  /* A network's ROAS is total graded revenue over total graded cost — never the
+     average of its campaigns' ratios. Only campaigns that carry a verdict count. */
+  const graded = net.campaigns.filter(c => c.roas != null);
+  net.roas   = graded.length ? graded.reduce((s,c)=>s+c.revenue,0) / graded.reduce((s,c)=>s+c.spend,0) : null;
+  net.target = graded.length ? graded[0].target : null;
+});
+
+/* ---- verdict, the same shape as hisVerdict() in the live report ---- */
+const AT_RISK_PACE = 0.70;
+function verdictOf(o, net){
+  if (net.fake && o.roas == null) return 'blind';
+  if ((o.judge || net.judge) === 'budget' || (net.judge === 'budget' && o.roas == null))
+    return o.budget == null ? 'nocap' : 'budgetok';
+  if (o.roas == null) return 'nodata';
+  if (o.roas <  o.target * AT_RISK_PACE) return 'cut';
+  if (o.roas <  o.target) return 'under';
+  return 'pass';
+}
+const CHIP = {
+  nocap:    ['c-warn','warn','no budget cap'],
+  overbud:  ['c-bad','warn','over budget'],
+  budgetok: ['c-good','check','within budget'],
+  cut:      ['c-bad','minus','cut'],
+  under:    ['c-warn','warn','under target'],
+  pass:     ['c-good','check','passing'],
+  blind:    ['c-none','info','install data unusable'],
+  nodata:   ['c-none','info','not judged'],
+};
+const ICON = {
+  warn:'<path d="M8 1.6 1.4 13.2h13.2L8 1.6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.2v3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.2" r=".95" fill="currentColor"/>',
+  minus:'<circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.5"/><path d="M5.4 8h5.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  check:'<circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.5"/><path d="M5.2 8.2 7.1 10l3.7-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  info :'<circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.8v3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="11.1" r=".95" fill="currentColor"/>',
+};
+const chip = k => { const [cls,ic,label] = CHIP[k];
+  return `<span class="chip ${cls}"><svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true">${ICON[ic]}</svg>${label}</span>`; };
+
+/* ---- formatting ---- */
+const money = v => (v<0?'−':'') + '$' + Math.abs(Math.round(v)).toLocaleString('en-US');
+const kmoney = v => (v<0?'−':'') + '$' + (Math.abs(v)>=1000 ? (Math.abs(v)/1000).toFixed(1)+'k' : Math.round(Math.abs(v)));
+const dateAt = i => { const d = new Date(TODAY); d.setDate(d.getDate() - (DAYS-1-i)); return d; };
+const fmtDay = d => d.toLocaleDateString('en-US',{day:'2-digit',month:'short'});
+
+/* ---- grain: fold the daily arrays into buckets ---- */
+let GRAIN = 'weekly';
+function bucket(arr){
+  if (GRAIN === 'daily') return arr.map((v,i)=>({v, label: fmtDay(dateAt(i))}));
+  const out = [], size = GRAIN === 'weekly' ? 7 : 30;
+  for (let i = 0; i < DAYS; i += size){
+    const slice = arr.slice(i, i+size);
+    out.push({ v: slice.reduce((a,b)=>a+b,0),
+               label: fmtDay(dateAt(i)) + ' – ' + fmtDay(dateAt(Math.min(i+size-1, DAYS-1))) });
+  }
+  return out;
+}
+
+/* ---- sparkline: two 2px lines, no fill, no axes ---- */
+function spark(cost, rev){
+  const c = bucket(cost).map(b=>b.v), r = bucket(rev).map(b=>b.v);
+  const w = 92, h = 26, max = Math.max(...c, ...r, 1);
+  const path = a => a.map((v,i)=>
+    (i? 'L':'M') + (i/(a.length-1)*w).toFixed(1) + ' ' + (h - v/max*(h-3) - 1.5).toFixed(1)).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true" style="display:block">
+    <path d="${path(c)}" fill="none" stroke="var(--cost)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${path(r)}" fill="none" stroke="var(--rev)"  stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+/* ---- roas bullet: the target is the 100% mark, not the end of the track ---- */
+function bullet(roas, target){
+  if (roas == null || target == null) return '<span class="dash">—</span>';
+  const pct = roas / target;
+  const cls = pct >= 1 ? 'b-good' : pct >= AT_RISK_PACE ? 'b-warn' : 'b-bad';
+  const w = Math.min(pct / 1.4, 1) * 100;                 // track spans 0 – 1.4x target
+  return `<div class="bul ${cls}"><span class="v">${roas.toFixed(2)} / ${target.toFixed(2)}</span>
+    <span class="t"><span class="f" style="width:${w.toFixed(1)}%"></span><span class="mk"></span></span></div>`;
+}
+
+/**
+ * Spend, and how much of the budget it used.
+ *
+ * A network only gets a budget bar when EVERY campaign under it has a cap.
+ * Summing the caps that happen to exist and calling that the network's budget
+ * is how you get "Google Ads: 920% of budget" — true of the one campaign that
+ * has a cap, meaningless as a statement about the network. When some are
+ * missing, the honest reading is the count, so that is what it says.
+ */
+function spendCell(o, isNet){
+  const n = money(o.spend);
+  let budget = null, uncapped = 0, total = 0;
+  if (isNet){
+    total = o.campaigns.length;
+    uncapped = o.campaigns.filter(c => c.budget == null).length;
+    if (!uncapped) budget = o.campaigns.reduce((s,c)=>s+c.budget,0);
+  } else {
+    budget = o.budget;
+    uncapped = budget == null ? 1 : 0;
+    total = 1;
+  }
+
+  if (budget == null){
+    const label = !isNet || total === 1 ? 'no cap set'
+                : uncapped === total ? `none of the ${total} has a cap`
+                : `${uncapped} of ${total} have no cap`;
+    return `<div class="spend"><b>${n}</b><span class="nocap">${label}</span></div>`;
+  }
+  const pct = o.spend / budget;
+  const cls = pct > 1 ? 's-over' : pct > 0.9 ? 's-near' : 's-ok';
+  return `<div class="spend ${cls}"><b>${n}</b>
+    <span class="bar"><span class="lb">${Math.round(pct*100)}% of ${money(budget)}</span>
+    <span class="t"><span class="f" style="width:${Math.min(pct,1)*100}%"></span></span></span></div>`;
+}
+
+/* ---- table ---- */
+const open = new Set();
+let selected = null;
+
+function render(){
+  const tb = document.getElementById('tb');
+  let html = '';
+  NETWORKS.forEach((net, ni) => {
+    const isOpen = open.has(ni);
+    /* Over budget outranks no cap: a breach is a fact, a missing cap is the
+       absence of one. The tile above still counts both. */
+    const v = net.judge === 'budget'
+      ? (net.campaigns.some(c=>c.budget!=null && c.spend>c.budget) ? 'overbud'
+         : net.campaigns.some(c=>c.budget==null) ? 'nocap' : 'budgetok')
+      : (net.fake ? 'blind' : verdictOf(net, net));
+    html += `<tr class="row ${selected===('n'+ni)?'on':''}" data-k="n${ni}" data-net="${ni}">
+      <td><div class="nm ${isOpen?'open':''}"><span class="tw">▶</span><span>${net.name}
+        ${net.note?`<small>${net.note}</small>`:''}</span></div></td>
+      <td>${spark(net.cost, net.rev)}</td>
+      <td class="n">${spendCell(net, true)}</td>
+      <td class="n">${money(net.revenue)}</td>
+      <td class="n ${net.cash<0?'neg':'pos'}">${money(net.cash)}</td>
+      <td class="n">${net.judge==='budget'?'<span class="dash">budget-only</span>':bullet(net.roas, net.target)}</td>
+      <td>${chip(v)}</td></tr>`;
+
+    if (isOpen) net.campaigns.forEach((c, ci) => {
+      const cv = net.judge === 'budget'
+        ? (c.budget == null ? 'nocap' : c.spend > c.budget ? 'overbud' : 'budgetok')
+        : (net.fake ? 'blind' : verdictOf(c, net));
+      html += `<tr class="row camp ${selected===('c'+ni+'-'+ci)?'on':''}" data-k="c${ni}-${ci}" data-net="${ni}" data-camp="${ci}">
+        <td><div class="nm"><span>${c.name}<small>goal ${c.goal}</small></span></div></td>
+        <td>${spark(c.cost, c.rev)}</td>
+        <td class="n">${spendCell(c, false)}</td>
+        <td class="n">${money(c.revenue)}</td>
+        <td class="n ${c.cash<0?'neg':'pos'}">${money(c.cash)}</td>
+        <td class="n">${net.judge==='budget'?'<span class="dash">budget-only</span>':bullet(c.roas, c.target)}</td>
+        <td>${chip(cv)}</td></tr>`;
+    });
+  });
+  tb.innerHTML = html;
+
+  tb.querySelectorAll('tr.row').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const ni = +tr.dataset.net;
+      if (tr.dataset.camp === undefined){ open.has(ni) ? open.delete(ni) : open.add(ni); }
+      selected = tr.dataset.k;
+      render(); drawDetail();
+    });
+  });
+}
+
+/* ---- detail chart: one axis, both series in dollars ---- */
+function current(){
+  if (!selected) return null;
+  if (selected[0] === 'n'){ const n = NETWORKS[+selected.slice(1)]; return { o:n, net:n, title:n.name }; }
+  const [ni, ci] = selected.slice(1).split('-').map(Number);
+  const net = NETWORKS[ni];
+  return { o: net.campaigns[ci], net, title: net.campaigns[ci].name };
+}
+
+/* ===========================================================================
+ * The detail chart, in three readings of the same row.
+ *
+ * Cost-vs-revenue was the first draft and it was the wrong default. Both of
+ * its lines are driven by how much was spent, so spending more widens the gap
+ * whether or not anything got worse - the chart reads scale as if it were
+ * efficiency. ROAS against target is scale-free and answers the question the
+ * row is actually judged on; spend against budget answers it for the rows
+ * judged on budget instead. Money is kept as a third view because sometimes
+ * the dollars are the point, but it is nobody's default.
+ *
+ * Which view opens is decided by how the row is judged - the same judgeMode
+ * the backend already carries - so the chart opens on the test the row will
+ * be graded by.
+ * ======================================================================== */
+const GOAL_DAYS = { D0:0, D7:7, D28:28, D30:30 };
+let CHART_MODE = null;              // null = follow the row's own judge mode
+
+function modeFor(sel){
+  if (CHART_MODE) return CHART_MODE;
+  return sel.net.judge === 'budget' ? 'budget' : (sel.o.target != null ? 'roas' : 'money');
+}
+
+/**
+ * Per-bucket ROAS, counting ONLY cohorts old enough to have reached the goal
+ * window. The trailing buckets therefore have no value at all, and that is
+ * the point: a line drawn through them would show a collapse to zero that is
+ * missing data, not lost money - the same mistake the live page makes when a
+ * two-week window reports "$0.00 at risk" over a list of campaigns to cut.
+ */
+function roasBuckets(o, goalDays){
+  const size = GRAIN === 'daily' ? 1 : GRAIN === 'weekly' ? 7 : 30;
+  const out = [];
+  for (let i = 0; i < DAYS; i += size){
+    let mc = 0, mr = 0, days = 0, mature = 0;
+    for (let d = i; d < Math.min(i + size, DAYS); d++){
+      days++;
+      if ((DAYS - 1 - d) >= goalDays){ mature++; mc += o.cost[d]; mr += o.rev[d]; }
+    }
+    out.push({
+      v: mc > 0 ? mr / mc : null,
+      full: mature === days,
+      label: fmtDay(dateAt(i)) + (size > 1 ? ' - ' + fmtDay(dateAt(Math.min(i+size-1, DAYS-1))) : ''),
+      mc: mc, mr: mr
+    });
+  }
+  return out;
+}
+
+function drawDetail(){
+  const sel = current(), box = document.getElementById('detail');
+  if (!sel){ box.classList.remove('on'); return; }
+  box.classList.add('on');
+
+  const mode = modeFor(sel);
+  document.querySelectorAll('.cmode button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
+
+  const W = 900, H = 210, PL = 58, PR = 14, PT = 12, PB = 26;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const svg = document.getElementById('svg');
+
+  const c = bucket(sel.o.cost), r = bucket(sel.o.rev);
+  const n = c.length;
+  const x = i => PL + (n === 1 ? iw/2 : i/(n-1)*iw);
+
+  let body = '', yFmt = kmoney, max = 1, yOf, note = '';
+
+  /* ------------------------------------------------------------ 1. ROAS */
+  if (mode === 'roas'){
+    const goal = sel.o.goal || (sel.o.campaigns ? sel.o.campaigns[0].goal : 'D7');
+    const gd = GOAL_DAYS[goal] != null ? GOAL_DAYS[goal] : 7;
+    const target = sel.o.target != null ? sel.o.target
+                 : (sel.o.campaigns ? (sel.o.campaigns.find(k=>k.target!=null)||{}).target : null);
+    const b = roasBuckets(sel.o, gd);
+    const vals = b.filter(k=>k.v!=null).map(k=>k.v);
+    max = Math.max.apply(null, vals.concat([target||0, 0.1])) * 1.25;
+    yOf = v => PT + ih - v/max*ih;
+    yFmt = v => v.toFixed(2);
+
+    let lastMature = -1;
+    b.forEach((k,i)=>{ if (k.v != null) lastMature = i; });
+
+    /* Everything past the last judgeable bucket is called out, not drawn. */
+    if (lastMature < n-1){
+      const x0 = x(Math.max(lastMature, 0));
+      body += '<rect x="' + x0.toFixed(1) + '" y="' + PT + '" width="' + (W-PR-x0).toFixed(1) +
+              '" height="' + ih + '" fill="var(--none)" opacity=".14"/>' +
+              '<line x1="' + x0.toFixed(1) + '" x2="' + x0.toFixed(1) + '" y1="' + PT +
+              '" y2="' + (PT+ih) + '" stroke="var(--t3)" stroke-width="1" stroke-dasharray="3 3"/>' +
+              '<text x="' + (x0+9).toFixed(1) + '" y="' + (PT+14) +
+              '" font-size="10.5" fill="var(--t3)">not old enough to judge yet</text>';
+    }
+    if (target != null){
+      body += '<line x1="' + PL + '" x2="' + (W-PR) + '" y1="' + yOf(target).toFixed(1) +
+              '" y2="' + yOf(target).toFixed(1) + '" stroke="var(--t2)" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+              '<text x="' + (PL+7) + '" y="' + (yOf(target)-6).toFixed(1) +
+              '" font-size="10.5" fill="var(--t2)">target ' + target.toFixed(2) + '</text>';
+    }
+    const pts = [];
+    b.forEach((k,i)=>{ if (k.v != null) pts.push([x(i), yOf(k.v), k.v]); });
+    if (pts.length){
+      const allUnder = target != null && pts.every(q => q[2] < target);
+      body += '<path d="' + pts.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ') +
+              '" fill="none" stroke="' + (allUnder ? 'var(--bad)' : 'var(--rev)') +
+              '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    }
+    note = goal + ' cohorts, dashed line is the target';
+    window.__pts = b.map((k,i)=>({ x:x(i), y:k.v==null?null:yOf(k.v), label:k.label,
+      rows:[['Back per $1', k.v==null?'not judged yet':k.v.toFixed(2)],
+            ['Graded spend', k.mc>0?money(k.mc):'-'],
+            ['Target', target!=null?target.toFixed(2):'-']] }));
+  }
+
+  /* ---------------------------------------------------------- 2. BUDGET */
+  else if (mode === 'budget'){
+    const bud = sel.o.budget != null ? sel.o.budget
+              : (sel.o.campaigns && !sel.o.campaigns.some(k=>k.budget==null)
+                 ? sel.o.campaigns.reduce((s,k)=>s+k.budget,0) : null);
+    let run = 0; const cum = c.map(k => (run += k.v));
+    max = Math.max.apply(null, cum.concat([bud||0])) * 1.08;
+    yOf = v => PT + ih - v/max*ih;
+    const path = cum.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+yOf(v).toFixed(1)).join(' ');
+
+    body += '<path d="' + path + ' L ' + x(n-1).toFixed(1) + ' ' + (PT+ih) + ' L ' +
+            x(0).toFixed(1) + ' ' + (PT+ih) + ' Z" fill="var(--cost)" opacity=".14"/>' +
+            '<path d="' + path + '" fill="none" stroke="var(--cost)" stroke-width="2.5" stroke-linejoin="round"/>';
+    if (bud != null){
+      const over = cum[n-1] > bud;
+      body += '<line x1="' + PL + '" x2="' + (W-PR) + '" y1="' + yOf(bud).toFixed(1) +
+              '" y2="' + yOf(bud).toFixed(1) + '" stroke="' + (over?'var(--bad)':'var(--warn)') +
+              '" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+              '<text x="' + (W-PR) + '" y="' + (yOf(bud)-6).toFixed(1) +
+              '" text-anchor="end" font-size="10.5" fill="' + (over?'var(--bad)':'var(--warn)') +
+              '">budget ' + money(bud) + '</text>';
+      note = over ? 'over budget by ' + money(cum[n-1]-bud)
+                  : Math.round(cum[n-1]/bud*100) + '% of budget used';
+    } else {
+      note = 'no cap set, so there is nothing to pace against';
+    }
+    window.__pts = cum.map((v,i)=>({ x:x(i), y:yOf(v), label:c[i].label,
+      rows:[['Spent so far', money(v)], ['This period', money(c[i].v)],
+            ['Budget', bud!=null?money(bud):'none set']] }));
+  }
+
+  /* ----------------------------------------------------------- 3. MONEY */
+  else {
+    max = Math.max.apply(null, c.map(k=>k.v).concat(r.map(k=>k.v), [1]));
+    yOf = v => PT + ih - v/max*ih;
+    const ln = a => a.map((k,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+yOf(k.v).toFixed(1)).join(' ');
+    const up = ln(c);
+    const dn = r.slice().reverse().map((k,i)=>'L'+x(n-1-i).toFixed(1)+' '+yOf(k.v).toFixed(1)).join(' ');
+    body += '<path d="' + up + ' ' + dn + ' Z" fill="var(--bad)" opacity=".15"/>' +
+            '<path d="' + ln(c) + '" fill="none" stroke="var(--cost)" stroke-width="2" stroke-linejoin="round"/>' +
+            '<path d="' + ln(r) + '" fill="none" stroke="var(--rev)" stroke-width="2" stroke-linejoin="round"/>';
+    note = 'the shaded gap is cash';
+    window.__pts = c.map((k,i)=>({ x:x(i), y:yOf(k.v), label:k.label,
+      rows:[['Cost', money(k.v)], ['Revenue', money(r[i].v)],
+            ['Cash', money(r[i].v - k.v)]] }));
+  }
+
+  /* gridlines and x ticks, under everything */
+  let grid = '';
+  for (let g = 0; g <= 3; g++){
+    const v = max*g/3, yy = yOf(v);
+    grid += '<line x1="' + PL + '" x2="' + (W-PR) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) +
+            '" stroke="var(--grid)" stroke-width="1"/>' +
+            '<text x="' + (PL-9) + '" y="' + (yy+3.5).toFixed(1) +
+            '" text-anchor="end" font-size="10" font-family="DM Mono,monospace" fill="var(--t3)">' +
+            yFmt(v) + '</text>';
+  }
+  const ticks = [0, Math.floor((n-1)/2), n-1].map(i =>
+    '<text x="' + x(i).toFixed(1) + '" y="' + (H-7) + '" text-anchor="' +
+    (i===0?'start':i===n-1?'end':'middle') + '" font-size="10" fill="var(--t3)">' +
+    c[i].label + '</text>').join('');
+
+  svg.innerHTML = grid + body + ticks +
+    '<line id="cross" x1="0" x2="0" y1="' + PT + '" y2="' + (PT+ih) +
+    '" stroke="var(--t3)" stroke-width="1" opacity="0"/>' +
+    '<circle id="dot" r="4.5" fill="var(--t1)" stroke="var(--card)" stroke-width="2" opacity="0"/>';
+
+  /* ---- headings ---- */
+  const o = sel.o;
+  const goalTxt = o.goal || (o.campaigns
+    ? Array.from(new Set(o.campaigns.map(k=>k.goal))).join(' / ') : '');
+  document.getElementById('dTitle').textContent = sel.title;
+  document.getElementById('dMeta').innerHTML =
+    money(o.spend) + ' spent \u00b7 ' + money(o.revenue) + ' back \u00b7 ' +
+    '<span class="' + (o.cash<0?'neg':'pos') + '">' + money(o.cash) + ' cash</span>' +
+    (goalTxt ? ' \u00b7 judged on ' + goalTxt : '');
+  document.getElementById('dRef').textContent = note;
+  document.getElementById('dGrain').textContent =
+    GRAIN === 'daily' ? '90 points' : GRAIN === 'weekly' ? '13 points' : '3 points';
+
+  /* ---- hover ---- */
+  const plot = document.getElementById('plot'), tip = document.getElementById('tip');
+  const cross = svg.querySelector('#cross'), dot = svg.querySelector('#dot');
+  plot.onmousemove = ev => {
+    const bb = svg.getBoundingClientRect();
+    const px = (ev.clientX - bb.left) / bb.width * W;
+    let i = Math.round((px - PL) / (iw || 1) * (n - 1));
+    i = Math.max(0, Math.min(n - 1, i));
+    const pt = window.__pts[i];
+    cross.setAttribute('x1', pt.x); cross.setAttribute('x2', pt.x); cross.setAttribute('opacity','.5');
+    if (pt.y == null) dot.setAttribute('opacity','0');
+    else { dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y); dot.setAttribute('opacity','1'); }
+    tip.innerHTML = '<div class="d">' + pt.label + '</div>' +
+      pt.rows.map(kv => '<div class="r"><span>' + kv[0] + '</span><b>' + kv[1] + '</b></div>').join('');
+    tip.classList.add('on');
+    tip.style.left = Math.min(pt.x / W * bb.width + 16, bb.width - 190) + 'px';
+    tip.style.top = '6px';
+  };
+  plot.onmouseleave = () => {
+    tip.classList.remove('on');
+    cross.setAttribute('opacity','0'); dot.setAttribute('opacity','0');
+  };
+}
+
+/* grain: how wide one point is */
+document.querySelectorAll('.seg:not(.cmode) button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.seg:not(.cmode) button')
+      .forEach(x => x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true');
+    GRAIN = b.dataset.g;
+    render(); drawDetail();
+  });
+});
+
+/* mode: which question the chart answers. Once chosen it sticks, so moving
+   down the table compares like with like instead of silently changing the
+   question under the reader. */
+document.querySelectorAll('.cmode button').forEach(b => {
+  b.addEventListener('click', () => { CHART_MODE = b.dataset.m; drawDetail(); });
+});
+
+document.getElementById('tbtn').onclick = e => {
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  e.target.textContent = dark ? 'Dark' : 'Light';
+};
+
+/* ===========================================================================
+ * The summary, rolled up from the rows the table draws — never calculated
+ * independently. Every campaign is classified once, by verdictOf(), and the
+ * three tiles are just three filters over that one list.
+ * ======================================================================== */
+function summarise(){
+  const all = [];
+  NETWORKS.forEach(net => net.campaigns.forEach(c => {
+    const v = net.judge === 'budget'
+      ? (c.budget == null ? 'nocap' : c.spend > c.budget ? 'overbud' : 'budgetok')
+      : (net.fake ? 'blind' : verdictOf(c, net));
+    all.push({ c, net, v });
+  }));
+
+  const spend  = all.reduce((s,x)=>s+x.c.spend,0);
+  const cash   = all.reduce((s,x)=>s+x.c.cash,0);
+  const pick   = v => all.filter(x => x.v === v);
+  const sum    = list => list.reduce((s,x)=>s+x.c.spend,0);
+  /* Networks named in order of how much they contribute, so the label reads
+     like the table sorts. */
+  const nets   = list => [...new Set(list.map(x=>x.net.name))];
+  const tally  = list => nets(list)
+    .map(n => `<b>${n}</b> ×${list.filter(x=>x.net.name===n).length}`).join(' · ');
+
+  document.getElementById('headline').innerHTML =
+    `${money(spend)} spent. <span class="lost">${money(Math.abs(cash))} did not come back.</span>`;
+
+  /* 1 — spend nothing is holding back: over its cap, or never given one */
+  const nocap = pick('nocap'), over = pick('overbud');
+  const loose = over.concat(nocap);
+  const overBy = over.reduce((s,x)=>s + (x.c.spend - x.c.budget), 0);
+  document.getElementById('t1amt').textContent = loose.length ? money(sum(loose)) : 'Nothing';
+  document.getElementById('t1amt').className = 'amt' + (loose.length ? '' : ' quiet');
+  document.getElementById('t1why').innerHTML =
+    (over.length
+      ? `${over.length} campaign${over.length>1?'s are':' is'} <b>over budget</b> by ${money(overBy)}.`
+      : '') +
+    (nocap.length
+      ? `${over.length?' ':''}${nocap.length} ${over.length?'other ':''}campaign${nocap.length>1?'s have':' has'} no cap set.`
+      : '') ||
+    'Every campaign is inside a budget.';
+  document.getElementById('t1who').innerHTML = loose.length
+    ? `<b>${Math.round(sum(loose)/spend*100)}%</b> of everything spent · ${tally(loose)}`
+    : '';
+
+  /* 2 — cut. Under target is deliberately NOT counted here: it is a different
+     decision (watch, or lower the bid) and folding it in is how a "cut" number
+     stops meaning cut. It gets a line of its own underneath. */
+  const cut = pick('cut'), under = pick('under');
+  document.getElementById('t2amt').textContent = cut.length ? money(sum(cut)) : 'Nothing';
+  document.getElementById('t2amt').className = 'amt' + (cut.length ? '' : ' quiet');
+  document.getElementById('t2why').innerHTML = cut.length
+    ? `${cut.length} campaign${cut.length>1?'s are':' is'} below <b>${Math.round(AT_RISK_PACE*100)}%</b> of target ROAS on mature cohorts.`
+    : 'No campaign is below the cut threshold.';
+  document.getElementById('t2who').innerHTML =
+    (cut.length ? tally(cut) : '') +
+    (under.length ? `${cut.length?'<br>':''}${under.length} more under target — ${money(sum(under))}` : '');
+
+  /* 3 — scale */
+  const pass = pick('pass');
+  const room = pass.filter(x => x.c.budget == null || x.c.spend < x.c.budget * 0.9);
+  document.getElementById('t3amt').textContent = room.length ? money(sum(room)) : 'Nothing yet';
+  document.getElementById('t3amt').className = 'amt' + (room.length ? '' : ' quiet');
+  document.getElementById('t3why').innerHTML = room.length
+    ? `${room.length} campaign${room.length>1?'s are':' is'} beating target at <b>${(room.reduce((s,x)=>s+x.c.roas/x.c.target,0)/room.length).toFixed(2)}×</b> with budget headroom.`
+    : 'No campaign is beating its target with room to spend more.';
+  document.getElementById('t3who').innerHTML = room.length
+    ? room.map(x=>`<b>${x.net.name}</b> — ${x.c.name.replace(/^PS_AND_Supermarket_Simulator_/,'')}`).join('<br>')
+    : (pass.length ? `${pass.length} passing, but already at budget.` : '');
+}
+
+open.add(1);              // Applovin open, so the campaign grain is visible at rest
+selected = 'n0';          // Google Ads selected, so the chart is not empty
+summarise(); render(); drawDetail();
+</script>
+</body>
+</html>
