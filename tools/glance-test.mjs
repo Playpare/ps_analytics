@@ -22,6 +22,7 @@
 
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -141,6 +142,33 @@ await page.waitForTimeout(2500);
 /* --------------------------------- checks -------------------------------- */
 const fail = [];
 const ok = (cond, label, detail) => { if (!cond) fail.push(label + (detail ? ' — ' + detail : '')); };
+
+/* ---------------------------------------------------------------------------
+ * Class-name collisions, checked statically.
+ *
+ * negative-spend.css is 40 KB written years before glance.css existed, and it
+ * legitimately owns short names. This has now bitten twice: `.b-warn`/`.b-bad`
+ * painted the ROAS bullets with the report's badge colours, and `.ladder` and
+ * every `.lad-*` were the OLD cohort ladder's classes, so the new payback rows
+ * inherited its layout and rendered as thumbnails in the middle of the card.
+ *
+ * Neither threw. Both looked like a styling mistake in the new code. Checking
+ * the two stylesheets against each other costs nothing and ends the class.
+ * ------------------------------------------------------------------------- */
+{
+  const NS = resolve(ROOT, 'reports/negative-spend');
+  const classesIn = (f) => new Set(
+    [...readFileSync(resolve(NS, f), 'utf8').matchAll(/\.([a-zA-Z][\w-]*)(?=[\s,{:.>)\[])/g)]
+      .map((m) => m[1]));
+
+  /* Shared on purpose: `lt` is the report's light-theme body class, and the two
+     value colours are only ever used inside #perfTable, which scopes them. */
+  const SHARED = new Set(['lt', 'neg', 'pos']);
+  const clash = [...classesIn('glance.css')].filter((c) => classesIn('negative-spend.css').has(c) && !SHARED.has(c));
+
+  ok(clash.length === 0, 'no class-name collision with the report stylesheet',
+    clash.length ? `${clash.join(', ')} — prefix them (g-…) or add to SHARED with a reason` : '');
+}
 
 /* The money invariant is asserted on the model, not on rendered text. money()
    abbreviates ("$209K") and the spend cell carries a budget caption beside the
