@@ -26,7 +26,23 @@ export const API_URLS = {
   tilldate: import.meta.env.VITE_API_TILLDATE,
   aso: import.meta.env.VITE_API_ASO,
   negative: import.meta.env.VITE_API_NEGATIVE,
+  game: import.meta.env.VITE_API_GAME,
 };
+
+/**
+ * The shared key game-analytics puts on every request as `key=`.
+ *
+ * It is here for the same reason the URLs are: to keep it out of the
+ * repository. It should not be read as a security control. A static site
+ * cannot hold a secret — Vite inlines this into the bundle, and anyone who
+ * opens the page can read it — so what this actually is today is a password
+ * that every visitor already has.
+ *
+ * It exists because the deployed Apps Script still checks it. Replacing it
+ * with a per-user session token, so that authorisation belongs to the person
+ * rather than the page, is the security work that follows this migration.
+ */
+export const GAME_API_KEY = import.meta.env.VITE_API_GAME_KEY || '';
 
 /**
  * A missing endpoint used to surface deep inside a report as an unexplained

@@ -51,6 +51,17 @@ const TILL_DATE_HANDLERS = [
   'retFilter', 'showSection', 'stickFilter', 'whaleFilter',
 ];
 
+/* The same trap, in game-analytics: 22 functions its markup and its generated
+   rows call from on*="" attributes. tools/extract-game.mjs discovers them and
+   republishes them; this is the check that notices if that ever stops. */
+const GAME_HANDLERS = [
+  'addFeedback', 'addUser', 'applyDateFilter', 'changeRole', 'doLogin',
+  'doLogout', 'goTab', 'goToTab', 'hardReset', 'jumpToLatest', 'loadUsers',
+  'mxSetGrain', 'mxToggleSheetColours', 'onDateInput', 'onGameChange',
+  'onPresetChange', 'onProgRangeChange', 'removeUser', 'saveThresh',
+  'syncNow', 'toggleSidebar', 'toggleTheme',
+];
+
 const PAGES = [
   {
     name: 'hub',
@@ -78,6 +89,40 @@ const PAGES = [
   },
   { name: 'aso', url: '/reports/aso/' },
   { name: 'negative-spend', url: '/reports/negative-spend/' },
+  {
+    name: 'game-analytics',
+    url: '/game-analytics/',
+    /* Exempt from the shared light-switch check, and this is not a gap being
+       papered over. The other five listen for the hub's 'mss3d_theme' storage
+       event via src/shared/theme.js; this document has always carried its own
+       data-theme system and toggleTheme(), and importing both would give it
+       two writers fighting over one attribute. Reconciling them is real work
+       and a SEPARATE change — asserting it here would only mean the migration
+       had altered behaviour. */
+    sharedTheme: false,
+    /* Note what this does NOT prove. The document opens on a login screen and
+       init() only runs after a successful sign-in, so nothing here renders a
+       chart or calls the backend. What it does prove is the part the module
+       conversion actually threatened: the script evaluates under strict mode
+       without throwing, and all 22 inline handlers resolve. Charts have to be
+       checked by signing in. */
+    assert: (names) => {
+      const missing = names.filter((n) => typeof window[n] !== 'function');
+      if (missing.length) return 'inline handlers not on window: ' + missing.join(', ');
+
+      // Its own theme path, since it is exempt from the shared one above:
+      // toggleTheme() must actually flip the attribute, and put it back.
+      const root = document.documentElement;
+      const before = root.getAttribute('data-theme');
+      window.toggleTheme();
+      const after = root.getAttribute('data-theme');
+      window.toggleTheme();
+      if (after === before) return 'toggleTheme() did not change data-theme';
+      if (root.getAttribute('data-theme') !== before) return 'toggleTheme() is not reversible';
+      return null;
+    },
+    assertArg: GAME_HANDLERS,
+  },
 ];
 
 /* Failures that are the absence of a signed-in session, not the absence of
@@ -171,7 +216,7 @@ for (const page of PAGES) {
   /* The light theme is applied by a different code path than the initial
      paint — theme-boot writes the html attribute, theme.js adds the body
      class — so exercising the switch is what proves both halves are wired. */
-  const lightOk = await tab.evaluate(() => {
+  const lightOk = page.sharedTheme === false ? 'n/a' : await tab.evaluate(() => {
     try {
       localStorage.setItem('mss3d_theme', 'light');
       window.dispatchEvent(new StorageEvent('storage', { key: 'mss3d_theme', newValue: 'light' }));
@@ -205,7 +250,8 @@ console.log('\n' + '='.repeat(74));
 for (const r of results) {
   const ok = r.crashes.length === 0 && r.theme !== 'NONE' && r.lightOk && !r.assertion;
   console.log(
-    `${ok ? 'PASS' : 'FAIL'}  ${r.page.padEnd(16)} theme=${r.theme}  light-switch=${r.lightOk ? 'ok' : 'BROKEN'}`
+    `${ok ? 'PASS' : 'FAIL'}  ${r.page.padEnd(16)} theme=${r.theme}  light-switch=${
+      r.lightOk === 'n/a' ? 'own theme' : r.lightOk ? 'ok' : 'BROKEN'}`
   );
   if (r.assertion) console.log(`        assert:   ${r.assertion}`);
   r.crashes.forEach((c) => console.log(`        uncaught: ${c.split('\n')[0]}`));
