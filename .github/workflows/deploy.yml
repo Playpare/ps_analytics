@@ -44,6 +44,12 @@ jobs:
           VITE_API_TILLDATE: ${{ secrets.VITE_API_TILLDATE }}
           VITE_API_ASO: ${{ secrets.VITE_API_ASO }}
           VITE_API_NEGATIVE: ${{ secrets.VITE_API_NEGATIVE }}
+          VITE_API_GAME: ${{ secrets.VITE_API_GAME }}
+          # Not a URL, so the endpoint check below does not cover it: the shared
+          # key game-analytics puts on every request. Kept out of the repo for
+          # the same reason the URLs are, and not a security control — see the
+          # comment on GAME_API_KEY in src/shared/config.js.
+          VITE_API_GAME_KEY: ${{ secrets.VITE_API_GAME_KEY }}
           # Relative base keeps the build correct whether Pages serves this at
           # a domain root or under /<repo>/.
           VITE_BASE: ./
@@ -54,14 +60,22 @@ jobs:
         # config.js checks this in the browser too, but a build that silently
         # ships `undefined` as an endpoint is a broken deploy nobody notices
         # until someone opens the dashboard. Catch it here instead.
+        #
+        # Scans every emitted chunk rather than hub-*.js alone. Which chunk
+        # holds config.js is Rollup's decision, not ours: it inlined it into
+        # the hub bundle while six pages imported it, and split it into a
+        # shared chunk the moment a seventh did. Pinning the check to one
+        # filename meant a correct build with every secret set would have been
+        # rejected here, reporting missing secrets - the one explanation that
+        # was not the problem.
         run: |
-          for f in dist/assets/hub-*.js; do
-            if grep -q 'script.google.com/macros' "$f"; then
-              echo "endpoints present in $f"
-              exit 0
-            fi
-          done
-          echo "::error::No Apps Script endpoints in the built hub bundle."
+          hits=$(grep -l 'script.google.com/macros' dist/assets/*.js 2>/dev/null || true)
+          if [ -n "$hits" ]; then
+            echo "endpoints present in:"
+            echo "$hits" | sed 's/^/  /'
+            exit 0
+          fi
+          echo "::error::No Apps Script endpoints in any built chunk."
           echo "Check that the VITE_API_* repository secrets are set."
           exit 1
 

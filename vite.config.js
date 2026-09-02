@@ -76,6 +76,9 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           hub: at('index.html'),
+          // Not under reports/: this is the shell the five reports are being
+          // folded into as sections, not a sixth report beside them.
+          game: at('game-analytics/index.html'),
           ua: at('reports/ua/index.html'),
           weekly: at('reports/weekly/index.html'),
           tilldate: at('reports/till-date/index.html'),
