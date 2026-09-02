@@ -115,6 +115,22 @@ function declaredFunctions(js) {
 
 /* -------------------------------------------------------------- migration */
 
+/* ONE SHOT. game-analytics/ has been edited by hand since this ran - the login
+   was rewired onto the shared session, among other things - and re-running
+   would overwrite all of it with the original document, silently. The output
+   existing at all is proof the migration already happened. */
+if (fs.existsSync(path.join(OUT, NAME + '.legacy.js')) && !process.argv.includes('--force')) {
+  console.error(
+    '\nRefusing to run: ' + NAME + '/ already exists.\n\n' +
+    'This tool is the RECORD of how that directory was produced, not a build\n' +
+    'step. The files there have been edited since; re-running would replace\n' +
+    'them with the untouched legacy document and lose that work.\n\n' +
+    'Pass --force only if you genuinely mean to redo the migration from\n' +
+    'scratch, and expect to reapply every change made since.\n'
+  );
+  process.exit(1);
+}
+
 const html = fs.readFileSync(SRC, 'utf8');
 const blocks = parseBlocks(html);
 fs.mkdirSync(OUT, { recursive: true });

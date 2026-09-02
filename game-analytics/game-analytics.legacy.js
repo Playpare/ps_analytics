@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { API_URLS, GAME_API_KEY } from '../src/shared/config.js';
+import { getToken, clearSession, login as sessionLogin } from '../src/shared/session.js';
 /* --- from game_analytics.html · block 1f1f70eae8 --- */
 // ═════════════════════════════════════════
 // CONFIG — Apps Script /exec URL + secret key
@@ -419,6 +420,7 @@ function normalizeSheetData(raw){
     feedback:    raw.feedback    || [],
     missing:     raw.missing     || {},
     freshness:   raw.freshness   || null,
+    user:        raw.user        || null,
     _cached:     !!raw._cached,
     _lastSync:   (raw.meta && raw.meta.generatedAt) || new Date().toISOString(),
   };
@@ -698,6 +700,7 @@ async function loadGameData(gameId, opts){
     const normalized = normalizeSheetData(raw);
     normalized._source = source;
     DATA[gameId] = normalized;
+    applyUserRecord(raw.user);
     applySheetThresholds(raw.thresholds || []);
     feedback = (normalized.feedback || []).slice();
     return { ok:true, raw: raw, source: source };
@@ -1276,6 +1279,7 @@ async function init(){
       DATA[currentGame] = normalizeSheetData(cached.payload);
       DATA[currentGame]._source = 'local';
       applySheetThresholds(cached.payload.thresholds || []);
+      applyUserRecord(cached.payload.user);
       if(cached.payload.games) applyGameList(cached.payload.games);
       servedFromCache = true;
       setSyncState('live');
@@ -4404,80 +4408,77 @@ async function jumpToLatest(){
 }
 
 // ═════════════════════════════════════════
-// AUTH — Email/Password with Apps Script backend
+// AUTH — one shared sign-in, for every report
 // ═════════════════════════════════════════
-const SESSION_HOURS = 8;
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
-let CU = null; // current user {email, name, role}
+//
+// This page used to authenticate by itself: SHA-256 the password in the
+// browser, post it to this project's own /exec, receive a token only this
+// project would accept. That is gone. One deployment issues the token now and
+// every project - UA, Weekly, Till Date, ASO, Negative Spend and this one -
+// verifies the same signature, so a person signs in once and everything opens.
+// src/shared/session.js owns where the token is kept; the reports read it from
+// exactly that place.
+//
+// The password is sent AS TYPED. Hashing it here would make the hash the
+// password - the server compares whatever arrives, so stealing the stored
+// value would be enough to sign in without ever knowing what was typed.
 
+let CU = null;   // { username, name, role } - the SERVER decides this, not the token
+
+/** Still used by addUser(); Auth.gs will grow per-user passwords next. */
 async function hashPwd(pwd){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function createSession(user, token){
-  const session = { email:user.email, name:user.name, role:user.role, token:token, expires:Date.now()+SESSION_HOURS*3600*1000 };
-  sessionStorage.setItem('gd_session', JSON.stringify(session));
-  return session;
+/**
+ * Adopts the user record the payload carries.
+ *
+ * The shared token holds a username and nothing else, so the role arrives with
+ * the DATA rather than at sign-in. The nav is rebuilt when it changes, because
+ * the admin-only sections are gated on it - without this an admin would sign in
+ * and find the Users tab missing until something else forced a redraw.
+ */
+function applyUserRecord(u){
+  if(!u || !u.username) return;
+  const before = CU && CU.role;
+  CU = {
+    username: u.username,
+    name: u.name || u.username,
+    role: String(u.role || 'viewer').toLowerCase()
+  };
+  const el = g('unameEl');
+  if(el) el.textContent = CU.name;
+  if(CU.role !== before) buildNav();
 }
-function getSession(){
-  try{ const s=JSON.parse(sessionStorage.getItem('gd_session')||'null'); if(!s||Date.now()>s.expires){clearSession();return null;} return s; }
-  catch(e){return null;}
-}
-function clearSession(){ sessionStorage.removeItem('gd_session'); }
-function getToken(){ return getSession()?.token || ''; }
-
-function getAttempts(email){
-  try{return JSON.parse(localStorage.getItem('gd_att_'+btoa(email))||'{"count":0,"until":0}');}
-  catch(e){return{count:0,until:0};}
-}
-function setAttempts(email,data){localStorage.setItem('gd_att_'+btoa(email),JSON.stringify(data));}
-function clearAttempts(email){localStorage.removeItem('gd_att_'+btoa(email));}
 
 async function doLogin(){
-  const emailRaw = g('lUser').value.trim().toLowerCase();
-  const pwd = g('lPass').value;
+  const user = g('lUser').value.trim();
+  const pass = g('lPass').value;
   const errEl = g('loginErr');
 
-  if(!emailRaw || !pwd){ errEl.textContent='Enter email and password.'; errEl.style.display='block'; return; }
-
-  const att = getAttempts(emailRaw);
-  if(att.until > Date.now()){
-    const mins = Math.ceil((att.until-Date.now())/60000);
-    errEl.textContent = 'Too many attempts. Try again in '+mins+' min.';
+  if(!user || !pass){
+    errEl.textContent = 'Enter your username and password.';
     errEl.style.display = 'block';
     return;
   }
 
   errEl.style.display = 'none';
   const btn = document.querySelector('.loginBtn');
-  btn.disabled = true; btn.textContent = 'Signing in…';
+  btn.disabled = true; btn.textContent = 'Signing in\u2026';
 
   try {
-    const hashed = await hashPwd(pwd);
-    const url = SHEET_API_URL + '?action=login&key='+encodeURIComponent(SHEET_API_KEY)+'&email='+encodeURIComponent(emailRaw)+'&pwd='+encodeURIComponent(hashed)+'&_cb='+Date.now();
-    const res = await fetch(url, {redirect:'follow'});
-    const resp = await res.json();
-
-    if(resp.error){
-      const a = getAttempts(emailRaw);
-      a.count = (a.count||0)+1;
-      if(a.count >= MAX_ATTEMPTS){ a.until=Date.now()+LOCKOUT_MINUTES*60*1000; a.count=0; errEl.textContent='Account locked for '+LOCKOUT_MINUTES+' minutes.'; }
-      else { errEl.textContent='Invalid email or password. '+(MAX_ATTEMPTS-a.count)+' attempts remaining.'; }
-      setAttempts(emailRaw, a);
-      errEl.style.display = 'block';
-      g('lPass').value = ''; g('lPass').focus();
-      return;
-    }
-
-    clearAttempts(emailRaw);
-    createSession(resp.user, resp.token);
-    CU = { email:resp.user.email, name:resp.user.name, role:resp.user.role };
+    const res = await sessionLogin(API_URLS.auth, user, pass);
+    // Provisional: the real name and role arrive with the first payload.
+    CU = { username: res.username, name: res.username, role: 'viewer' };
     loginSuccess();
   } catch(e){
-    errEl.textContent = 'Connection failed: '+e.message;
+    // The server's own words. Inventing a message here is how "wrong password"
+    // and "the backend is unreachable" become indistinguishable to the reader.
+    errEl.textContent = e.message || 'Sign in failed.';
     errEl.style.display = 'block';
+    g('lPass').value = '';
+    g('lPass').focus();
   } finally {
     btn.disabled = false; btn.textContent = 'Sign In';
   }
@@ -4486,14 +4487,23 @@ async function doLogin(){
 function loginSuccess(){
   g('loginScreen').style.display = 'none';
   g('appShell').style.display = '';
-  g('unameEl').textContent = CU.name || CU.email.split('@')[0];
+  g('unameEl').textContent = (CU && CU.name) || '';
   init();
 }
 
+/**
+ * Restores a session left by this page, by the hub, or by any other report.
+ *
+ * The previous version of this function was never called: DOMContentLoaded ran
+ * clearSession() instead, so every reload forced a fresh sign-in and the
+ * eight-hour session was dead code. With one shared token that would be worse
+ * than an annoyance - arriving here from a report you are already signed into
+ * would still demand a password.
+ */
 function checkSession(){
-  const s = getSession();
-  if(!s) return false;
-  CU = { email:s.email, name:s.name, role:s.role };
+  if(!getToken()) return false;
+  // Provisional, same as after a login: the payload fills in who this is.
+  CU = { username: '', name: '', role: 'viewer' };
   loginSuccess();
   return true;
 }
@@ -4507,9 +4517,8 @@ function doLogout(){
   g('loginErr').style.display = 'none';
 }
 
-// Enter key handlers
 document.addEventListener('DOMContentLoaded', function(){
-  clearSession();
+  if(checkSession()) return;
   g('loginScreen').style.display = 'flex';
   g('appShell').style.display = 'none';
 });
