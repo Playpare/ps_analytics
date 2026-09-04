@@ -32,6 +32,40 @@ jobs:
 
       - run: npm ci
 
+      - name: Fail if a build variable is unset
+        # BEFORE the build, because after it there is nothing left to look at:
+        # Vite inlines an unset variable as `undefined` and the bundle is a
+        # perfectly valid file that cannot talk to anything.
+        #
+        # This exists because the check that ran after the build only grepped
+        # for /exec URLs. VITE_API_GAME_KEY is not a URL, so when that secret
+        # was missing the gate passed, the deploy went out, and the dashboard
+        # answered "Unauthorized" on every request of its own while the
+        # reports - which use a different call and no key - carried on working.
+        # A gate that only knows one shape of value is not a gate.
+        env:
+          VITE_API_AUTH: ${{ secrets.VITE_API_AUTH }}
+          VITE_API_UA: ${{ secrets.VITE_API_UA }}
+          VITE_API_WEEKLY: ${{ secrets.VITE_API_WEEKLY }}
+          VITE_API_TILLDATE: ${{ secrets.VITE_API_TILLDATE }}
+          VITE_API_ASO: ${{ secrets.VITE_API_ASO }}
+          VITE_API_NEGATIVE: ${{ secrets.VITE_API_NEGATIVE }}
+          VITE_API_GAME: ${{ secrets.VITE_API_GAME }}
+          VITE_API_GAME_KEY: ${{ secrets.VITE_API_GAME_KEY }}
+        run: |
+          missing=""
+          for v in VITE_API_AUTH VITE_API_UA VITE_API_WEEKLY VITE_API_TILLDATE \
+                   VITE_API_ASO VITE_API_NEGATIVE VITE_API_GAME VITE_API_GAME_KEY; do
+            eval "val=\${$v}"
+            if [ -z "$val" ]; then missing="$missing $v"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::These repository secrets are not set:$missing"
+            echo "Add them under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "all 8 build variables are set"
+
       - name: Build
         env:
           # The Apps Script /exec URLs. Set these under
