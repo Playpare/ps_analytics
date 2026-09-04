@@ -63,14 +63,6 @@ const GAME_HANDLERS = [
 ];
 
 const PAGES = [
-  {
-    name: 'hub',
-    url: '/',
-    // The toggle in the hub's nav is wired to this; the reports listen for the
-    // storage event it writes.
-    assert: () => (typeof window.toggleThemeGlobal === 'function'
-      ? null : 'window.toggleThemeGlobal is missing'),
-  },
   { name: 'ua', url: '/reports/ua/' },
   {
     name: 'weekly',
@@ -90,15 +82,15 @@ const PAGES = [
   { name: 'aso', url: '/reports/aso/' },
   { name: 'negative-spend', url: '/reports/negative-spend/' },
   {
-    name: 'game-analytics',
-    url: '/game-analytics/',
-    /* Exempt from the shared light-switch check, and this is not a gap being
-       papered over. The other five listen for the hub's 'mss3d_theme' storage
-       event via src/shared/theme.js; this document has always carried its own
-       data-theme system and toggleTheme(), and importing both would give it
-       two writers fighting over one attribute. Reconciling them is real work
-       and a SEPARATE change — asserting it here would only mean the migration
-       had altered behaviour. */
+    name: 'shell',
+    url: '/',
+    /* Exempt from the shared light-switch check, which looks for the `lt` body
+       class src/shared/theme.js adds. This page never had that: it carries its
+       own data-theme system, and importing theme.js as well would give it two
+       writers over one attribute.
+       What it DOES now share is the key. The reports read 'mss3d_theme' and
+       this page writes it, which is the half of the reconciliation that had to
+       happen the moment they became frames inside it — asserted below. */
     sharedTheme: false,
     /* Note what this does NOT prove. The document opens on a login screen and
        init() only runs after a successful sign-in, so nothing here renders a
@@ -119,6 +111,19 @@ const PAGES = [
       window.toggleTheme();
       if (after === before) return 'toggleTheme() did not change data-theme';
       if (root.getAttribute('data-theme') !== before) return 'toggleTheme() is not reversible';
+
+      /* The reports read localStorage['mss3d_theme'] and follow it. The hub
+         used to write it; this page does now. Without this the shell switches
+         to light and every report framed inside it stays dark, which is not
+         something the eye forgives. */
+      window.toggleTheme();
+      const written = (() => { try { return localStorage.getItem('mss3d_theme'); } catch (e) { return null; } })();
+      const nowTheme = root.getAttribute('data-theme');
+      window.toggleTheme();
+      if (written !== nowTheme) {
+        return 'toggleTheme() left mss3d_theme as ' + written + ' while the page is ' + nowTheme +
+               ' - framed reports would not follow';
+      }
 
       /* ---- the shell: scope, reports, and the controls ----
          Reached through window.__shell because the test cannot sign in, so it

@@ -1,25 +1,26 @@
 /**
- * Game Analytics entry point.
+ * The shell's entry point — the document at the root of the site.
  *
- * Import order is the contract. Chart.js has to be on `window` before the
- * report body runs — that used to be guaranteed by the position of a <script
- * src> tag in the document, and an import list is how that guarantee survives
- * bundling.
+ * Import order is the contract. Chart.js has to be on `window` before the body
+ * runs; that used to be guaranteed by the position of a <script src> tag, and
+ * an import list is how that guarantee survives bundling.
  *
- * Two shared modules the other five reports import are deliberately ABSENT:
+ * Two shared modules the five reports import are deliberately ABSENT:
  *
  *   src/shared/theme.js     this document carries its own data-theme system
  *                           and toggleTheme(); adding the shared one would
- *                           give it two, fighting over the same attribute.
+ *                           give it two writers over the same attribute.
+ *
+ *                           It does now WRITE the shared 'mss3d_theme' key,
+ *                           and reads it back through the inline theme-boot in
+ *                           the head. That half could not wait: the reports
+ *                           follow that key, and a light shell around a dark
+ *                           report is not something the eye forgives.
  *
  *   src/shared/snapshot.js  it has its own localStorage cache with a version
  *                           gate, a prefetch queue and an eviction policy.
  *                           Two cache layers over one payload is worse than
- *                           either alone.
- *
- * Both are things to RECONCILE later, once the migration is proven not to
- * have changed anything. Doing it here would mean this step altered
- * behaviour, which is the one thing it must not do.
+ *                           either alone. Still to reconcile.
  */
 
 import './game-analytics.css';
