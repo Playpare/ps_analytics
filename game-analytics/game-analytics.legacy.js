@@ -119,16 +119,21 @@ const SECTION_META = {
   /* The reports. Order puts them after the game sections and before Config,
      which is where a UA manager's eye goes second - the game overview first,
      then what needs a decision today. */
+  /* `report` is the directory the page lives in; `api` is its key in
+     API_URLS. They are not always the same word - till-date/tilldate and
+     negative-spend/negative differ - so the key is written down rather than
+     derived from the path. Deriving it would work for three of the five and
+     fail silently on the other two. */
   negative:     { group:'UA Reports', label:'Negative Spend', order:200, scope:'ua',
-                  report:'negative-spend' },
+                  report:'negative-spend', api:'negative' },
   uareport:     { group:'UA Reports', label:'UA Report',      order:210, scope:'ua',
-                  report:'ua' },
+                  report:'ua',             api:'ua' },
   monetization: { group:'UA Reports', label:'Monetization',   order:220, scope:'ua',
-                  report:'weekly' },
+                  report:'weekly',         api:'weekly' },
   tilldate:     { group:'All Time',   label:'Till Date',      order:230, scope:'all',
-                  report:'till-date' },
+                  report:'till-date',      api:'tilldate' },
   aso:          { group:'Store',      label:'ASO',            order:240, scope:'aso',
-                  report:'aso' },
+                  report:'aso',            api:'aso' },
 
   feedback:   { group:'Config',         label:'Feedback',        order:300, scope:'game' },
   thresholds: { group:'Config',         label:'Thresholds',      order:310, scope:'game' },
@@ -153,9 +158,31 @@ const SCOPES = {
   aso:  { game: 'all games',   range: 'set inside the report' }
 };
 
-/** Where a report section's page lives, relative to this one. */
-function reportUrl(name) {
-  return 'reports/' + name + '/?v=' + encodeURIComponent(BUILD_ID);
+/**
+ * The URL for a report section's page.
+ *
+ * `api` is the whole reason a report can fetch anything: each one reads its
+ * /exec endpoint out of that query parameter rather than importing config.js,
+ * because these pages predate the shared module and were always launched by a
+ * host that knew which backend they belonged to. The hub did this. This page
+ * did not, so every framed report loaded, found no endpoint and stayed empty -
+ * while saying so in the console, in words, on every run.
+ *
+ * `v` is the build id. Vite fingerprints JS and CSS by content but cannot
+ * fingerprint the HTML documents themselves, so without this a deploy leaves
+ * everyone's cached copy of the report in place.
+ *
+ * The UA report carries a second endpoint because its own nav has a Negative
+ * Spend tab inside it.
+ */
+function reportUrl(section) {
+  const api = API_URLS[section.api];
+  let url = 'reports/' + section.report + '/?v=' + encodeURIComponent(BUILD_ID);
+  if (api) url += '&api=' + encodeURIComponent(api);
+  if (section.api === 'ua' && API_URLS.negative) {
+    url += '&negativeApi=' + encodeURIComponent(API_URLS.negative);
+  }
+  return url;
 }
 
 // Section id → render function reference (late-bound so forward decls work)
@@ -222,6 +249,7 @@ function getEnabledSections(){
           group: meta.group || 'Other',
           scope: meta.scope || 'game',
           report:meta.report || null,
+          api:   meta.api || null,
           icon:  NAV_ICONS[s.section] || '',
           render:SECTION_RENDERS[s.section],
         }; 
@@ -239,6 +267,7 @@ function getEnabledSections(){
         group: meta.group || 'Other',
         scope: meta.scope || 'game',
         report:meta.report || null,
+      api:   meta.api || null,
         icon:  NAV_ICONS[id] || '',
         render:SECTION_RENDERS[id],
       };
@@ -257,6 +286,7 @@ function getEnabledSections(){
       group: meta.group || 'Other',
       scope: meta.scope || 'game',
       report:meta.report,
+      api:   meta.api || null,
       icon:  NAV_ICONS[id] || '',
       render:null,
     });
@@ -277,6 +307,7 @@ function getEnabledSections(){
             // applyScope falls back to 'game' by luck rather than by intent.
             scope: meta.scope || 'game',
             report:meta.report || null,
+          api:   meta.api || null,
             icon:  NAV_ICONS[id] || '',
             render:SECTION_RENDERS[id],
           });
@@ -4180,12 +4211,18 @@ function ensureReportPane(section){
   let pane = g('tab-' + section.id);
   if(pane) return pane;
 
+  /* No token, no frame. A report started without one spends a document
+     download and an Apps Script execution to arrive at "Unauthorized", which
+     reads to the person as a broken report rather than an expired session.
+     The hub refused for the same reason. */
+  if (!getToken()) return null;
+
   pane = document.createElement('div');
   pane.className = 'tab-pane report-pane';
   pane.id = 'tab-' + section.id;
   pane.innerHTML =
     '<iframe class="report-frame" title="' + esc_(section.label) + '"' +
-    ' src="' + reportUrl(section.report) + '" loading="lazy"></iframe>';
+    ' src="' + reportUrl(section) + '" loading="lazy"></iframe>';
   const host = document.querySelector('.content');
   if(host) host.appendChild(pane);
   return pane;

@@ -162,6 +162,25 @@ const PAGES = [
         return 'sheet config ignored - liveops appeared without being enabled';
       }
 
+      /* Every report's frame URL must carry the endpoint that report reads.
+         Each of these pages takes its /exec from an `api=` parameter rather
+         than importing config.js — the hub supplied it, this page did not, and
+         so all five framed reports loaded and sat empty. They even said so in
+         the console; it was sitting in this file's expected-noise list, filed
+         as what a report says when opened standalone. */
+      for (const s of S.sections.filter((x) => x.report)) {
+        const url = S.reportUrl(s);
+        if (!/[?&]api=/.test(url)) {
+          return 'report "' + s.id + '" gets no api= parameter — it will load empty';
+        }
+        if (!/api=https%3A%2F%2Fscript\.google\.com/.test(url)) {
+          return 'report "' + s.id + '" has an api= that is not an Apps Script URL: ' + url;
+        }
+      }
+      // The UA report's own nav contains a Negative Spend tab, so it needs two.
+      const uaUrl = S.reportUrl(S.sections.find((x) => x.id === 'uareport'));
+      if (!/[?&]negativeApi=/.test(uaUrl)) return 'the UA report is missing negativeApi=';
+
       // Nothing is built until it is opened.
       if (document.getElementById('tab-negative')) return 'a report pane was built before it was opened';
 
