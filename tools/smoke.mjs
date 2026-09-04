@@ -126,8 +126,8 @@ const PAGES = [
       const S = window.__shell;
       if (!S) return '__shell test hook is missing';
 
-      const ids = S.sections.map((s) => s.id);
       const reports = ['negative', 'uareport', 'monetization', 'tilldate', 'aso'];
+      const ids = S.sections.map((s) => s.id);
       const absent = reports.filter((r) => ids.indexOf(r) < 0);
       if (absent.length) return 'report sections missing from the nav: ' + absent.join(', ');
 
@@ -137,6 +137,25 @@ const PAGES = [
       const bad = S.sections.filter((s) => !S.scopes[s.scope]);
       if (bad.length) return 'sections with an unknown scope: ' +
         bad.map((s) => s.id + '=' + s.scope).join(', ');
+
+      /* And again with a sheet Config tab that does not mention the reports.
+         This is the case that shipped broken. getEnabledSections reads the
+         sheet when it has rows and only falls back to the default list when it
+         does not — and a signed-out page, which is all this test ever sees, has
+         no sheet config. So the test kept exercising the branch that worked
+         while the live dashboard took the other one and showed no reports. */
+      const pretendSheet = [
+        { section: 'overview',  enabled: true, order: 10 },
+        { section: 'growth',    enabled: true, order: 20 },
+        { section: 'retention', enabled: true, order: 30 },
+      ];
+      const viaSheet = S.sectionsWithSheetConfig(pretendSheet).map((s) => s.id);
+      const lost = reports.filter((r) => viaSheet.indexOf(r) < 0);
+      if (lost.length) return 'a sheet Config tab drops the reports: ' + lost.join(', ');
+      // ...and the sheet must still decide the game sections it does list.
+      if (viaSheet.indexOf('liveops') >= 0) {
+        return 'sheet config ignored - liveops appeared without being enabled';
+      }
 
       // Nothing is built until it is opened.
       if (document.getElementById('tab-negative')) return 'a report pane was built before it was opened';
