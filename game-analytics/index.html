@@ -17,7 +17,11 @@
   <div class="loginCard">
     <h1 class="loginH">Game Analytics</h1>
     <p class="loginSub">Sign in to access the dashboard</p>
-    <div class="lf"><label>Email Address</label><input id="lUser" type="email" placeholder="you@company.com" autocomplete="email"/></div>
+    <!-- The Authentication tab lists full email addresses, so the placeholder
+         shows one. "your username" sent people to type a bare name that is not
+         on the list, and Auth.gs answers an unknown name and a wrong password
+         identically - deliberately - so nothing on screen said which it was. -->
+    <div class="lf"><label>Username</label><input id="lUser" type="text" placeholder="you@gamedistrict.co" autocomplete="username" autocapitalize="off" spellcheck="false"/></div>
     <div class="lf"><label>Password</label><input id="lPass" type="password" placeholder="Enter password" autocomplete="current-password"/></div>
     <button class="loginBtn" onclick="doLogin()">Sign In</button>
     <div class="loginErr" id="loginErr"></div>
@@ -66,8 +70,15 @@
         <option value="custom">Custom (from &ndash; to)</option>
         <option value="single">Single date</option>
       </select>
+      <!-- Stands in for the dropdown on a section the range does not cut.
+           Never hidden alongside it: one or the other is always here, so the
+           bar keeps its shape and the reader is told what the section covers
+           instead of being left to wonder whether a stale-looking control is
+           filtering what they see. applyScope() decides which. -->
+      <span class="scope-chip" id="rangeChip" style="display:none"></span>
     </div>
     <select class="game-select" id="gameSelect" onchange="onGameChange(this.value)"></select>
+    <span class="scope-chip wide" id="gameChip" style="display:none"></span>
     <div class="sync-info"><span class="sync-dot"></span><span id="syncInfo">Demo data</span></div>
     <span class="uname" id="unameEl"></span>
     <button class="icon-btn btn-sync" id="syncBtn" onclick="syncNow()" title="Rebuild every view from the sheet — slow, only needed after a manual sheet sync">

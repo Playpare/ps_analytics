@@ -1,5 +1,6 @@
 /* eslint-disable */
-import { API_URLS, GAME_API_KEY } from '../src/shared/config.js';
+import { API_URLS, GAME_API_KEY, BUILD_ID } from '../src/shared/config.js';
+import { getToken, clearSession, login as sessionLogin } from '../src/shared/session.js';
 /* --- from game_analytics.html · block 1f1f70eae8 --- */
 // ═════════════════════════════════════════
 // CONFIG — Apps Script /exec URL + secret key
@@ -77,25 +78,85 @@ const NAV_ICONS = {
   rating:    '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 1.5l2 4.5 4.5.5-3.5 3 1 4.5L8 11.5 4 14l1-4.5-3.5-3L6 6z"/></svg>',
   feedback:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13.5 2.5h-11a1 1 0 00-1 1v7a1 1 0 001 1h3l2.5 3 2.5-3h3a1 1 0 001-1v-7a1 1 0 00-1-1z"/></svg>',
   thresholds:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="2.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4"/></svg>',
+  negative:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><polyline points="1.5,4 5,8 8.5,6 14,12"/><polyline points="10,12 14,12 14,8"/></svg>',
+  uareport:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="12" height="12" rx="1.6"/><line x1="5" y1="10.5" x2="5" y2="7"/><line x1="8" y1="10.5" x2="8" y2="5"/><line x1="11" y1="10.5" x2="11" y2="8.5"/></svg>',
+  monetization:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M10.5 5.5H7a1.5 1.5 0 100 3h2a1.5 1.5 0 010 3H5.5"/><line x1="8" y1="3.5" x2="8" y2="12.5"/></svg>',
+  tilldate:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M8 4.2V8l2.6 1.6"/></svg>',
+  aso:       '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 1.6l1.9 4 4.3.5-3.2 2.9 .9 4.3L8 11.2 4.1 13.3l.9-4.3L1.8 6.1l4.3-.5z"/></svg>',
   users:     '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-5 5-5s5 2 5 5"/><circle cx="12.5" cy="5" r="2"/><path d="M12.5 9c1.5 0 3 1 3 3.5"/></svg>',
 };
 
+/**
+ * SCOPE is the thing that makes one nav able to hold both halves.
+ *
+ * The sections above the divider answer "how is THIS GAME doing" and are cut
+ * by the game picker and the date range. The reports below it answer
+ * different questions entirely: Negative Spend is cut by network across every
+ * campaign, Till Date covers all time. Leaving "MSS - Android" sitting above
+ * Negative Spend would not be untidy, it would be a lie - a reader would take
+ * those figures for that game's.
+ *
+ * So each section declares what it is cut by, and the topbar follows. See
+ * SCOPES and applyScope() below for what that does to the controls.
+ *
+ * `report` marks a section that is one of the five existing report pages
+ * rather than something this file draws. Those load in an iframe, which is
+ * why folding them in costs a registry entry instead of a port.
+ */
 const SECTION_META = {
-  overview:   { group:'Dashboard',      label:'Overview',        order:10  },
-  growth:     { group:'Growth',         label:'Growth',          order:20  },
-  retention:  { group:'Player Metrics', label:'Retention',       order:30  },
-  playtime:   { group:'Player Metrics', label:'Engagement',      order:40  },
-  ftue:       { group:'Player Metrics', label:'FTUE Funnel',     order:50  },
-  mechanics:  { group:'Gameplay',       label:'Store Ops',       order:60  },
-  economy:    { group:'Gameplay',       label:'Economy',         order:70  },
-  events:     { group:'Gameplay',       label:'Progress Events', order:80  },
-  liveops:    { group:'Live Ops',       label:'Live Ops',        order:90  },
-  stability:  { group:'App Health',     label:'Stability',       order:100 },
-  rating:     { group:'App Health',     label:'Player Rating',   order:110 },
-  feedback:   { group:'Team',           label:'Feedback',        order:120 },
-  thresholds: { group:'Config',         label:'Thresholds',      order:130 },
-  users:      { group:'Config',         label:'User Management', order:140 },
+  overview:   { group:'Dashboard',      label:'Overview',        order:10,  scope:'game' },
+  growth:     { group:'Growth',         label:'Growth',          order:20,  scope:'game' },
+  retention:  { group:'Player Metrics', label:'Retention',       order:30,  scope:'game' },
+  playtime:   { group:'Player Metrics', label:'Engagement',      order:40,  scope:'game' },
+  ftue:       { group:'Player Metrics', label:'FTUE Funnel',     order:50,  scope:'game' },
+  mechanics:  { group:'Gameplay',       label:'Store Ops',       order:60,  scope:'game' },
+  economy:    { group:'Gameplay',       label:'Economy',         order:70,  scope:'game' },
+  events:     { group:'Gameplay',       label:'Progress Events', order:80,  scope:'game' },
+  liveops:    { group:'Live Ops',       label:'Live Ops',        order:90,  scope:'game' },
+  stability:  { group:'App Health',     label:'Stability',       order:100, scope:'game' },
+  rating:     { group:'App Health',     label:'Player Rating',   order:110, scope:'game' },
+
+  /* The reports. Order puts them after the game sections and before Config,
+     which is where a UA manager's eye goes second - the game overview first,
+     then what needs a decision today. */
+  negative:     { group:'UA Reports', label:'Negative Spend', order:200, scope:'ua',
+                  report:'negative-spend' },
+  uareport:     { group:'UA Reports', label:'UA Report',      order:210, scope:'ua',
+                  report:'ua' },
+  monetization: { group:'UA Reports', label:'Monetization',   order:220, scope:'ua',
+                  report:'weekly' },
+  tilldate:     { group:'All Time',   label:'Till Date',      order:230, scope:'all',
+                  report:'till-date' },
+  aso:          { group:'Store',      label:'ASO',            order:240, scope:'aso',
+                  report:'aso' },
+
+  feedback:   { group:'Config',         label:'Feedback',        order:300, scope:'game' },
+  thresholds: { group:'Config',         label:'Thresholds',      order:310, scope:'game' },
+  users:      { group:'Config',         label:'User Management', order:320, scope:'game' },
 };
+
+/**
+ * What the topbar controls mean in each scope.
+ *
+ * Nothing is ever hidden. A control that does not apply becomes a chip that
+ * says what the section is actually cut by, in the same place and at the same
+ * size, so the bar never reflows as you move around and a reader is never left
+ * guessing whether a stale-looking dropdown is filtering what they see.
+ *
+ * Hiding was the first design and it was worse in both directions: controls
+ * jumped as you switched sections, and their absence said nothing.
+ */
+const SCOPES = {
+  game: { game: null,          range: null },
+  ua:   { game: 'all games',   range: 'set inside the report' },
+  all:  { game: 'all games',   range: 'all time' },
+  aso:  { game: 'all games',   range: 'set inside the report' }
+};
+
+/** Where a report section's page lives, relative to this one. */
+function reportUrl(name) {
+  return '../reports/' + name + '/?v=' + encodeURIComponent(BUILD_ID);
+}
 
 // Section id → render function reference (late-bound so forward decls work)
 const SECTION_RENDERS = {
@@ -119,7 +180,12 @@ const SECTION_RENDERS = {
 // Once you add a Config tab per game, those rows override this list.
 const DEFAULT_ENABLED_SECTIONS = [
   'overview', 'growth', 'retention', 'playtime', 'ftue',
-  'mechanics', 'events', 'liveops', 'stability', 'rating', 'feedback', 'thresholds'
+  'mechanics', 'events', 'liveops', 'stability', 'rating',
+  /* The five reports. They are listed here rather than left to the sheet's
+     Config tab because they are not per-game features to be switched on and
+     off - they are the rest of the dashboard. */
+  'negative', 'uareport', 'monetization', 'tilldate', 'aso',
+  'feedback', 'thresholds'
 ];
 // Users section is always available but only shown to admins (filtered in getEnabledSections)
 const ADMIN_ONLY_SECTIONS = ['users'];
@@ -140,11 +206,15 @@ function getEnabledSections(){
           label: s.section === 'playtime' ? 'Engagement' : (s.label || meta.label || s.section),
           order: +s.order || meta.order || 999,
           group: meta.group || 'Other',
+          scope: meta.scope || 'game',
+          report:meta.report || null,
           icon:  NAV_ICONS[s.section] || '',
           render:SECTION_RENDERS[s.section],
         }; 
       })
-      .filter(function(s){ return s.render; });
+      // A report section is drawn by its own page in an iframe, so it has no
+      // render function here and must not be filtered out for lacking one.
+      .filter(function(s){ return s.render || s.report; });
   } else {
     list = DEFAULT_ENABLED_SECTIONS.map(function(id){
       const meta = SECTION_META[id] || {};
@@ -153,10 +223,12 @@ function getEnabledSections(){
         label: meta.label || id,
         order: meta.order || 999,
         group: meta.group || 'Other',
+        scope: meta.scope || 'game',
+        report:meta.report || null,
         icon:  NAV_ICONS[id] || '',
         render:SECTION_RENDERS[id],
       };
-    }).filter(function(s){ return s.render; });
+    }).filter(function(s){ return s.render || s.report; });
   }
 
   // Always add admin-only sections for admin users
@@ -419,6 +491,7 @@ function normalizeSheetData(raw){
     feedback:    raw.feedback    || [],
     missing:     raw.missing     || {},
     freshness:   raw.freshness   || null,
+    user:        raw.user        || null,
     _cached:     !!raw._cached,
     _lastSync:   (raw.meta && raw.meta.generatedAt) || new Date().toISOString(),
   };
@@ -698,6 +771,7 @@ async function loadGameData(gameId, opts){
     const normalized = normalizeSheetData(raw);
     normalized._source = source;
     DATA[gameId] = normalized;
+    applyUserRecord(raw.user);
     applySheetThresholds(raw.thresholds || []);
     feedback = (normalized.feedback || []).slice();
     return { ok:true, raw: raw, source: source };
@@ -1276,6 +1350,7 @@ async function init(){
       DATA[currentGame] = normalizeSheetData(cached.payload);
       DATA[currentGame]._source = 'local';
       applySheetThresholds(cached.payload.thresholds || []);
+      applyUserRecord(cached.payload.user);
       if(cached.payload.games) applyGameList(cached.payload.games);
       servedFromCache = true;
       setSyncState('live');
@@ -1447,6 +1522,8 @@ function renderAll(){
   aggregateFtue();
   const sections = getEnabledSections();
   sections.forEach(function(s){
+    // Reports render themselves in their own page; there is nothing to call.
+    if(s.report) return;
     if(typeof s.render === 'function'){
       try { s.render(); }
       catch(e) { console.warn('Render error:', s.id, e); }
@@ -3989,10 +4066,73 @@ function makeChart(id, type, data, extra={}){
 // ═════════════════════════════════════════
 // TAB SWITCH
 // ═════════════════════════════════════════
+/**
+ * Points the topbar at what the current section is actually cut by.
+ *
+ * Each control has a chip beside it carrying the same information in words.
+ * One of the pair is shown at a time; both keep their place in the flex row,
+ * so moving between a game section and a report does not shuffle the bar.
+ */
+function applyScope(scope){
+  const rules = SCOPES[scope] || SCOPES.game;
+  [['gameSelect', 'gameChip', rules.game],
+   ['rangePreset', 'rangeChip', rules.range]].forEach(function(pair){
+    const control = g(pair[0]);
+    const chip    = g(pair[1]);
+    if(!control || !chip) return;
+    const asChip = !!pair[2];
+    control.style.display = asChip ? 'none' : '';
+    chip.style.display    = asChip ? '' : 'none';
+    chip.textContent      = pair[2] || '';
+  });
+
+  // The typed date range belongs to the game scope alone.
+  const inline = g('dateInline');
+  if(inline && rules.range) inline.style.display = 'none';
+  else if(inline) showDateInputs(rangeMode());
+
+  document.body.setAttribute('data-scope', scope);
+}
+
+/**
+ * Builds a report section's pane the first time it is opened.
+ *
+ * The iframe src is set here rather than in markup, so a report is downloaded
+ * when somebody asks for it and not before - five reports eagerly loaded would
+ * cost more than the whole dashboard. The token is already in sessionStorage
+ * by the time this runs, and the report reads it there, which is the entire
+ * reason the sign-in work came first.
+ */
+function ensureReportPane(section){
+  let pane = g('tab-' + section.id);
+  if(pane) return pane;
+
+  pane = document.createElement('div');
+  pane.className = 'tab-pane report-pane';
+  pane.id = 'tab-' + section.id;
+  pane.innerHTML =
+    '<iframe class="report-frame" title="' + esc_(section.label) + '"' +
+    ' src="' + reportUrl(section.report) + '" loading="lazy"></iframe>';
+  const host = document.querySelector('.content');
+  if(host) host.appendChild(pane);
+  return pane;
+}
+
+/** Minimal escape for the one attribute built from a label. */
+function esc_(s){
+  return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+  });
+}
+
 function goTab(id, el){
   // If requested section isn't enabled for the current game, fall back to overview
   if(!isEnabled(id)) id = 'overview';
   currentTab = id;
+
+  const section = getEnabledSections().find(function(s){ return s.id === id; }) || {};
+  if(section.report) ensureReportPane(section);
+  applyScope(section.scope || 'game');
 
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -4007,6 +4147,9 @@ function goTab(id, el){
   // Topbar title from section registry (respects custom labels from sheet Config tab)
   const matched = getEnabledSections().find(function(s){ return s.id === id; });
   g('topTitle').textContent = matched ? matched.label : (SECTION_META[id] && SECTION_META[id].label) || id;
+
+  // A report section draws itself, inside its own page. Nothing to render.
+  if(section.report) return;
 
   // Re-render target tab (refresh charts)
   setTimeout(function(){
@@ -4404,80 +4547,77 @@ async function jumpToLatest(){
 }
 
 // ═════════════════════════════════════════
-// AUTH — Email/Password with Apps Script backend
+// AUTH — one shared sign-in, for every report
 // ═════════════════════════════════════════
-const SESSION_HOURS = 8;
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
-let CU = null; // current user {email, name, role}
+//
+// This page used to authenticate by itself: SHA-256 the password in the
+// browser, post it to this project's own /exec, receive a token only this
+// project would accept. That is gone. One deployment issues the token now and
+// every project - UA, Weekly, Till Date, ASO, Negative Spend and this one -
+// verifies the same signature, so a person signs in once and everything opens.
+// src/shared/session.js owns where the token is kept; the reports read it from
+// exactly that place.
+//
+// The password is sent AS TYPED. Hashing it here would make the hash the
+// password - the server compares whatever arrives, so stealing the stored
+// value would be enough to sign in without ever knowing what was typed.
 
+let CU = null;   // { username, name, role } - the SERVER decides this, not the token
+
+/** Still used by addUser(); Auth.gs will grow per-user passwords next. */
 async function hashPwd(pwd){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function createSession(user, token){
-  const session = { email:user.email, name:user.name, role:user.role, token:token, expires:Date.now()+SESSION_HOURS*3600*1000 };
-  sessionStorage.setItem('gd_session', JSON.stringify(session));
-  return session;
+/**
+ * Adopts the user record the payload carries.
+ *
+ * The shared token holds a username and nothing else, so the role arrives with
+ * the DATA rather than at sign-in. The nav is rebuilt when it changes, because
+ * the admin-only sections are gated on it - without this an admin would sign in
+ * and find the Users tab missing until something else forced a redraw.
+ */
+function applyUserRecord(u){
+  if(!u || !u.username) return;
+  const before = CU && CU.role;
+  CU = {
+    username: u.username,
+    name: u.name || u.username,
+    role: String(u.role || 'viewer').toLowerCase()
+  };
+  const el = g('unameEl');
+  if(el) el.textContent = CU.name;
+  if(CU.role !== before) buildNav();
 }
-function getSession(){
-  try{ const s=JSON.parse(sessionStorage.getItem('gd_session')||'null'); if(!s||Date.now()>s.expires){clearSession();return null;} return s; }
-  catch(e){return null;}
-}
-function clearSession(){ sessionStorage.removeItem('gd_session'); }
-function getToken(){ return getSession()?.token || ''; }
-
-function getAttempts(email){
-  try{return JSON.parse(localStorage.getItem('gd_att_'+btoa(email))||'{"count":0,"until":0}');}
-  catch(e){return{count:0,until:0};}
-}
-function setAttempts(email,data){localStorage.setItem('gd_att_'+btoa(email),JSON.stringify(data));}
-function clearAttempts(email){localStorage.removeItem('gd_att_'+btoa(email));}
 
 async function doLogin(){
-  const emailRaw = g('lUser').value.trim().toLowerCase();
-  const pwd = g('lPass').value;
+  const user = g('lUser').value.trim();
+  const pass = g('lPass').value;
   const errEl = g('loginErr');
 
-  if(!emailRaw || !pwd){ errEl.textContent='Enter email and password.'; errEl.style.display='block'; return; }
-
-  const att = getAttempts(emailRaw);
-  if(att.until > Date.now()){
-    const mins = Math.ceil((att.until-Date.now())/60000);
-    errEl.textContent = 'Too many attempts. Try again in '+mins+' min.';
+  if(!user || !pass){
+    errEl.textContent = 'Enter your username and password.';
     errEl.style.display = 'block';
     return;
   }
 
   errEl.style.display = 'none';
   const btn = document.querySelector('.loginBtn');
-  btn.disabled = true; btn.textContent = 'Signing in…';
+  btn.disabled = true; btn.textContent = 'Signing in\u2026';
 
   try {
-    const hashed = await hashPwd(pwd);
-    const url = SHEET_API_URL + '?action=login&key='+encodeURIComponent(SHEET_API_KEY)+'&email='+encodeURIComponent(emailRaw)+'&pwd='+encodeURIComponent(hashed)+'&_cb='+Date.now();
-    const res = await fetch(url, {redirect:'follow'});
-    const resp = await res.json();
-
-    if(resp.error){
-      const a = getAttempts(emailRaw);
-      a.count = (a.count||0)+1;
-      if(a.count >= MAX_ATTEMPTS){ a.until=Date.now()+LOCKOUT_MINUTES*60*1000; a.count=0; errEl.textContent='Account locked for '+LOCKOUT_MINUTES+' minutes.'; }
-      else { errEl.textContent='Invalid email or password. '+(MAX_ATTEMPTS-a.count)+' attempts remaining.'; }
-      setAttempts(emailRaw, a);
-      errEl.style.display = 'block';
-      g('lPass').value = ''; g('lPass').focus();
-      return;
-    }
-
-    clearAttempts(emailRaw);
-    createSession(resp.user, resp.token);
-    CU = { email:resp.user.email, name:resp.user.name, role:resp.user.role };
+    const res = await sessionLogin(API_URLS.auth, user, pass);
+    // Provisional: the real name and role arrive with the first payload.
+    CU = { username: res.username, name: res.username, role: 'viewer' };
     loginSuccess();
   } catch(e){
-    errEl.textContent = 'Connection failed: '+e.message;
+    // The server's own words. Inventing a message here is how "wrong password"
+    // and "the backend is unreachable" become indistinguishable to the reader.
+    errEl.textContent = e.message || 'Sign in failed.';
     errEl.style.display = 'block';
+    g('lPass').value = '';
+    g('lPass').focus();
   } finally {
     btn.disabled = false; btn.textContent = 'Sign In';
   }
@@ -4486,14 +4626,23 @@ async function doLogin(){
 function loginSuccess(){
   g('loginScreen').style.display = 'none';
   g('appShell').style.display = '';
-  g('unameEl').textContent = CU.name || CU.email.split('@')[0];
+  g('unameEl').textContent = (CU && CU.name) || '';
   init();
 }
 
+/**
+ * Restores a session left by this page, by the hub, or by any other report.
+ *
+ * The previous version of this function was never called: DOMContentLoaded ran
+ * clearSession() instead, so every reload forced a fresh sign-in and the
+ * eight-hour session was dead code. With one shared token that would be worse
+ * than an annoyance - arriving here from a report you are already signed into
+ * would still demand a password.
+ */
 function checkSession(){
-  const s = getSession();
-  if(!s) return false;
-  CU = { email:s.email, name:s.name, role:s.role };
+  if(!getToken()) return false;
+  // Provisional, same as after a login: the payload fills in who this is.
+  CU = { username: '', name: '', role: 'viewer' };
   loginSuccess();
   return true;
 }
@@ -4507,13 +4656,32 @@ function doLogout(){
   g('loginErr').style.display = 'none';
 }
 
-// Enter key handlers
 document.addEventListener('DOMContentLoaded', function(){
-  clearSession();
+  if(checkSession()) return;
   g('loginScreen').style.display = 'flex';
   g('appShell').style.display = 'none';
 });
 
+
+/* ---------------------------------------------------------------------------
+ * Test hook.
+ *
+ * The smoke test cannot sign in, so it never reaches buildNav() and cannot
+ * click its way to a report section. Without this it could only prove the
+ * module evaluates - which was already true before any of the scope work
+ * existed, and so proves nothing about it.
+ *
+ * Exposes the pieces that decide what the nav and the topbar do, so the test
+ * can assert on them directly. Deliberately read-only apart from applyScope,
+ * which is the behaviour under test.
+ * ------------------------------------------------------------------------- */
+window.__shell = {
+  get sections(){ return getEnabledSections(); },
+  get scopes(){ return SCOPES; },
+  meta: SECTION_META,
+  applyScope: applyScope,
+  reportUrl: reportUrl
+};
 
 /* ===========================================================================
  * Inline-handler bridge — GENERATED by tools/extract-game.mjs. Do not edit.

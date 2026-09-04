@@ -712,3 +712,61 @@ table.mx{width:max-content;min-width:100%;border-collapse:separate;border-spacin
 .mx.sheet tbody tr:hover td{box-shadow:inset 0 0 0 9999px rgba(0,0,0,.07)}
 
 @media (max-width:640px){.mx .mx-lbl{width:170px;min-width:170px;max-width:170px}}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SCOPE — one nav holding two kinds of section
+   ═══════════════════════════════════════════════════════════════════════
+   The sections above the divider are cut by the game picker and the date
+   range. The reports below it are not: Negative Spend is cut by network
+   across every campaign, Till Date covers all time.
+
+   So a control that does not apply is replaced by a chip saying what the
+   section IS cut by — never removed. Removing it made the bar reflow as you
+   moved around, and said nothing about why. A dropdown left sitting there
+   would have been worse than either: a reader would take "MSS — Android"
+   above Negative Spend to mean those figures were that game's.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.scope-chip{
+  display:inline-flex;align-items:center;height:34px;padding:0 14px;
+  border-radius:var(--r);
+  border:1px dashed var(--border2);
+  background:var(--surface2);
+  color:var(--text3);
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.2px;
+  white-space:nowrap;flex-shrink:0;
+  /* Dashed, muted and not clickable — it must not read as a control that
+     someone has failed to style. */
+  cursor:default;user-select:none;
+}
+/* Matches the game picker's footprint so the row does not jump on switch. */
+.scope-chip.wide{min-width:230px}
+
+@media(max-width:860px){ .scope-chip.wide{min-width:0} }
+
+/* ── The range bar follows the topbar instead of scrolling away ──────────
+   The topbar was already sticky, so the game picker and the range preset
+   stayed put while From/To/Apply scrolled off — half a control panel. */
+.rangebar{position:sticky;top:56px;z-index:19}
+
+/* Below this width the topbar wraps to auto height, so a fixed 56px offset
+   would let the two bars overlap. Sticky is dropped rather than guessed at. */
+@media(max-width:860px){ .rangebar{position:static} }
+
+/* ── Report sections ────────────────────────────────────────────────────
+   Each of the five reports stays its own page, loaded in an iframe. That
+   boundary is doing real work: every report keeps its own theme, its own
+   cache and its own 200 KB of chart building, and none of it can jank the
+   section the user is actually looking at. Folding them in costs a registry
+   entry instead of a port. */
+.tab-pane.report-pane.on{display:block;padding:0;gap:0}
+.report-frame{
+  display:block;width:100%;border:0;
+  /* Fills what is left under the topbar (56px) and the range bar (~53px),
+     less the content padding, so the report scrolls inside its own frame
+     rather than the page growing to fit it. */
+  height:calc(100vh - 170px);min-height:520px;
+  background:var(--surface);
+  border-radius:var(--r-lg);
+}
+@media(max-width:860px){ .report-frame{height:calc(100vh - 220px)} }
