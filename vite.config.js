@@ -75,10 +75,11 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1200,
       rollupOptions: {
         input: {
-          hub: at('index.html'),
-          // Not under reports/: this is the shell the five reports are being
-          // folded into as sections, not a sixth report beside them.
-          game: at('game-analytics/index.html'),
+          // The root IS the shell now. The hub that used to live here listed
+          // four reports and signed people in; the shell does both, plus the
+          // game sections, from one nav - so keeping the hub would have meant
+          // two front doors to the same system.
+          shell: at('index.html'),
           ua: at('reports/ua/index.html'),
           weekly: at('reports/weekly/index.html'),
           tilldate: at('reports/till-date/index.html'),
