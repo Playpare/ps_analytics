@@ -2,70 +2,75 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root{
-  --bg:#070B14;
-  --bg2:#0B1120;
-  --surface:#0F1628;
-  --surface2:#141C34;
-  --border:rgba(100,130,230,0.1);
-  --border2:rgba(100,130,230,0.22);
+  --bg:#000;
+  --bg2:#070809;
+  --surface:#0b0c0f;
+  --surface2:#12141a;
+  --border:rgba(255,255,255,.08);
+  --border2:rgba(255,255,255,.14);
   /* Three steps that are actually distinguishable. --text2 and --text3 used to
      sit four points apart (#8A94BE / #7E8AB4), so the "secondary" and "muted"
      tiers looked identical AND both read as grey mush against the dark ground. */
-  --text:#EEF1FF;
-  --text2:#C2C9E8;   /* card subtitles, labels, sign-posting text */
-  --text3:#A2ACD2;   /* captions, axis ticks, footnotes — muted, still legible */
+  --text:#f4f7ff;
+  --text2:#d7deea;   /* card subtitles, labels, sign-posting text */
+  --text3:#aebbd0;   /* captions, axis ticks, footnotes — muted, still legible */
 
-  --cyan:#00E5FF;
-  --magenta:#FF4DC9;
-  --lime:#A6FF4D;
-  --amber:#FFB800;
-  --coral:#FF5470;
-  --violet:#A78BFA;
+  --cyan:#00e5c3;
+  --magenta:#ec0a9b;
+  --lime:#00c47a;
+  --amber:#ffb800;
+  --coral:#ff4d6d;
+  --violet:#4d9fff;
 
-  --cyanBg:rgba(0,229,255,0.1);
-  --magentaBg:rgba(255,77,201,0.1);
-  --limeBg:rgba(166,255,77,0.12);
-  --amberBg:rgba(255,184,0,0.12);
-  --coralBg:rgba(255,84,112,0.1);
-  --violetBg:rgba(167,139,250,0.1);
+  --cyanBg:rgba(0,229,195,.10);
+  --magentaBg:rgba(236,10,155,.10);
+  --limeBg:rgba(0,196,122,.12);
+  --amberBg:rgba(255,184,0,.12);
+  --coralBg:rgba(255,77,109,.10);
+  --violetBg:rgba(77,159,255,.10);
 
   /* --mono is the numeric face: every figure, axis label, KPI value and caption.
      Poppins is proportional, not monospaced, so digits no longer share a fixed
      advance width — 'font-variant-numeric: tabular-nums' is applied below to
      keep columns of numbers aligned. */
+  /* The reports' signature: teal to blue, used on the active nav item and on
+     primary buttons. The shell had no equivalent - its accents were flat - so
+     this is the one thing here that is added rather than remapped. */
+  --grad:linear-gradient(135deg,#00e5c3,#4d9fff);
   --mono:'Poppins','Segoe UI',sans-serif;
   /* Segoe UI ships with Windows, so nothing is downloaded for body text. The
      fallbacks cover macOS and Linux. */
-  --sans:'Segoe UI','Helvetica Neue',Roboto,sans-serif;
+  --sans:'Segoe UI Variable Text','Segoe UI',Arial,sans-serif;
   --r:10px;
   --r-lg:14px;
   --sidebar:240px;
 }
 
 [data-theme=light]{
-  --bg:#F3F6FC;
-  --bg2:#E8EDF7;
-  --surface:#FFFFFF;
-  --surface2:#F4F7FD;
-  --border:rgba(30,60,160,0.08);
-  --border2:rgba(30,60,160,0.18);
-  --text:#0B1128;
-  --text2:#3E4767;
-  --text3:#5B6488;   /* was #8A94BE — washed out on the light background */
+  --bg:#eef1f7;
+  --bg2:#f5f7fc;
+  --surface:#ffffff;
+  --surface2:#f5f7fc;
+  --border:rgba(15,30,60,.09);
+  --border2:rgba(15,30,60,.16);
+  --text:#0d1b2e;
+  --text2:#56657f;
+  --text3:#8394ad;   /* was #8A94BE — washed out on the light background */
 
-  --cyan:#0095B8;
-  --magenta:#C4277D;
-  --lime:#4B9B00;
-  --amber:#B87400;
-  --coral:#D2324A;
-  --violet:#6D4BCE;
+  --cyan:#00b39a;
+  --magenta:#c2077f;
+  --lime:#00a065;
+  --amber:#d99400;
+  --coral:#e23a59;
+  --violet:#2f7fe0;
 
-  --cyanBg:rgba(0,149,184,0.08);
-  --magentaBg:rgba(196,39,125,0.08);
-  --limeBg:rgba(75,155,0,0.1);
-  --amberBg:rgba(184,116,0,0.1);
-  --coralBg:rgba(210,50,74,0.08);
-  --violetBg:rgba(109,75,206,0.08);
+  --cyanBg:rgba(0,179,154,.08);
+  --magentaBg:rgba(194,7,127,.08);
+  --limeBg:rgba(0,160,101,.10);
+  --amberBg:rgba(217,148,0,.10);
+  --coralBg:rgba(226,58,89,.08);
+  --violetBg:rgba(47,127,224,.08);
+  --grad:linear-gradient(135deg,#00b39a,#2f7fe0);
 }
 
 body{
@@ -191,7 +196,7 @@ body.sb-collapsed .nav-item.active::before{top:6px;bottom:6px}
 [data-theme=light] .topbar{background:rgba(243,246,252,0.85)}
 .topbar-title{font-size:16px;font-weight:700;letter-spacing:-.2px;flex:1}
 .topbar-range{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.game-select{padding:7px 32px 7px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238A94BE' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;min-width:230px;outline:none;transition:border-color .15s}
+.game-select{padding:7px 32px 7px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23aebbd0' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;min-width:230px;outline:none;transition:border-color .15s}
 .game-select:focus{border-color:var(--cyan)}
 .sync-info{font-family:var(--mono);font-size:10px;color:var(--text3);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:pulse 2s infinite}
@@ -207,7 +212,7 @@ body.sb-collapsed .nav-item.active::before{top:6px;bottom:6px}
 .range-lbl{font-family:var(--mono);font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;font-weight:700;white-space:nowrap}
 /* The native arrow sat flush against the rounded border. Replaced with a
    chevron drawn inside the padding, so there is real space around it. */
-.range-select{padding:6px 32px 6px 14px;border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:600;border:1px solid var(--cyan);background:linear-gradient(90deg,var(--cyanBg),var(--magentaBg));color:var(--cyan);cursor:pointer;outline:none;transition:all .15s;white-space:nowrap;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7' fill='none' stroke='%2300e5ff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E"),linear-gradient(90deg,var(--cyanBg),var(--magentaBg));background-repeat:no-repeat,no-repeat;background-position:right 12px center,0 0;background-size:10px 7px,auto}
+.range-select{padding:6px 32px 6px 14px;border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:600;border:1px solid var(--cyan);background:linear-gradient(90deg,var(--cyanBg),var(--magentaBg));color:var(--cyan);cursor:pointer;outline:none;transition:all .15s;white-space:nowrap;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7' fill='none' stroke='%2300e5c3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E"),linear-gradient(90deg,var(--cyanBg),var(--magentaBg));background-repeat:no-repeat,no-repeat;background-position:right 12px center,0 0;background-size:10px 7px,auto}
 .range-select:hover{border-color:var(--magenta)}
 .range-select option{background:var(--surface);color:var(--text)}
 .range-select.sm{padding:5px 11px;font-size:10.5px;border-color:var(--border2);background:var(--surface2);color:var(--text2)}
@@ -604,7 +609,7 @@ textarea.form-ctrl{resize:vertical;min-height:78px}
 .mx-btn:hover{border-color:var(--cyan);color:var(--cyan)}
 .mx-btn.on{border-color:var(--cyan);color:var(--cyan);background:var(--cyanBg)}
 .mx-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-.range-select.sm.mx-grain-select{min-width:104px;padding:7px 34px 7px 16px;font-size:11.5px;background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7' fill='none' stroke='%2300e5ff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E"),linear-gradient(90deg,var(--cyanBg),var(--magentaBg));background-repeat:no-repeat,no-repeat;background-position:right 13px center,0 0;background-size:10px 7px,auto;border-color:var(--cyan);color:var(--cyan)}
+.range-select.sm.mx-grain-select{min-width:104px;padding:7px 34px 7px 16px;font-size:11.5px;background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7' fill='none' stroke='%2300e5c3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E"),linear-gradient(90deg,var(--cyanBg),var(--magentaBg));background-repeat:no-repeat,no-repeat;background-position:right 13px center,0 0;background-size:10px 7px,auto;border-color:var(--cyan);color:var(--cyan)}
 .mx-spacer{margin-left:auto}
 
 .mx-scroll{position:relative;max-height:680px;overflow:auto;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg2);overscroll-behavior:contain}
@@ -770,3 +775,59 @@ table.mx{width:max-content;min-width:100%;border-collapse:separate;border-spacin
   border-radius:var(--r-lg);
 }
 @media(max-width:860px){ .report-frame{height:calc(100vh - 220px)} }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ONE IDENTITY
+   ═══════════════════════════════════════════════════════════════════════
+   The shell arrived with its own look — navy ground, neon cyan and magenta.
+   The five reports have used pure black with a teal-to-blue gradient for
+   months. Now that they open inside this nav, two identities in one window
+   read as two products, and the seam falls exactly where a reader crosses
+   from a game section into a report.
+
+   The palette above is remapped. These are the pieces that are not a remap.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* The gradient is the reports' signature, so it goes where the eye looks for
+   "this is the live one": the active nav item, and any primary action.
+   These used to run teal→pink, which was the old palette's pairing and reads
+   as a different brand beside a report. */
+.btn-primary,
+.sb-mark,
+.loginBtn,
+.tabs button.active   { background:var(--grad) }
+
+.nav-item.active      { background:linear-gradient(90deg,var(--cyanBg),transparent);
+                        color:var(--cyan) }
+.nav-item.active::before { background:var(--grad); box-shadow:0 0 8px rgba(0,229,195,.55) }
+[data-theme=light] .nav-item.active::before { box-shadow:0 0 8px rgba(0,179,154,.45) }
+
+/* Buttons on the gradient need dark ink in both themes — the teal end is
+   light enough that white text falls under 3:1. */
+.btn-primary, .loginBtn { color:#031018 }
+
+/* ── Status carries a shape, not only a hue ──────────────────────────────
+   The palette validator puts amber and green 7.4 apart under protanopia,
+   inside the 6–8 band that is only allowed WITH a second channel. These
+   three classes were colour and nothing else, on numbers in a table, which
+   is the worst case: no legend, no label, nothing to fall back on.
+
+   A glyph in ::before costs no markup change and no renderer edit, and it
+   is what makes the palette legal rather than merely pretty. */
+.pill-good::before { content:'\25B2\00a0' }   /* ▲ */
+.pill-warn::before { content:'\25CF\00a0' }   /* ● */
+.pill-bad::before  { content:'\25BC\00a0' }   /* ▼ */
+.pill-good, .pill-warn, .pill-bad { white-space:nowrap }
+
+/* A colour inside a data: URI cannot read a CSS variable, so these three
+   select chevrons carry theirs literally — which meant they kept the old
+   palette after everything around them had moved, and stayed dark-theme
+   coloured on a light ground. Redrawn per theme, since one value cannot
+   serve both. */
+[data-theme=light] .game-select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238394ad' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+[data-theme=light] .range-select,
+[data-theme=light] .range-select.sm.mx-grain-select{
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7' fill='none' stroke='%2300b39a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E"),linear-gradient(90deg,var(--cyanBg),var(--magentaBg));
+}
