@@ -391,16 +391,22 @@ function aggregateFtue(){
 function chartColors(){
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   return {
-    // Axis ticks and legends. Kept in step with --text2 in the stylesheet;
-    // Chart.js cannot read a CSS variable, so the value is repeated here.
-    text:  dark ? '#C2C9E8' : '#3E4767',
-    grid:  dark ? 'rgba(100,130,230,0.07)' : 'rgba(30,60,160,0.07)',
-    cyan:  dark ? '#00E5FF' : '#0095B8',
-    magenta: dark ? '#FF4DC9' : '#C4277D',
-    lime:  dark ? '#A6FF4D' : '#4B9B00',
-    amber: dark ? '#FFB800' : '#B87400',
-    coral: dark ? '#FF5470' : '#D2324A',
-    violet:dark ? '#A78BFA' : '#6D4BCE',
+    /* Chart.js takes literals, not CSS variables, so every one of these is a
+       copy of a token in the stylesheet and has to be changed with it. The
+       names are the shell's originals; the values are the reports' palette,
+       so a chart in a game section and a chart inside a framed report are
+       drawing with the same six colours.
+
+         cyan -> teal    violet -> blue    lime -> green
+         magenta -> pink    amber, coral unchanged in role */
+    text:  dark ? '#d7deea' : '#56657f',
+    grid:  dark ? 'rgba(255,255,255,0.07)' : 'rgba(15,30,60,0.08)',
+    cyan:  dark ? '#00e5c3' : '#00b39a',
+    magenta: dark ? '#ec0a9b' : '#c2077f',
+    lime:  dark ? '#00c47a' : '#00a065',
+    amber: dark ? '#ffb800' : '#d99400',
+    coral: dark ? '#ff4d6d' : '#e23a59',
+    violet:dark ? '#4d9fff' : '#2f7fe0',
   };
 }
 
@@ -944,7 +950,11 @@ function drawSpark(id, data, color, fmt, dates){
               const pct = prev !== 0 ? (diff / Math.abs(prev) * 100) : 0;
               const arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '•');
               const sign = diff > 0 ? '+' : '';
-              const col = diff > 0 ? '#A6FF4D' : (diff < 0 ? '#FF5470' : '#8A94BE');
+              /* Was three literals from the old palette, and dark-mode ones at
+                 that - so in light mode this tooltip drew neon on white. Reading
+                 chartColors() fixes the hue and the theme in one go. */
+              const cc = chartColors();
+              const col = diff > 0 ? cc.lime : (diff < 0 ? cc.coral : cc.text);
               diffLine = `<div style="font-size:10px;color:${col};margin-top:3px">vs prev: ${arrow} ${sign}${formatter(diff)} (${sign}${pct.toFixed(1)}%)</div>`;
             }
 
