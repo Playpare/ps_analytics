@@ -119,6 +119,49 @@ const PAGES = [
       window.toggleTheme();
       if (after === before) return 'toggleTheme() did not change data-theme';
       if (root.getAttribute('data-theme') !== before) return 'toggleTheme() is not reversible';
+
+      /* ---- the shell: scope, reports, and the controls ----
+         Reached through window.__shell because the test cannot sign in, so it
+         never gets a nav to click. */
+      const S = window.__shell;
+      if (!S) return '__shell test hook is missing';
+
+      const ids = S.sections.map((s) => s.id);
+      const reports = ['negative', 'uareport', 'monetization', 'tilldate', 'aso'];
+      const absent = reports.filter((r) => ids.indexOf(r) < 0);
+      if (absent.length) return 'report sections missing from the nav: ' + absent.join(', ');
+
+      // Every section must declare a scope the SCOPES table knows about, or
+      // applyScope silently falls back to 'game' and a report gets a game
+      // picker over it.
+      const bad = S.sections.filter((s) => !S.scopes[s.scope]);
+      if (bad.length) return 'sections with an unknown scope: ' +
+        bad.map((s) => s.id + '=' + s.scope).join(', ');
+
+      // Nothing is built until it is opened.
+      if (document.getElementById('tab-negative')) return 'a report pane was built before it was opened';
+
+      // The controls swap, and swap back. Neither may end up hidden with no
+      // chip in its place - that is the reflow this design exists to avoid.
+      const check = (scope) => {
+        S.applyScope(scope);
+        return [['gameSelect', 'gameChip'], ['rangePreset', 'rangeChip']].map((pair) => {
+          const c = document.getElementById(pair[0]);
+          const chip = document.getElementById(pair[1]);
+          const cOn = c && c.style.display !== 'none';
+          const chipOn = chip && chip.style.display !== 'none';
+          if (cOn === chipOn) return pair[0] + ': both or neither visible in scope ' + scope;
+          if (chipOn && !chip.textContent.trim()) return pair[1] + ': shown but empty in scope ' + scope;
+          return null;
+        }).filter(Boolean);
+      };
+      const uaProblems = check('ua');
+      const gameProblems = check('game');
+      if (uaProblems.length || gameProblems.length) {
+        return 'scope controls: ' + uaProblems.concat(gameProblems).join('; ');
+      }
+      // Left in the state a fresh load expects.
+      S.applyScope('game');
       return null;
     },
     assertArg: GAME_HANDLERS,
