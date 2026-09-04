@@ -181,12 +181,26 @@ const SECTION_RENDERS = {
 const DEFAULT_ENABLED_SECTIONS = [
   'overview', 'growth', 'retention', 'playtime', 'ftue',
   'mechanics', 'events', 'liveops', 'stability', 'rating',
-  /* The five reports. They are listed here rather than left to the sheet's
-     Config tab because they are not per-game features to be switched on and
-     off - they are the rest of the dashboard. */
-  'negative', 'uareport', 'monetization', 'tilldate', 'aso',
   'feedback', 'thresholds'
 ];
+
+/**
+ * The five report pages. Appended to whatever the section list turns out to
+ * be, never listed inside it.
+ *
+ * They were in DEFAULT_ENABLED_SECTIONS at first, which looked right and was
+ * wrong: getEnabledSections() reads the sheet's Config tab when that tab has
+ * rows and only falls back to the default list when it does not. MSS_Dashbaord
+ * has a Config tab. So the sheet path ran, replaced the whole list, and not
+ * one report ever reached the nav - while the smoke test, which has no signed
+ * in session and therefore no sheet config, went down the fallback path and
+ * saw all five.
+ *
+ * They are not per-game features to be switched on and off; they are the rest
+ * of the dashboard. Appending them, the way ADMIN_ONLY_SECTIONS already was,
+ * is what makes that true in the code and not only in a comment.
+ */
+const REPORT_SECTIONS = ['negative', 'uareport', 'monetization', 'tilldate', 'aso'];
 // Users section is always available but only shown to admins (filtered in getEnabledSections)
 const ADMIN_ONLY_SECTIONS = ['users'];
 
@@ -231,6 +245,23 @@ function getEnabledSections(){
     }).filter(function(s){ return s.render || s.report; });
   }
 
+  /* Whichever branch produced the list above, the reports go on it. */
+  REPORT_SECTIONS.forEach(function(id){
+    if(list.find(function(s){ return s.id === id; })) return;
+    const meta = SECTION_META[id] || {};
+    if(!meta.report) return;
+    list.push({
+      id:    id,
+      label: meta.label || id,
+      order: meta.order || 999,
+      group: meta.group || 'Other',
+      scope: meta.scope || 'game',
+      report:meta.report,
+      icon:  NAV_ICONS[id] || '',
+      render:null,
+    });
+  });
+
   // Always add admin-only sections for admin users
   if(CU && CU.role === 'admin'){
     ADMIN_ONLY_SECTIONS.forEach(function(id){
@@ -242,6 +273,10 @@ function getEnabledSections(){
             label: meta.label || id,
             order: meta.order || 999,
             group: meta.group || 'Config',
+            // Without this the section arrives with scope undefined, and
+            // applyScope falls back to 'game' by luck rather than by intent.
+            scope: meta.scope || 'game',
+            report:meta.report || null,
             icon:  NAV_ICONS[id] || '',
             render:SECTION_RENDERS[id],
           });
@@ -1377,13 +1412,35 @@ async function init(){
   }
 
   feedback = (DATA[currentGame] && DATA[currentGame].feedback || []).slice();
-  buildNav();
-  restoreSidebarState();
-  if(!isEnabled(currentTab)) currentTab = 'overview';
-  renderAll();
-  goTab(currentTab);
-  updateRangeLabel();
-  showLoadingOverlay(false);
+
+  /* Everything that paints, in one guarded block.
+   *
+   * showLoadingOverlay(false) used to sit at the end of a bare sequence, so
+   * anything throwing on the way - buildNav, goTab, updateRangeLabel - left
+   * the overlay up with no error anywhere a person could see it. The symptom
+   * was a blank page after signing in, which says nothing about the cause and
+   * is the hardest kind of failure to report.
+   *
+   * renderAll already guards each section individually. This guards the rest,
+   * and puts the message on screen instead of only in the console. */
+  try {
+    buildNav();
+    restoreSidebarState();
+    if(!isEnabled(currentTab)) currentTab = 'overview';
+    renderAll();
+    goTab(currentTab);
+    updateRangeLabel();
+  } catch (e) {
+    console.error('[dash] boot failed while drawing:', e);
+    setSyncState('error', e.message || String(e));
+    const box = g('freshBanner');
+    if(box) box.innerHTML = '<div class="fresh-warn"><span>&#9888; <b>The dashboard could not '
+      + 'finish drawing.</b> ' + String(e && e.message || e) + '</span>'
+      + '<button onclick="hardReset()">Clear cache &amp; reload</button></div>';
+  } finally {
+    // Always. A stuck overlay is indistinguishable from a hung page.
+    showLoadingOverlay(false);
+  }
 
   // The dashboard is now interactive. Everything below is background work and
   // must never block or alter what is on screen.
@@ -4677,6 +4734,16 @@ document.addEventListener('DOMContentLoaded', function(){
  * ------------------------------------------------------------------------- */
 window.__shell = {
   get sections(){ return getEnabledSections(); },
+  /* Runs the real section logic against a pretend Config tab. The reports
+     going missing was invisible to the test because a signed-out page has no
+     sheet config, so only the fallback path was ever exercised - the one that
+     was not broken. */
+  sectionsWithSheetConfig(rows){
+    const before = DATA[currentGame];
+    DATA[currentGame] = Object.assign({}, before || {}, { sections: rows });
+    try { return getEnabledSections(); }
+    finally { if(before === undefined) delete DATA[currentGame]; else DATA[currentGame] = before; }
+  },
   get scopes(){ return SCOPES; },
   meta: SECTION_META,
   applyScope: applyScope,
