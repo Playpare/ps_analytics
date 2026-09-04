@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { API_URLS, GAME_API_KEY, BUILD_ID } from '../src/shared/config.js';
+import { API_URLS, GAME_API_KEY, BUILD_ID, assertConfigured } from '../src/shared/config.js';
 import { getToken, clearSession, login as sessionLogin } from '../src/shared/session.js';
 /* --- from game_analytics.html · block 1f1f70eae8 --- */
 // ═════════════════════════════════════════
@@ -155,7 +155,7 @@ const SCOPES = {
 
 /** Where a report section's page lives, relative to this one. */
 function reportUrl(name) {
-  return '../reports/' + name + '/?v=' + encodeURIComponent(BUILD_ID);
+  return 'reports/' + name + '/?v=' + encodeURIComponent(BUILD_ID);
 }
 
 // Section id → render function reference (late-bound so forward decls work)
@@ -1351,6 +1351,12 @@ function noteStaleData(gameId){
 // INIT
 // ═════════════════════════════════════════
 async function init(){
+  /* The hub used to make this check and is gone. Without it a mis-set build
+     variable surfaces deep inside a report as an unexplained "could not reach
+     the web app"; with it, one clear message at boot naming the variable. */
+  try { assertConfigured(); }
+  catch (e) { setSyncState('error', e.message); showLoadingOverlay(false); throw e; }
+
   // Older builds stored payloads without a schema stamp. Clear them once so a
   // pre-fix copy can never be resurrected by the offline fallback.
   try {
@@ -4268,8 +4274,21 @@ function restoreSidebarState(){
 function toggleTheme(){
   const root = document.documentElement;
   const dark = root.getAttribute('data-theme') === 'dark';
-  root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  const next = dark ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
   g('themeLbl').textContent = dark ? 'Dark mode' : 'Light mode';
+
+  /* The reports read localStorage['mss3d_theme'] and follow it, and the hub
+     used to be what wrote it. Now that they load inside this page and the hub
+     is gone, this is. Without it the shell switches to light and every report
+     framed inside it stays dark - which is exactly what happened the moment
+     the reports became iframes.
+
+     A storage write does not raise an event in the tab that made it, but it
+     does in every OTHER same-origin context, and each report is one. So the
+     frames repaint without being told anything else. */
+  try { localStorage.setItem('mss3d_theme', next); } catch (e) { /* blocked */ }
+
   setTimeout(renderAll, 30);
 }
 
