@@ -1621,18 +1621,45 @@ function updateGameBranding(){
   g('sbMark').textContent = gameBadge(game.name);
 }
 
+/**
+ * Sections whose drawn output no longer matches the data.
+ *
+ * renderAll() used to call every section's renderer. With makeChart()
+ * destroying and rebuilding a chart on each run, that was 34 Chart.js
+ * instances torn down and constructed per pass - and one section's worth of
+ * them was on screen. Everything else was drawn into a pane with
+ * display:none, at zero width, to be thrown away and drawn again the next
+ * time anything changed.
+ *
+ * It cost the most on exactly the actions where waiting is most obvious: a
+ * range change, a game switch, a sync. And it grows with the data, which is
+ * the direction this dashboard is going.
+ *
+ * Now a data change marks every section stale and draws the one being looked
+ * at. goTab() draws a section the first time it is opened after that, and not
+ * again until something makes it stale.
+ */
+const staleSections = new Set();
+
+/** Draws one section if it is stale. Safe to call for a report or an unknown id. */
+function renderSection(id){
+  if(!staleSections.has(id)) return false;
+  const s = getEnabledSections().find(function(x){ return x.id === id; });
+  if(!s || s.report || typeof s.render !== 'function'){ staleSections.delete(id); return false; }
+  try { s.render(); }
+  catch(e) { console.warn('Render error:', id, e); }
+  staleSections.delete(id);
+  return true;
+}
+
 function renderAll(){
   setTimeout(function(){ resizeChartsIn(g('tab-' + currentTab)); }, 50);
   aggregateFtue();
-  const sections = getEnabledSections();
-  sections.forEach(function(s){
-    // Reports render themselves in their own page; there is nothing to call.
-    if(s.report) return;
-    if(typeof s.render === 'function'){
-      try { s.render(); }
-      catch(e) { console.warn('Render error:', s.id, e); }
-    }
+  getEnabledSections().forEach(function(s){
+    // A report draws itself inside its own page; there is nothing to mark.
+    if(!s.report && typeof s.render === 'function') staleSections.add(s.id);
   });
+  renderSection(currentTab);
   // No-op once this window is cached; otherwise it lands and repaints itself.
   ensureProgression();
 }
@@ -3709,8 +3736,12 @@ function setProgStatus(msg){
 
 /** Repaints only what the progression window feeds — never the whole dashboard. */
 function paintProgression(){
+  /* The overview carries a preview of these charts and the Events section owns
+     the full set, so a window landing makes both stale - but only the one on
+     screen is worth drawing now. */
   try { renderProgressionMinis(); } catch(e){ console.warn('prog minis', e); }
-  try { renderEvents(); }          catch(e){ console.warn('prog events', e); }
+  staleSections.add('events');
+  renderSection('events');
 }
 
 /**
@@ -4261,11 +4292,14 @@ function goTab(id, el){
   // A report section draws itself, inside its own page. Nothing to render.
   if(section.report) return;
 
-  // Re-render target tab (refresh charts)
+  /* Draw on arrival if the data has moved since this section was last drawn.
+     A pane that is already current is left alone - redrawing it would destroy
+     and rebuild its charts to produce the same picture, which is what made
+     switching tabs feel heavy. resizeChartsIn still runs either way: a chart
+     built while its pane was hidden has zero width and has to be told. */
   setTimeout(function(){
     aggregateFtue();
-    const fn = SECTION_RENDERS[id];
-    if(typeof fn === 'function'){ try{ fn(); }catch(e){ console.error('Render error:', id, e); } }
+    renderSection(id);
     resizeChartsIn(pane);
   }, 30);
 }
@@ -4813,7 +4847,12 @@ window.__shell = {
   get scopes(){ return SCOPES; },
   meta: SECTION_META,
   applyScope: applyScope,
-  reportUrl: reportUrl
+  reportUrl: reportUrl,
+  /* The stale set and the one-section draw, so the test can check that a data
+     change draws what is on screen and leaves the rest marked. Without this
+     the only guard is that nobody puts the loop back by hand. */
+  stale: staleSections,
+  renderSection: renderSection
 };
 
 /* ===========================================================================

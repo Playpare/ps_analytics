@@ -181,6 +181,19 @@ const PAGES = [
       const uaUrl = S.reportUrl(S.sections.find((x) => x.id === 'uareport'));
       if (!/[?&]negativeApi=/.test(uaUrl)) return 'the UA report is missing negativeApi=';
 
+      /* A data change marks every section stale and draws only the one on
+         screen. It used to draw all eleven — 34 Chart.js instances destroyed
+         and rebuilt per pass, of which one section's worth was visible, on
+         every range change, game switch, theme toggle and sync. */
+      if (!S.stale || typeof S.renderSection !== 'function') return 'the stale-section hook is missing';
+      S.stale.clear();
+      S.stale.add('overview');
+      S.stale.add('growth');
+      S.renderSection('overview');
+      if (S.stale.has('overview')) return 'renderSection did not clear the section it drew';
+      if (!S.stale.has('growth')) return 'renderSection drew a section nobody asked for';
+      S.stale.clear();
+
       // Nothing is built until it is opened.
       if (document.getElementById('tab-negative')) return 'a report pane was built before it was opened';
 
