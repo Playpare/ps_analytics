@@ -162,20 +162,6 @@
       </div>
 
       <!-- Cash & Energy by Shop Level (full width) -->
-      <div class="card clickable ov-section-card" data-section="economy" onclick="goToTab('economy')" style="margin-bottom:16px">
-        <div class="card-hd">
-          <span class="card-title">Cash &amp; Energy by Shop Level <span class="card-sub">earned vs spent per level</span></span>
-          <span class="card-cta">View details →</span>
-        </div>
-        <div class="row row-2b" style="margin-bottom:0;gap:14px">
-          <div>
-            <div class="mini-section-label">💰 Cash</div>
-          </div>
-          <div>
-            <div class="mini-section-label">⚡ Energy</div>
-          </div>
-        </div>
-      </div>
 
       <!-- Live Ops (full width) -->
       <div class="card clickable ov-section-card" data-section="liveops" onclick="goToTab('liveops')" style="margin-bottom:16px">
@@ -187,10 +173,6 @@
       </div>
 
       <div class="row row-3">
-        <div class="card clickable ov-section-card" data-section="mechanics" onclick="goTab('mechanics')">
-          <div class="card-hd"><span class="card-title">Store Ops <span class="card-sub">per player</span></span><span class="card-cta">Details →</span></div>
-          <div id="ovMechanics"></div>
-        </div>
         <div class="card clickable ov-section-card" data-section="stability" onclick="goToTab('stability')">
           <div class="card-hd"><span class="card-title">Stability <span class="card-sub">Crash & ANR</span></span><span class="card-cta">Details →</span></div>
           <div class="stat-grid" id="ovStab"></div>
@@ -394,23 +376,6 @@
     </div>
 
     <!-- ── MECHANICS ── -->
-    <div class="tab-pane" id="tab-mechanics">
-      <div class="kpi-grid g3" id="mechKpis" style="grid-template-columns:repeat(6,minmax(0,1fr))"></div>
-      <div class="row row-2b">
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Store activity <span class="card-sub">per player</span></span></div>
-          <div id="mechBarWrap"></div>
-        </div>
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Store activity trend <span class="card-sub">per-player rate over time</span></span></div>
-          <div id="mechTrendWrap"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-hd"><span class="card-title">Core loop conversion <span class="card-sub">order → stock → sell</span></span></div>
-        <div id="mechFunnelWrap"></div>
-      </div>
-    </div>
 
     <!-- ── STABILITY ── -->
     <div class="tab-pane" id="tab-stability">
@@ -463,31 +428,6 @@
     </div>
 
     <!-- ── ECONOMY ── -->
-    <div class="tab-pane" id="tab-economy">
-      <div class="kpi-grid g3" id="econKpis" style="grid-template-columns:repeat(6,minmax(0,1fr))"></div>
-      <div class="card">
-        <div class="card-hd"><span class="card-title">Faucet vs drain <span class="card-sub">currency earned vs spent</span></span></div>
-        <div id="econFlowWrap"></div>
-      </div>
-      <div class="card">
-        <div class="card-hd"><span class="card-title">Cash &amp; energy by shop level <span class="card-sub">earned vs spent per level</span></span></div>
-        <div id="econLevelWrap"></div>
-      </div>
-      <div class="row row-2b">
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Currency sources</span></div>
-          <div id="econSources"></div>
-        </div>
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Currency sinks</span></div>
-          <div id="econSinks"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-hd"><span class="card-title">Top sinks by depth</span></div>
-        <div id="econSinkTbl"></div>
-      </div>
-    </div>
 
     <div class="tab-pane" id="tab-events">
       <div class="prog-bar">

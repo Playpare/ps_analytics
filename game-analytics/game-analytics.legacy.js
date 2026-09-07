@@ -70,8 +70,6 @@ const NAV_ICONS = {
   retention: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 8a6 6 0 0111-3.5M14 8a6 6 0 01-11 3.5M14 3v3h-3M2 13v-3h3"/></svg>',
   playtime:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>',
   ftue:      '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 2h12l-2.5 4h-7z"/><path d="M4.5 6l1.5 3h4l1.5-3"/><path d="M6 9v5h4V9"/></svg>',
-  mechanics: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4"/></svg>',
-  economy:   '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M10.5 5.5H7a1.5 1.5 0 100 3h2a1.5 1.5 0 010 3H5.5"/><line x1="8" y1="3.5" x2="8" y2="12.5"/></svg>',
   events:    '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 2v13"/><path d="M3 3h8l-2 3 2 3H3"/></svg>',
   liveops:   '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9.5 2l-6 7.5h4L7 14l5.5-7.5H8.5z"/></svg>',
   stability: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 1.5l6.5 11H1.5L8 1.5z"/><line x1="8" y1="6.5" x2="8" y2="9.5"/><circle cx="8" cy="11.5" r=".7" fill="currentColor"/></svg>',
@@ -109,8 +107,6 @@ const SECTION_META = {
   retention:  { group:'Player Metrics', label:'Retention',       order:30,  scope:'game' },
   playtime:   { group:'Player Metrics', label:'Engagement',      order:40,  scope:'game' },
   ftue:       { group:'Player Metrics', label:'FTUE Funnel',     order:50,  scope:'game' },
-  mechanics:  { group:'Gameplay',       label:'Store Ops',       order:60,  scope:'game' },
-  economy:    { group:'Gameplay',       label:'Economy',         order:70,  scope:'game' },
   events:     { group:'Gameplay',       label:'Progress Events', order:80,  scope:'game' },
   liveops:    { group:'Live Ops',       label:'Live Ops',        order:90,  scope:'game' },
   stability:  { group:'App Health',     label:'Stability',       order:100, scope:'game' },
@@ -192,8 +188,6 @@ const SECTION_RENDERS = {
   retention:  function(){ renderRetention(); },
   playtime:   function(){ renderPlaytime(); },
   ftue:       function(){ renderFtue(); },
-  mechanics:  function(){ renderMechanics(); },
-  economy:    function(){ renderEconomy(); },
   events:     function(){ renderEvents(); },
   liveops:    function(){ renderLiveOps(); },
   stability:  function(){ renderStability(); },
@@ -207,7 +201,7 @@ const SECTION_RENDERS = {
 // Once you add a Config tab per game, those rows override this list.
 const DEFAULT_ENABLED_SECTIONS = [
   'overview', 'growth', 'retention', 'playtime', 'ftue',
-  'mechanics', 'events', 'liveops', 'stability', 'rating',
+  'events', 'liveops', 'stability', 'rating',
   'feedback', 'thresholds'
 ];
 
@@ -1829,10 +1823,6 @@ function renderOverview(){
 
   renderProgressionMinis();
 
-  // ── Store Ops / Economy / LiveOps — awaiting Cellar ──
-  if(g('ovMechanics')) g('ovMechanics').innerHTML = noData(d.missing.storeOps || 'Store Ops events');
-  if(g('ovEconomy'))   g('ovEconomy').innerHTML   = noData(d.missing.economy  || 'Economy events');
-
   // ── Live Ops mini — now a real feed from the LiveOps tab ──
   const ops = d.liveops || [];
   if(g('ovLiveOpsList')){
@@ -3437,14 +3427,6 @@ function renderFtue(){
   }
 }
 
-function renderMechanics(){
-  const d = curData();
-  const reason = (d.missing && d.missing.storeOps) || 'Store Ops events';
-  ['mechKpis','mechBarWrap','mechTrendWrap','mechFunnelWrap'].forEach(function(id){
-    if(g(id)) g(id).innerHTML = noData(reason);
-  });
-}
-
 function renderStability(){
   const d = curData();
   const rows = getWindow(d.stability || []);
@@ -3662,14 +3644,6 @@ function renderLiveOps(){
     g('liveopsGrid').innerHTML = evts.map(liveopCard).join('');
     markTable('liveopsGrid', evts.length, 'events');
   }
-}
-
-function renderEconomy(){
-  const d = curData();
-  const reason = (d.missing && d.missing.economy) || 'Economy events';
-  ['econKpis','econSources','econSinks','econFlowWrap','econLevelWrap','econSinkTbl'].forEach(function(id){
-    if(g(id)) g(id).innerHTML = noData(reason);
-  });
 }
 
 /**
