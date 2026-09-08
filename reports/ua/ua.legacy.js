@@ -164,7 +164,10 @@ const charts={}; let DATA={}; let DATE_FILTER='w2',SINGLE_DATE='',RANGE_START=''
    { full:1 } fetch, after which the report holds everything again.
 
    Set to null to restore the previous full-history-on-open behaviour. */
-const UA_WINDOW_PRESET=10;
+/* 22 weeks - 154 days - matching UA_STANDARD_WEEKS on the backend. Both
+   sides move together or the preset is refused and the report falls back
+   to asking for everything. */
+const UA_WINDOW_PRESET=22;
 let LOADED_WINDOW=null;      // { start, end } the payload in DATA covers
 let FULL_RANGE=null;         // { start, end } the workbook actually spans
 let FULL_LOADED=false;       // true once a { full:1 } payload has landed
