@@ -452,8 +452,13 @@ function installControls(){
      single/range inputs so switching to them keeps the old values. */
   g('weeklyMode').value='w2';
   g('weeklyDate').value=localStorage.getItem('weekly_date')||'';
-  g('weeklyStart').value=localStorage.getItem('weekly_start')||'';
-  g('weeklyEnd').value=localStorage.getItem('weekly_end')||'';
+  /* With nothing saved, Custom range opened on two empty boxes and Apply
+     answered "Choose both From and To dates". Seed it with the same two weeks
+     the report is already showing, so the mode opens on a valid range that
+     matches what is on screen. */
+  const w2=weekWindow(2,weekAnchor());
+  g('weeklyStart').value=localStorage.getItem('weekly_start')||isoDay(w2.start);
+  g('weeklyEnd').value=localStorage.getItem('weekly_end')||isoDay(w2.end);
   function syncMode(){
     const m=g('weeklyMode').value;
     box.classList.toggle('single',m==='single');
