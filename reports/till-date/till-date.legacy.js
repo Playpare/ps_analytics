@@ -1366,18 +1366,25 @@ const SHEET_HEADER_MAP = {
 
 /* Which of the three LTV kinds the chart shows.
 
-   The old ltv_overall tab had no LTV Type column, so it carried exactly one
-   number per date and platform - and which one it was is not recoverable,
-   because that tab no longer exists. 'Total LTV' is what an unqualified "LTV"
-   means and the chart is labelled just "LTV D0 / D7 / D28". If it should be
-   ad-only or IAP-only, this is the one line to change. Measured values in the
-   sheet: Ad LTV, IAP LTV, Total LTV, 229 rows each. */
+   Total, confirmed rather than inferred. The old ltv_overall tab had no LTV
+   Type column, so which kind it carried was not recoverable from the data -
+   that tab no longer exists. Asked, and the answer was Total, with Ad and IAP
+   to be broken out separately when a chart needs them rather than by changing
+   what this one means.
+
+   Measured values in the sheet: Ad LTV, IAP LTV, Total LTV, 229 rows each. */
 const LTV_TYPE = 'Total LTV';
 
 /* Country as the sheets spell it, measured rather than assumed: ltv_combined
    has ALL and US, stickiness_combined has ALL and US. A filter written against
    a value that is not there matches nothing and renders the same empty chart
-   this change exists to fix. */
+   this change exists to fix.
+
+   What ALL means was also asked rather than guessed: it is every country
+   INCLUDING the US, with US broken out alongside it - not the rest of the
+   world. So the report's 'all' view is global, which is what its label says.
+   Had it meant non-US, every chart on that setting would have been mislabelled
+   while looking perfectly reasonable. */
 const COUNTRY_ALL = 'ALL', COUNTRY_US = 'US';
 
 /* The LTV tab has no plat column - the platform is inside the app name, and
