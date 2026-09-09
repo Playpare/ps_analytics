@@ -164,7 +164,6 @@ const RAW = {
   ios_iap_us: [],
   android_iap_us: [],
   cohort_us: [],
-  stickiness_us: [],
   retention_us: [],
   network_rev: [],
   us_ftp_ios: [],
@@ -174,9 +173,10 @@ const RAW = {
   android_iap: [],
   user_activity: [],
   cohort: [],
-  ltv_overall: [],
-  ltv_us: [],
-  stickiness: [],
+  /* One tab each now, with country as a column inside them. The two old
+     per-country keys are gone; renderLTV and renderStickiness filter. */
+  ltv_combined: [],
+  stickiness_combined: [],
   whale: [],
   retention: [],
   ftp: [],
@@ -749,7 +749,9 @@ function stickFilter(axis,v,btn){
 
 function renderStickiness(){
   const isUS = stickPlat==='us_ios' || stickPlat==='us_android';
-  const src = isUS ? RAW.stickiness_us : RAW.stickiness;
+  /* One tab now; country is a column. Same shape as the LTV split above. */
+  const src = (RAW.stickiness_combined||[]).filter(r =>
+    r.country===(isUS ? COUNTRY_US : COUNTRY_ALL));
   const effPlat = stickPlat==='us_ios' ? 'ios' : stickPlat==='us_android' ? 'android' : stickPlat;
   const wantIos=effPlat!=='android', wantAnd=effPlat!=='ios';
   // MAU is a trailing 30-day metric, so during the first ~month after each platform's
@@ -893,13 +895,17 @@ function fillGaps(arr){
 }
 
 function renderLTV(){
-  const src = ltvCountry==='us' ? RAW.ltv_us : RAW.ltv_overall;
+  /* One tab now, split here: Country and LTV Type are columns, and the
+     platform is derived from the app name because there is no plat column. */
+  const wantCountry = ltvCountry==='us' ? COUNTRY_US : COUNTRY_ALL;
+  const src = (RAW.ltv_combined||[]).filter(r =>
+    r.country===wantCountry && r.ltv_type===LTV_TYPE);
 
   // Build per-platform, per-date averaged values across the chosen period.
   function platData(plat){
     const byDate={};
     src.forEach(r=>{
-      if(r.plat!==plat)return;
+      if(ltvPlatOf(r.app)!==plat)return;
       if(!dateInPeriod(r.date,ovPer))return;
       const b=byDate[r.date]||(byDate[r.date]={d0:[],d7:[],d28:[]});
       if(r.d0)b.d0.push(r.d0);
@@ -1314,11 +1320,18 @@ window.__themeRerender = function(){ renderActive(); };
 // ── DATA SOURCE (Excel) ──
 const SHEET_TO_RAW_KEY = {
   user_activity:'user_activity', ios_iap:'ios_iap', android_iap:'android_iap',
-  cohort:'cohort', network_rev:'network_rev', ltv_overall:'ltv_overall', ltv_us:'ltv_us',
-  stickiness:'stickiness', whale:'whale', retention:'retention', ftp:'ftp',
+  cohort:'cohort', network_rev:'network_rev',
+  /* Consolidated in the workbook; country became a column inside each. The RAW
+     key keeps the plain name and renderLTV / renderStickiness do the split. */
+  ltv_combined:'ltv_combined', stickiness_combined:'stickiness_combined',
+  /* A rename only - payer_retention has exactly the headers renderRetention
+     already reads, so it lands on the RAW key that function expects and needs
+     no other change. retention_us was not renamed and is still its own tab. */
+  payer_retention:'retention',
+  whale:'whale', ftp:'ftp',
   us_ftp_ios:'us_ftp_ios', us_ftp_android:'us_ftp_android',
   user_activity_us:'user_activity_us', ios_iap_us:'ios_iap_us', android_iap_us:'android_iap_us',
-  cohort_us:'cohort_us', stickiness_us:'stickiness_us', retention_us:'retention_us'
+  cohort_us:'cohort_us', retention_us:'retention_us'
 };
 // Maps a sheet's human-readable column headers to the internal field names the
 // report's chart code reads. Only sheets whose headers differ from the internal
@@ -1333,8 +1346,47 @@ const SHEET_HEADER_MAP = {
     'Day':'date', 'Application':'app', 'Ad Type':'ad_type', 'DAU':'dau', 'DAV':'dav',
     'ARPDAU':'arpdau', 'Est. Revenue':'est_revenue', 'eCPM':'ecpm',
     'Ad Viewer Rate':'ad_viewer_rate', 'Req/dau':'req_dau', 'Imp/dau':'imp_dau'
+  },
+  /* ltv_overall and ltv_us used to be two tabs carrying one LTV number each.
+     They are one tab now, with Country and LTV Type as columns - a row is
+     identified by three things where it used to be identified by which sheet
+     it came from. */
+  ltv_combined: {
+    'Install Date':'date', 'App Name':'app', 'Country':'country',
+    'Cohort Size':'cohort_size', 'LTV Type':'ltv_type',
+    'D0':'d0', 'D1':'d1', 'D3':'d3', 'D7':'d7', 'D14':'d14', 'D21':'d21',
+    'D28':'d28', 'D30':'d30', 'D40':'d40', 'D45':'d45', 'D50':'d50'
+  },
+  /* Only 'platform' differs from what renderStickiness reads; date, dau and mau
+     already match. country is new, and is what the split now uses. */
+  stickiness_combined: {
+    'platform':'plat'
   }
 };
+
+/* Which of the three LTV kinds the chart shows.
+
+   The old ltv_overall tab had no LTV Type column, so it carried exactly one
+   number per date and platform - and which one it was is not recoverable,
+   because that tab no longer exists. 'Total LTV' is what an unqualified "LTV"
+   means and the chart is labelled just "LTV D0 / D7 / D28". If it should be
+   ad-only or IAP-only, this is the one line to change. Measured values in the
+   sheet: Ad LTV, IAP LTV, Total LTV, 229 rows each. */
+const LTV_TYPE = 'Total LTV';
+
+/* Country as the sheets spell it, measured rather than assumed: ltv_combined
+   has ALL and US, stickiness_combined has ALL and US. A filter written against
+   a value that is not there matches nothing and renders the same empty chart
+   this change exists to fix. */
+const COUNTRY_ALL = 'ALL', COUNTRY_US = 'US';
+
+/* The LTV tab has no plat column - the platform is inside the app name, and
+   the only two values present are 'PS_iOS_My Supermarket Simulator' and
+   'PS_Android_My Supermarket Simulator'. */
+function ltvPlatOf(app){
+  const s = String(app||'');
+  return /_ios_/i.test(s) ? 'ios' : /_android_/i.test(s) ? 'android' : '';
+}
 const NUMERIC_FIELDS = new Set(['dau','dav','arpdau','req_dau','est_revenue','ecpm','ad_viewer_rate','imp_dau','proceeds','paying_users',
   'purchases','active_users','arppu','purchase_rate','buyers','installs','d0','d1','d2','d3','d4','d5','d6','d7',
   'd10','d14','d18','d21','d24','d27','d28','d30','revenue','mau','whale_share','total_rev','whale_rev',
