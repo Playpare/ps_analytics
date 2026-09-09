@@ -247,7 +247,13 @@ function initDateFilters(){
   const dates=[...collectDatesUnfiltered(A),...collectDatesUnfiltered(I)].sort();
   const min=(FULL_RANGE&&FULL_RANGE.start)||dates[0]||'';
   const max=(FULL_RANGE&&FULL_RANGE.end)||dates[dates.length-1]||todayIso();
-  if(!SINGLE_DATE)SINGLE_DATE=max;if(!RANGE_START)RANGE_START=min;if(!RANGE_END)RANGE_END=max;
+  if(!SINGLE_DATE)SINGLE_DATE=max;
+  /* Custom date is prefilled with the seven days already on screen, not with
+     the workbook's first row. min/max still go on the inputs below, so older
+     dates stay askable - but seeding From with the span's start opened the
+     picker years back and made an untouched Apply request all of history. */
+  if(!RANGE_END)RANGE_END=max;
+  if(!RANGE_START){const s=addDays(RANGE_END,-6);RANGE_START=(min&&s<min)?min:s;}
   document.querySelectorAll('.sh > .date').forEach(el=>{
     const box=document.createElement('div');box.className='date-controls';box.id=el.id;
     box.innerHTML='<span class="date-span"></span><select class="date" aria-label="Date filter">'+

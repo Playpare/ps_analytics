@@ -394,8 +394,21 @@ const min=(FULL_RANGE&&FULL_RANGE.start)||(bounds.min!==null?localISO(new Date(b
 GLOBAL_MAX_DATE=new Date(lastClosedInstant());
 logDateSpans();
 if(!SINGLE_DATE)SINGLE_DATE=max;
-if(!RANGE_START)RANGE_START=min;
-if(!RANGE_END)RANGE_END=max;
+/* Seed Custom date with the window that is ON SCREEN, not with the workbook's
+   first row. min/max are the workbook span and stay on the inputs as min= and
+   max= below, so nothing older becomes unaskable - but as a PREFILL the span
+   was wrong twice over: the picker opened on a date from the first year of the
+   sheet, unrelated to anything the user was looking at, and pressing Apply
+   without touching it asked for the entire history - the slowest request this
+   report can make, and the one it made by default. */
+if(!RANGE_START||!RANGE_END){
+  const w=weekWindow(2,new Date(lastClosedInstant())),
+        wStart=localISO(new Date(w.start)),wEnd=localISO(new Date(w.end));
+  /* Clamped, so a sheet starting after the window cannot prefill a From date
+     with no rows behind it. */
+  if(!RANGE_START)RANGE_START=(min&&wStart<min)?min:wStart;
+  if(!RANGE_END)RANGE_END=(max&&wEnd>max)?max:wEnd;
+}
 document.querySelectorAll('[data-date-range]').forEach(el=>{
   const box=document.createElement('div');
   box.className='date-controls';
