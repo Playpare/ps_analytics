@@ -110,6 +110,14 @@ const API = {
           err.retryable=err.queued||data.code>=500;
           throw err;
         }
+        /* A complete JSON answer proves the transport is working, so earlier
+           transport trouble should not still count against this call. Without
+           this, `attempt` is a lifetime budget: four transient 404s spread
+           across a long wait fail the load even with good responses between
+           them. The queued branch below already spends nothing, by design;
+           this closes the same gap for the successful ones. Weekly hit
+           exactly this on 10 Sep, where its budget was two. */
+        attempt=0;
         return data;
       }catch(e){
         clearTimeout(timer);

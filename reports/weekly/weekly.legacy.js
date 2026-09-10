@@ -52,6 +52,24 @@ const API = {
 
        Queued answers now get their own budget, ~85s, which covers a cold
        build with room to spare. */
+    /* TRANSPORT_RETRIES counts CONSECUTIVE transport failures, not a budget
+       for the whole call. It is reset every time a request comes back with a
+       complete JSON answer - including a BUILDING one, which proves the
+       transport is working even though the data is not ready.
+
+       It used to be a lifetime budget, and that is how a working build still
+       failed on 10 Sep. Apps Script answers /exec with a 302 to
+       script.googleusercontent.com, and that second request intermittently
+       returns 404; the backend never sees it. Meanwhile a queued wait runs up
+       to 85 seconds across eight polls. Two of those transient 404s anywhere
+       in those 85 seconds - even a minute apart, with good responses between
+       them - exhausted the budget and threw "HTTP 404 from Apps Script" at a
+       build that was progressing perfectly well. The execution log for that
+       load shows every doPost completing in 1-2 seconds and the warm run
+       finishing with failed:0.
+
+       Two separate 404s a minute apart are two transient blips. Three in a
+       row are a broken deployment. Only the second is worth giving up on. */
     const TRANSPORT_RETRIES=2;
     const QUEUE_POLLS=8;
     const QUEUE_WAIT_MS=[4000,6000,8000,10000,12000,15000,15000,15000];
@@ -128,8 +146,13 @@ const API = {
              answered on the queue budget rather than the transport one. */
           err.queued=isQueuedText(data.error);
           err.retryable=err.queued||data.code>=500;
+          /* The transport just carried a complete JSON answer, so whatever
+             transport trouble came before it is over. See the note where
+             transportTries is reset below. */
+          if(err.queued)transportTries=0;
           throw err;
         }
+        transportTries=0;
         return data;
       }catch(e){
         clearTimeout(timer);
