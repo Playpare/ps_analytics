@@ -831,3 +831,23 @@ table.mx{width:max-content;min-width:100%;border-collapse:separate;border-spacin
 [data-theme=light] .range-select.sm.mx-grain-select{
   background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7' fill='none' stroke='%2300b39a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 5 5.5 9 1.5'/%3E%3C/svg%3E"),linear-gradient(90deg,var(--cyanBg),var(--magentaBg));
 }
+
+/* ── The range strip and freshness banner belong to the game dashboard ──
+   Both describe the data THIS page loaded: platBadge and rangeLabel print the
+   window the game sections are cut by, and freshBanner warns when that window
+   runs past the end of the data.
+
+   A framed report owns its own range. UA was showing
+
+       shell   ANDROID ONLY  14 days · 2026-09-08 → 2026-09-21
+       report  Feb 2 – Sep 6   [Custom date]  02/02/2026  06/09/2026
+
+   one above the other, disagreeing - and a "7 of 12 sources have no data in
+   this range" banner about a range the report was not using. The topbar
+   already says "set inside the report" for these scopes; this is the rest of
+   that sentence.
+
+   Driven by the attribute applyScope() already sets, rather than by another
+   list of section ids that would have to be kept in step with SECTIONS. */
+body:not([data-scope="game"]) .rangebar,
+body:not([data-scope="game"]) #freshBanner { display: none; }

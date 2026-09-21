@@ -17,7 +17,12 @@
        frames now agree from the very first frame rather than after a toggle. -->
   <!--THEME_BOOT-->
 </head>
-<body>
+<!-- Default scope, so the range strip is present on the first paint. The
+     CSS hides it for report scopes, and applyScope() overwrites this
+     attribute on every section change - but it runs after the first
+     paint, and without a starting value the strip would flash away and
+     back on every load of a game section. -->
+<body data-scope="game">
 
 <div id="loginScreen" style="display:flex">
   <div class="loginCard">
