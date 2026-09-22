@@ -987,6 +987,16 @@ async function connect(force){
       showLoader();
       const j=await fetchDatasets(true);
       applyDatasets(j);
+      /* The backend throttles rebuilds - they are expensive and anyone with a
+         session can ask for one. When it refuses, it now says so, and that has
+         to reach the person who pressed the button: otherwise Refresh returns
+         ok:true with the rows they already had and looks broken. */
+      if(j.forceRefused){
+        const mins=Math.max(1,Math.ceil((j.forceRetryAfterMs||300000)/60000));
+        setStatus(`Showing the last build — a rebuild was requested too recently. Try again in up to ${mins} min.`,true);
+        CONNECTING=false; if(btn)btn.disabled=false; hideLoader();
+        return;
+      }
       /* A rebuild republishes the stamp, so read it back rather than
          assuming - if the warm has not finished, the stamp has not moved and
          the next load will correctly check again. */
