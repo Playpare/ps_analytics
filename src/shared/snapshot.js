@@ -193,15 +193,27 @@
     let stored = null;
     try { stored = await SnapshotStore.get(name); } catch (e) { stored = null; }
 
-    /* ---- Fast path: painted from disk, no network at all ---------------
-       A copy verified after this morning's boundary is correct until
-       tomorrow, because the sheets are append-only and appended to once a
-       day. This is what almost every load after the first one hits. */
-    if (stored && stored.data && verifiedToday(stored) && !opts.alwaysCheck) {
-      opts.render(stored.data, { source: 'disk', stamp: stored.stamp, builtAt: stored.builtAt });
-      say('');
-      return { source: 'disk', stamp: stored.stamp };
-    }
+    /* ---- THE FAST PATH THAT USED TO BE HERE ----------------------------
+       A copy verified after this morning's boundary was treated as correct
+       until tomorrow, and painted with no request at all. The reason given
+       was that "the sheets are append-only and appended to once a day".
+
+       They are not. People edit values in place, and a sync that upserts
+       rewrites rows that already exist - which is most of what the Adjust
+       sync does. The symptom was precise and hard to argue with: a value was
+       corrected in the sheet, Refresh was pressed on one machine and showed
+       it, and a second machine kept showing the old number all day. Two
+       people, two answers, and the second one had no way to tell.
+
+       It is gone. Every load asks. What it asks for is one Script Property
+       read - about 100ms, answering in roughly a hundred bytes - and the
+       screen is not waiting on it: the block below paints from disk first and
+       corrects a moment later if the stamp has moved. That is the same few
+       milliseconds to first paint as the shortcut gave, for the price of a
+       request nobody is watching.
+
+       verifiedToday() is kept and still exported, because ASO uses it to
+       decide something else. It simply no longer decides whether to check. */
 
     /* ---- Paint anything we have, THEN verify --------------------------
        Even a copy from last week is better than a spinner: it is on screen

@@ -1367,9 +1367,12 @@ async function cacheSave(core, stamp){
   return SnapshotStore.put(ASO_STORE,{
     stamp: stamp||ASO_STAMP||'',
     who: sessionFingerprint(),
-    /* checkedAt is what lets SnapshotBoot skip the network for the rest of
-       the day. Without a stamp there is nothing to trust, so leave it at 0
-       and the next load checks again. */
+    /* checkedAt no longer decides whether to make a request - every load
+       checks now, because a value edited in place moves nothing a daily
+       boundary can see. It still records when this copy was last confirmed
+       against the server, which is what the status line reports and what
+       tells a genuinely old copy from a fresh one. Left at 0 without a
+       stamp: there is nothing to have confirmed it against. */
     checkedAt: (stamp||ASO_STAMP) ? Date.now() : 0,
     builtAt: Date.now(),
     data: core
@@ -1730,21 +1733,27 @@ $('refreshBtn').onclick=()=>connect(true);
       BOOT_CACHE=cached;
       ASO_STAMP=cached.stamp||'';
 
-      /* Verified after this morning's data hour means nothing has changed
-         since we last checked, so the page is simply loaded - no "updating…",
-         no request. SnapshotBoot.verifiedToday owns that boundary and uses
-         08:00, matching the 09:00 warm. */
+      /* This used to return here when the copy had been verified after the
+         morning's data hour - painted, and no request at all for the rest of
+         the day. The reasoning was that the sheets are appended to once a
+         day, so nothing could have moved since.
+
+         They are edited in place too, and an upserting sync rewrites rows
+         that already exist. The symptom on the UA report was exact: a value
+         corrected in the sheet, Refresh pressed on one machine and showing
+         it, and a second machine still on the old number hours later, with
+         nothing on screen to suggest it was looking at something stale.
+
+         So the cached view is painted - that part was always right, and it is
+         why this page appears in a few milliseconds - and then it checks. The
+         check is a stamp request: one Script Property read, about a hundred
+         bytes back. Nobody waits on it, because the page is already up. */
       const settled=SnapshotBoot.verifiedToday({checkedAt:cached.checkedAt});
       setStatus(settled
-        ? 'Loaded'
+        ? 'Loaded · checking…'
         : 'Cached · '+clockTime(cached.at)+' · updating…',
         (!settled&&Date.now()-(cached.at||0)>PERF.staleAfterMs)?'stale':null);
-
-      if(settled){
-        prefetchViews();
-        tellHub('mss3d:report-ready');
-        return;                       // zero network requests for this load
-      }
+      tellHub('mss3d:report-ready');
     }catch(e){console.error('cached render failed',e);A=null;I=null;PARTIAL=true;BOOT_CACHE=null}
   }
   connect(false);
