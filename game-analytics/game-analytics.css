@@ -851,3 +851,9 @@ table.mx{width:max-content;min-width:100%;border-collapse:separate;border-spacin
    list of section ids that would have to be kept in step with SECTIONS. */
 body:not([data-scope="game"]) .rangebar,
 body:not([data-scope="game"]) #freshBanner { display: none; }
+
+/* Sign out sits with the theme toggle in the sidebar footer, styled as a peer
+   of it rather than as a danger button. It was a red icon beside SYNC in the
+   topbar, which put "end my session" a few pixels from "reload the data". */
+.sb-signout{color:var(--text3)}
+.sb-signout:hover{color:var(--magenta);border-color:var(--magenta)}

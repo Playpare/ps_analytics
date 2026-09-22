@@ -61,6 +61,14 @@
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="3.2"/><line x1="8" y1="1" x2="8" y2="2.5"/><line x1="8" y1="13.5" x2="8" y2="15"/><line x1="1" y1="8" x2="2.5" y2="8"/><line x1="13.5" y1="8" x2="15" y2="8"/><line x1="3" y1="3" x2="4.1" y2="4.1"/><line x1="11.9" y1="11.9" x2="13" y2="13"/><line x1="13" y1="3" x2="11.9" y2="4.1"/><line x1="4.1" y1="11.9" x2="3" y2="13"/></svg>
       <span id="themeLbl">Light mode</span>
     </button>
+    <!-- Moved out of the topbar. Sign out is not a thing you reach for while
+         reading a report, and sitting beside SYNC it was one slip away from
+         ending the session instead of refreshing it. Down here it keeps the
+         company of the other account-level control. -->
+    <button class="theme-btn sb-signout" onclick="doLogout()" title="Sign out">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M11 11l3-3-3-3M6 8h8"/></svg>
+      <span>Sign out</span>
+    </button>
   </div>
 </aside>
 
@@ -95,9 +103,6 @@
     <button class="icon-btn btn-sync" id="syncBtn" onclick="syncNow()" title="Rebuild every view from the sheet — slow, only needed after a manual sheet sync">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 8A6 6 0 1 1 8 2"/><path d="M14 2v4h-4"/></svg>
       SYNC
-    </button>
-    <button class="icon-btn btn-danger" onclick="doLogout()" title="Sign out">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M11 11l3-3-3-3M6 8h8"/></svg>
     </button>
   </div>
 
