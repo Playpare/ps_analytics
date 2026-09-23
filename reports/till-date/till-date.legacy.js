@@ -1361,6 +1361,29 @@ const SHEET_HEADER_MAP = {
      already match. country is new, and is what the split now uses. */
   stickiness_combined: {
     'platform':'plat'
+  },
+  /* network_rev had NO entry here, and every field renderNetRev reads was
+     therefore undefined:
+
+       sheet   Date | Application | Package Name | Network | ... | Est. Revenue
+       read    r.date  r.app                       r.network       r.revenue
+
+     rowsToRecords does `headerMap[h] || h`, so without a map the record keys
+     are the raw headings. The first thing renderNetRev does is
+
+       RAW.network_rev.filter(r => r.app && r.app.includes(appStr) && ...)
+
+     and `undefined && ...` is falsy for every row, so the filter returned an
+     empty array and the Network Revenue section showed nothing at all. No
+     error, no empty-state - a total of zero and a dropdown with one option.
+
+     Same family as the LTV and Stickiness sections that were blank earlier
+     this month: a tab whose shape moved while the map that reads it did not.
+     Only four columns are mapped because renderNetRev reads exactly four -
+     checked against the whole function, not a sample of it. */
+  network_rev: {
+    'Date':'date', 'Application':'app', 'Network':'network',
+    'Est. Revenue':'revenue'
   }
 };
 
