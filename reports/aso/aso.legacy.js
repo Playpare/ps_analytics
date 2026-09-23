@@ -1398,9 +1398,20 @@ try{
  * Asks the server whether our stored copy is still current.
  * One Script Property read on its side, ~120 bytes on the wire.
  */
+/* Three outcomes, and they were two until this was written.
+
+   a stamp     the server answered and told us which state it holds
+   ''          the server answered and has not published one yet
+   null        we could not ask - network, a 404 on the redirect, a bad body
+
+   The first two both mean "go and fetch", and returning '' for the third
+   made a FAILED CHECK indistinguishable from a server with nothing to
+   compare - so a 120-byte request that did not arrive turned into a full
+   payload fetch. Apps Script answers /exec with a 302 whose follow-up
+   intermittently 404s, so that is not a rare path. */
 async function fetchStamp(){
   const token=sessionToken();
-  if(!token)return '';
+  if(!token)return null;
   try{
     const res=await fetch(API.url,{
       method:'POST',
@@ -1409,11 +1420,11 @@ async function fetchStamp(){
       redirect:'follow'
     });
     const text=(await res.text()).trim();
-    if(!res.ok||text.charAt(0)==='<')return '';
+    if(!res.ok||text.charAt(0)==='<')return null;
     const data=JSON.parse(text);
-    if(!data||!data.ok)return '';
+    if(!data||!data.ok)return null;
     return (data.data&&data.data.stamp)||'';
-  }catch(e){ return ''; }
+  }catch(e){ return null; }
 }
 
 /* ==========================================================================
@@ -1624,6 +1635,18 @@ async function connect(force){
         tellHub('mss3d:report-ready');
         return;
       }
+      /* Could not ask at all. Keep what is on screen rather than answering a
+         failed 120-byte request with a full payload fetch - which is what
+         happened while '' meant both "no stamp" and "no answer". The copy may
+         be stale, and the status line says so instead of pretending. */
+      if(serverStamp===null){
+        ensureRendered(ACTIVE);
+        $('loader').classList.remove('show');
+        setStatus('Showing your saved copy — could not reach the server.','stale');
+        tellHub('mss3d:report-ready');
+        return;
+      }
+
       /* Different, or the server has not published one yet. Fall through and
          fetch exactly as before. */
       if(serverStamp)ASO_STAMP=serverStamp;

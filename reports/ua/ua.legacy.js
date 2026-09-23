@@ -1023,7 +1023,28 @@ async function connect(force){
         try{
           const s=await API.call('stamp',{});
           serverStamp=(s&&s.data&&s.data.stamp)||(s&&s.stamp)||'';
-        }catch(e){ serverStamp=''; }
+        }catch(e){
+          /* A FAILED CHECK IS NOT A REASON TO FETCH EVERYTHING.
+             This used to swallow the error and leave serverStamp empty,
+             which falls through to fetchDatasets below - so a cheap request
+             that failed turned into the most expensive one, and it is that
+             request the user then saw fail: "UA request interrupted".
+
+             It mattered little while this ran once a day. Every load asks
+             now, so every transient failure of the stamp call became a full
+             refetch, and Apps Script answers /exec with a 302 whose
+             follow-up intermittently 404s.
+
+             When we have stored rows, the right answer is to keep them.
+             Rethrowing hands that to SnapshotBoot, which already paints the
+             saved copy and says "could not reach the server" as a warning
+             rather than an error - the behaviour this wanted all along.
+
+             With nothing stored there is nothing to keep, so fall through
+             and fetch: a first load has to try. */
+          if(stamp) throw e;
+          serverStamp='';
+        }
 
         /* A stamp we already hold means our stored rows are still exactly
            right. Nothing else is sent. */
