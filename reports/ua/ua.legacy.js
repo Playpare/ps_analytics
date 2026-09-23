@@ -992,8 +992,19 @@ async function connect(force){
          to reach the person who pressed the button: otherwise Refresh returns
          ok:true with the rows they already had and looks broken. */
       if(j.forceRefused){
+        /* The wording matters more than it looks. This said "Showing the last
+           build - a rebuild was requested too recently", which reads as
+           "you are seeing the latest build" - the exact opposite of what it
+           means. Somebody changed a value, pressed Refresh, read that, and
+           reasonably concluded the new value had not saved.
+
+           It has to say three things and the first is the one that was
+           missing: the refresh did NOT run, what is on screen is older than
+           the sheet, and when to try again. */
         const mins=Math.max(1,Math.ceil((j.forceRetryAfterMs||300000)/60000));
-        setStatus(`Showing the last build — a rebuild was requested too recently. Try again in up to ${mins} min.`,true);
+        setStatus(`Refresh did NOT run — one was requested less than ${mins} min ago. `
+                  + `These numbers are from the previous build and may not include `
+                  + `your latest change. Try again in up to ${mins} min.`, true);
         CONNECTING=false; if(btn)btn.disabled=false; hideLoader();
         return;
       }
