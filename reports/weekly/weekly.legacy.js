@@ -610,9 +610,23 @@ function renderImmersive(data,platform){
   setKpi(s,'Total Immersive Rev',money(w.immersive),w.immersive,p.immersive,money);
   setKpi(s,'Blended eCPM',money(blend,3),null,null,null,'Revenue / impressions x 1000');
   setKpi(s,'Blended Fill Rate',pct(fill,2,false),null,null,null,'Impression-weighted Gadsme + Anzu');
-  setKpi(s,'AdMob Failover',pct(w.failover_pct,1,false),null,null,null,(finite(w.failover_pct)&&w.failover_pct<=10?'Within':'Above')+' 10% target | '+money(w.failover));
+  /* AdMob failover is NOT an immersive network, and this slide is a Gadsme
+     vs Anzu comparison. Its figure lives in the Ad Overview's revenue mix,
+     where it sits beside rewarded, interstitial and banner - which is the
+     question it answers. Writing it here too made the same number appear in
+     two places under two framings, and on a slide it does not belong to.
+
+     Removed from iOS only, because that is what was asked. The Android
+     Immersive slide still carries it and the same argument applies there -
+     left alone rather than widened past the request. */
+  if(platform!=='iOS')
+    setKpi(s,'AdMob Failover',pct(w.failover_pct,1,false),null,null,null,(finite(w.failover_pct)&&w.failover_pct<=10?'Within':'Above')+' 10% target | '+money(w.failover));
   const table=s.querySelector('table'),tbody=table?.querySelector('tbody');if(tbody){const winner=(a,b,low)=>!finite(a)||!finite(b)?'N/A':((low?a<b:a>b)?'Gadsme':'Anzu'),rows=[['Revenue',w.gadsme,w.anzu,money,'139,92,246'],['Impressions',w.gadsme_imp,w.anzu_imp,num,'77,159,255'],['eCPM',w.gadsme_ecpm,w.anzu_ecpm,v=>money(v,3),'236,10,155'],['Fill Rate',w.gadsme_fill,w.anzu_fill,v=>pct(v,2,false),'255,184,0']];tbody.innerHTML=rows.map(r=>{const values=[...new Set([r[1],r[2]].filter(finite).map(v=>Math.abs(v)))].sort((a,b)=>a-b),shade=v=>{const i=values.indexOf(Math.abs(v||0)),t=values.length>1?i/(values.length-1):1;return'background:rgba('+r[4]+','+(0.36-0.20*t).toFixed(3)+')'},win=winner(r[1],r[2]);return '<tr><td class="fmt-name">'+r[0]+'</td><td class="num b" style="'+shade(r[1])+'">'+r[3](r[1])+'</td><td class="num b" style="'+shade(r[2])+'">'+r[3](r[2])+'</td><td class="num" style="color:var(--blue);background:rgba(77,159,255,.16);font-weight:600!important">'+win+'</td></tr>';}).join('');}
-  const failoverLabel=[...s.querySelectorAll('div')].find(el=>clean(el.textContent).startsWith('AdMob Failover (')&&el.children.length===0);
+  /* The detail block under the table, same reasoning. The markup for it is
+     gone from the iOS slide, so this would find nothing there anyway - the
+     guard says why rather than relying on a querySelector missing. */
+  const failoverLabel=platform==='iOS'?null
+    :[...s.querySelectorAll('div')].find(el=>clean(el.textContent).startsWith('AdMob Failover (')&&el.children.length===0);
   if(failoverLabel){
     failoverLabel.textContent='AdMob Failover (Current)';
     const detail=failoverLabel.nextElementSibling;

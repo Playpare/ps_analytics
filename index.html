@@ -131,7 +131,7 @@
     <div class="tab-pane on" id="tab-overview">
       <div class="alert-strip" id="alertStrip"><div class="alert-pulse"></div><div class="alert-list" id="alertList"></div></div>
       <div class="kpi-grid g5" id="heroKpis"></div>
-      <div class="kpi-grid g5" id="heroKpis2"></div>
+      <div class="kpi-grid g6" id="heroKpis2"></div>
 
       <div class="row row-2b">
         <div class="card clickable" onclick="goToTab('retention')">
@@ -230,14 +230,14 @@
       </div>
 
       <div class="card tbl-big tbl-scroll">
-        <div class="card-hd"><span class="card-title">Channel performance <span class="card-sub">Channel Performance tab · installs · share · CPI · retention · ROAS</span></span></div>
-        <div class="tbl-head eleven"><span>Channel</span><span>Share</span><span>Spend</span><span>Installs</span><span>CPI</span><span>D0 ROAS</span><span>D7 ROAS</span><span>D28 ROAS</span><span>D1 ret.</span><span>D7 ret.</span><span>D30 ret.</span></div>
+        <div class="card-hd"><span class="card-title">Channel performance <span class="card-sub">attributed installs only — will not sum to Total Installs</span></span></div>
+        <div class="tbl-head eleven"><span>Channel</span><span>Share</span><span>Spend</span><span>Attr. installs</span><span>CPI</span><span>D0 ROAS</span><span>D7 ROAS</span><span>D28 ROAS</span><span>D1 ret.</span><span>D7 ret.</span><span>D30 ret.</span></div>
         <div id="growthSourceTbl"></div>
       </div>
 
       <div class="card tbl-big">
-        <div class="card-hd"><span class="card-title">Campaign performance <span class="card-sub">Campaign Performance tab · top spend</span></span></div>
-        <div class="tbl-head ten"><span>Campaign</span><span>Cost</span><span>Installs</span><span>eCPI</span><span>D0 ROAS</span><span>D7 ROAS</span><span>D28 ROAS</span><span>D1 ret.</span><span>D7 ret.</span><span>D30 ret.</span></div>
+        <div class="card-hd"><span class="card-title">Campaign performance <span class="card-sub">attributed installs only · top spend</span></span></div>
+        <div class="tbl-head ten"><span>Campaign</span><span>Cost</span><span>Attr. installs</span><span>eCPI</span><span>D0 ROAS</span><span>D7 ROAS</span><span>D28 ROAS</span><span>D1 ret.</span><span>D7 ret.</span><span>D30 ret.</span></div>
         <div id="growthCampaignTbl"></div>
       </div>
 
@@ -272,7 +272,7 @@
       <div class="kpi-grid g4" id="growthMonKpis2"></div>
       <div class="row row-2b">
         <div class="card">
-          <div class="card-hd"><span class="card-title">Revenue trend <span class="card-sub">IAP vs ad revenue, stacked</span></span></div>
+          <div class="card-hd"><span class="card-title">Revenue trend <span class="card-sub">all revenue — IAP and ads, stacked</span></span></div>
           <div id="growthRevenueWrap"><div class="cv-wrap tall"><canvas id="cvGrowthRevenue"></canvas></div></div>
         </div>
         <div class="card">
@@ -293,7 +293,7 @@
       </div>
 
       <div class="card tbl-big">
-        <div class="card-hd"><span class="card-title">Ad network performance <span class="card-sub">revenue · impressions · eCPM · fill</span></span></div>
+        <div class="card-hd"><span class="card-title">Ad network performance <span class="card-sub">ad revenue only — excludes IAP</span></span></div>
         <div class="tbl-head five"><span>Network</span><span>Revenue</span><span>Impressions</span><span>eCPM</span><span>Fill rate</span></div>
         <div id="growthNetworkTbl"></div>
       </div>
