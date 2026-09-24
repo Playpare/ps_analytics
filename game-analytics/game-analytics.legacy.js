@@ -1720,7 +1720,7 @@ function renderOverview(){
   const ftueComplete  = (ftueRef.engagement != null) ? ftueRef.engagement : null;
 
   const kpis = [
-    { cls:'cy', lbl:'Installs',      val:fmtKn(totalInstalls),  data:cur.map(x=>+x.installs||0), dates:curDates, cur:totalInstalls, prev:prevInstalls, sub:'period total', col:'--cyan',    fmt:fmtKn },
+    { cls:'cy', lbl:'Installs',      val:fmtKn(totalInstalls),  data:cur.map(x=>+x.installs||0), dates:curDates, cur:totalInstalls, prev:prevInstalls, sub:'all installs, paid + organic', col:'--cyan',    fmt:fmtKn },
     { cls:'mg', lbl:'DAU',           val:fmtKn(dauAvg),         data:cur.map(x=>+x.dau||0),      dates:curDates, cur:dauAvg,        prev:prevDau,      sub:'period avg',   col:'--magenta', fmt:fmtKn },
     { cls:'vl', lbl:'D1 Retention',  val:d1?fmtPct(d1):'—',     data:cohortsCur.map(x=>+x.d1||0), dates:cohortsCur.map(x=>x.date), cur:d1, prev:prevD1, sub:'cohort-weighted',   col:'--violet',  fmt:fmtPct },
     { cls:'lm', lbl:'D0 Playtime',   val:fmtSec(d0Play),        data:cur.map(x=>+x.d0Playtime||0), dates:curDates, cur:d0Play,     prev:prevD0Play,   sub:'avg new user', col:'--lime',    fmt:fmtSec },
@@ -1755,7 +1755,7 @@ function renderOverview(){
   const adShare  = revTot>0 ? sum(cur.map(x=>+x.adRevenue||0))/revTot*100 : 0;
 
   const kpis2 = [
-    { cls:'lm', lbl:'Revenue',         val:fmtMoney(revTot),        data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:'ads + IAP',      col:'--lime' },
+    { cls:'lm', lbl:'Revenue',         val:fmtMoney(revTot),        data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:'all revenue, ads + IAP',      col:'--lime' },
     { cls:'cy', lbl:'ARPDAU',          val:fmtMoney(arpdau, 4),    data:cur.map(x=>+x.arpdau||0),  cur:arpdau, prev:arpdauP, sub:'per active user',col:'--cyan' },
     { cls:'mg', lbl:'Payer Conv.',     val:payerPct?payerPct.toFixed(3)+'%':'—', data:cur.map(x=>+x.payerRate||0), cur:payerPct, prev:payerPrv, sub:'of DAU', col:'--magenta' },
     { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'—',   data:cur.map(x=>+x.sessionsPerUser||0), cur:spd, prev:spdPrev, sub:'per active user', col:'--amber' },
