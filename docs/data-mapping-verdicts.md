@@ -64,8 +64,56 @@ so the page does not show a permanently empty panel.
 
 ---
 
-## What is being asked
+## The decision — what stays, and what goes
 
-Tick the AVAILABLE rows you want built. Everything ticked is one job — the UA
-spend/install/revenue columns and the Till Date MAU column, read once and shared
-across the cards that need them, with the ratios computed over the range.
+Decided. This is not a list to tick any more; it is what the dashboard will
+contain.
+
+### KEPT — built from the columns named above
+
+All ten AVAILABLE cards and the one DERIVABLE card are built. That is UA Spend,
+Paid Installs, Avg CPI, ROAS, ROAS maturity, Channel performance, Campaign
+performance, both UA-spend-vs-revenue charts, MAU/stickiness, and LTV:CPI.
+
+They share one read of the UA cost/installs/revenue columns and one read of
+Till Date `mau`, rather than each card fetching for itself.
+
+### REMOVED — the card goes, not just the empty panel
+
+| Card | Where it is removed from |
+|---|---|
+| Cash & Energy · Store Ops | Overview mini-charts |
+| Session length distribution | Engagement |
+| First purchase value | Progress Events |
+| Crashes by device | Stability |
+| Rating by version | Player Rating |
+
+These are deleted outright - markup, chart code, and the fields they read.
+Not hidden behind a flag and not left rendering zeros. A panel that is
+permanently empty teaches people to distrust the ones beside it, and a hidden
+card is a card somebody re-enables in a year without knowing why it was off.
+
+If an export later arrives for one of them, the card comes back with the data.
+What is not kept is a placeholder waiting for it.
+
+### And the payload shrinks with them
+
+Dropping a card drops its columns from what the backend sends. Every field that
+no surviving card reads comes out of the payload - the same projection already
+applied to `network_rev`, applied to the rest. Less to build, less to cache,
+less to send.
+
+---
+
+## Imp/user Cohort — report and dashboard differ, deliberately
+
+The **report** keeps both splits: the cohort-day columns `Day 0`…`Day 30` broken
+down by `Ad Type`, and the `Country` dimension. Somebody reading the report is
+there to compare them, and collapsing them would remove the reason to open it.
+
+The **dashboard**, in the Growth section, shows this **overall only** - one
+series, every ad type and every country summed. The dashboard answers "is ad
+exposure per user going up"; the breakdown is the report's job.
+
+So `Country` stays in the source data and stays in the report. The dashboard
+aggregates over it rather than the backend dropping it.
