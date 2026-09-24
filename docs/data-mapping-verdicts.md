@@ -117,3 +117,52 @@ exposure per user going up"; the breakdown is the report's job.
 
 So `Country` stays in the source data and stays in the report. The dashboard
 aggregates over it rather than the backend dropping it.
+
+---
+
+## Correction, after reading the code rather than the mapping
+
+The AVAILABLE table above said these cards were "simply not read". That was
+taken from `Data_Mappng.MD`, and for most of them the mapping is stale. They
+are already built and already reading real data:
+
+| Card | Where it is built |
+|---|---|
+| UA Spend | `acqKpis` · fed by `buildUA` → Channel Performance |
+| Avg CPI | `acqKpis2` · spend ÷ installs, derived from totals |
+| ROAS | `acqKpis2` |
+| LTV : CPI | `acqKpis2` |
+| Channel performance | `growthSourceTbl` · `buildChannelPerf` |
+| Campaign performance | `growthCampaignTbl` · `buildCampaignPerf` |
+| UA spend vs revenue | `cvGrowthCpi` · `buildChannelDaily` |
+
+`buildUA` already states the ratio rule this document arrived at independently,
+and already obeys it: *"CPI and eCPI are derived from the totals, never
+averaged."* So the trap was found and closed before this list was written.
+
+**Paid Installs** is a separate case. There is a comment in the code saying it
+was removed on purpose, with organic installs, because splitting paid from
+organic needs attribution and this sheet has none - one card always read 0 and
+the other just repeated Total Installs. Campaign-level installs do exist and
+the campaign table shows them; what has no source is the paid/organic split of
+the *total*. Left removed.
+
+### So what actually remains unbuilt
+
+Two, both genuinely absent end to end - no backend field with data in it, and
+no card on the page:
+
+| Card | Source | State |
+|---|---|---|
+| **ROAS maturity (D0/D7/D14/D30)** | UA `Weekly Network` | `buildUA` returns `roasCurve: []` and nothing on the page reads it. |
+| **MAU / stickiness** | Till Date `stickiness_combined` · `dau`, `mau` | No field, no card. `MISSING_SOURCES.mau` still says "blocks stickiness". |
+
+MAU is the more involved of the two: it lives in the Till Date workbook, which
+is a different spreadsheet. `Source.js` already opens it - `SRC_BOOKS.tillDate`
+is there - so the route exists and this is a new SOURCE entry rather than new
+plumbing.
+
+**How this happened, since it is the point:** the list above was built by
+reading `Data_Mappng.MD` and the sheet column names, and not by reading the
+code that consumes them. The mapping described the state of the dashboard some
+months ago. Seven cards were reported as work that is already done.
