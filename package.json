@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "smoke": "node tools/smoke.mjs",
-    "glance": "node tools/glance-test.mjs"
+    "glance": "node tools/glance-test.mjs",
+    "test:fmt": "node tools/test-formatters.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",
