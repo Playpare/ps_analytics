@@ -494,7 +494,7 @@ function expandSection(sec){
 const PACKED_FALLBACK = [
   'daily','retention.cohorts','retention.curve','ftue.steps','ftue.tenMin',
   'ratings.daily','ratings.nps','monetization.networks','monetization.whale',
-  'monetization.ftp','engagement.adCohort','engagement.placements',
+  'monetization.ftp','engagement.placements',
   'progression.shopLevels','progression.dayCounts','conversions','liveops',
   'benchmark','feedback'
 ];
@@ -550,7 +550,7 @@ function normalizeSheetData(raw){
     cohortRoas:  raw.cohortRoas  || null,
     sheet1:      raw.sheet1      || null,
     monetization:raw.monetization|| { networks:[], ltv:[], whale:[], ftp:[] },
-    engagement:  raw.engagement  || { adCohort:[], placements:[], cohortDayKeys:[] },
+    engagement:  raw.engagement  || { adCohort:null, placements:[], cohortDayKeys:[] },
     conversions: raw.conversions || [],
     liveops:     raw.liveops     || [],
     benchmark:   raw.benchmark   || [],
@@ -870,7 +870,7 @@ function emptyDataShell(){
     stability:[], ratings:{daily:[]},
     ua:{daily:[],channels:[],campaigns:[],roasCurve:[]},
     monetization:{networks:[],ltv:[],whale:[],ftp:[]},
-    engagement:{adCohort:[],placements:[],cohortDayKeys:[]},
+    engagement:{adCohort:null,placements:[],cohortDayKeys:[]},
     conversions:[], liveops:[], benchmark:[], feedback:[], missing:{}, freshness:null,
     retentionRaw:{}, retCohorts:[], retSummary:{}, retByPlatform:{},
     retDays:['d1','d2','d3','d4','d5','d6','d7','d14'], curveAvailable:false,
@@ -2073,6 +2073,28 @@ function renderGrowth(){
 
   const xAx = {grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9}}};
   const yKn = {grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>fmtKn(v)}};
+
+  // Ad impressions by cohort day — one overall series.
+  // The Ad Type and Country splits stay in the source workbook, where somebody
+  // comparing them can see both. This card answers the dashboard's question:
+  // is ad exposure per user going up or down. The backend sums every row into
+  // one curve rather than averaging the per-type curves, so a rewarded type
+  // with forty rows does not weigh the same as an interstitial with four
+  // thousand.
+  const ac   = (d.engagement && d.engagement.adCohort) || null;
+  const acKeys = (d.engagement && d.engagement.cohortDayKeys) || [];
+  if(g('cvPlayAdCohort')){
+    const pts = acKeys.map(k => (ac ? ac[k] : null));
+    if(pts.some(v => v != null)){
+      makeChart('cvPlayAdCohort','line',{
+        labels: acKeys.map(k=>k.replace('day','D')),
+        datasets:[{ label:'Impressions per user', data:pts,
+          borderColor:cc.cyan, backgroundColor:cc.cyan+'22', fill:true,
+          tension:.35, borderWidth:2, pointRadius:2, spanGaps:true }]
+      }, { plugins:{legend:{display:false}},
+           scales:{x:xAx,y:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9}}}} });
+    } else { wrapEmpty('cvPlayAdCohort','No ad cohort rows in range'); }
+  }
   const yUsd= {grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>'$'+fmtKn(v)}};
 
   // A date the source never reported comes back null, not 0. Plotting it as zero
@@ -3312,23 +3334,6 @@ function renderPlaytime(){
     }, { plugins:{legend:{display:true,labels:{color:cc.text,font:{family:CHART_FONT,size:10},boxWidth:10}}},
          scales:{x:xAx,y:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9}}},
            y2:{position:'right',grid:{display:false},ticks:{color:cc.amber,font:{family:CHART_FONT,size:9},callback:v=>v+'%'}}} });
-  }
-
-  // Ad impressions by cohort day
-  const ac = (d.engagement&&d.engagement.adCohort)||[];
-  const keys = (d.engagement&&d.engagement.cohortDayKeys)||[];
-  if(g('cvPlayAdCohort')){
-    if(ac.length && keys.length){
-      makeChart('cvPlayAdCohort','line',{
-        labels: keys.map(k=>k.replace('day','D')),
-        datasets: ac.map((r,i)=>({
-          label:r.adType, data:keys.map(k=>r[k]),
-          borderColor:[cc.cyan,cc.magenta,cc.lime,cc.amber,cc.violet][i%5],
-          backgroundColor:'transparent', tension:.35, borderWidth:2, pointRadius:2
-        }))
-      }, { plugins:{legend:{display:true,labels:{color:cc.text,font:{family:CHART_FONT,size:10},boxWidth:10}}},
-           scales:{x:xAx,y:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9}}}} });
-    } else { wrapEmpty('cvPlayAdCohort','No ad cohort rows in range'); }
   }
 
   // Rewarded placements
