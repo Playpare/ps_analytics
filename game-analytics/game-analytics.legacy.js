@@ -494,7 +494,7 @@ function expandSection(sec){
 const PACKED_FALLBACK = [
   'daily','retention.cohorts','retention.curve','ftue.steps','ftue.tenMin',
   'ratings.daily','ratings.nps','monetization.networks','monetization.whale',
-  'monetization.ftp','engagement.placements',
+  'monetization.ftp','engagement.placements','stickiness.daily',
   'progression.shopLevels','progression.dayCounts','conversions','liveops',
   'benchmark','feedback'
 ];
@@ -546,7 +546,9 @@ function normalizeSheetData(raw){
     progWindow:  prog.window     || null,
     stability:   raw.stability   || [],
     ratings:     raw.ratings     || { daily:[] },
-    ua:          raw.ua          || { daily:[], channels:[], campaigns:[], roasCurve:[] },
+    ua:          raw.ua          || { daily:[], channels:[], campaigns:[] },
+    roasCurve:   raw.roasCurve   || { points:[] },
+    stickiness:  raw.stickiness  || { daily:[], stickiness:null },
     cohortRoas:  raw.cohortRoas  || null,
     sheet1:      raw.sheet1      || null,
     monetization:raw.monetization|| { networks:[], ltv:[], whale:[], ftp:[] },
@@ -868,7 +870,8 @@ function emptyDataShell(){
     ftue:{base:0,steps:[],tenMin:[]}, ftueSteps:[], ftueBase:0, tenMin:[],
     shopLevels:[], dayCounts:[], progWindow:null,
     stability:[], ratings:{daily:[]},
-    ua:{daily:[],channels:[],campaigns:[],roasCurve:[]},
+    ua:{daily:[],channels:[],campaigns:[]},
+    roasCurve:{points:[]}, stickiness:{daily:[],stickiness:null},
     monetization:{networks:[],ltv:[],whale:[],ftp:[]},
     engagement:{adCohort:null,placements:[],cohortDayKeys:[]},
     conversions:[], liveops:[], benchmark:[], feedback:[], missing:{}, freshness:null,
@@ -1866,7 +1869,7 @@ function renderGrowth(){
   const d = curData(); if(!d.daily) return;
   const cur  = getWindow(d.daily);
   const prev = getPrevWindow(d.daily);
-  const ua   = d.ua || {channels:[],daily:[],campaigns:[],roasCurve:[]};
+  const ua   = d.ua || {channels:[],daily:[],campaigns:[]};
   const uaCur  = getWindow(ua.daily || []);
   const uaPrev = getPrevWindow(ua.daily || []);
   const cc   = chartColors();
@@ -2094,6 +2097,62 @@ function renderGrowth(){
       }, { plugins:{legend:{display:false}},
            scales:{x:xAx,y:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9}}}} });
     } else { wrapEmpty('cvPlayAdCohort','No ad cohort rows in range'); }
+  }
+
+  // ── ROAS maturity ──
+  // A payback curve by cohort AGE, not by date: what cohorts had returned on
+  // their install day, at D7, D14, D30. The backend weights each point by that
+  // week's spend and drops ages whose window has not closed, so a short curve
+  // means "D30 has not happened yet" rather than "D30 is zero". Drawn as a
+  // line with the 100% break-even line behind it, because the only question
+  // anybody asks of this chart is where it crosses.
+  const rc = (d.roasCurve && d.roasCurve.points) || [];
+  if(g('cvRoasMaturity')){
+    if(rc.length){
+      makeChart('cvRoasMaturity','line',{
+        labels: rc.map(p=>p.age.toUpperCase()),
+        datasets:[{ label:'ROAS', data:rc.map(p=>p.roas),
+          borderColor:cc.amber, backgroundColor:cc.amber+'22', fill:true,
+          tension:.3, borderWidth:2, pointRadius:4 }]
+      }, {
+        plugins:{ legend:{display:false},
+          tooltip:{callbacks:{label:c=>'  '+(+c.parsed.y).toFixed(1)+'%  ('
+            + rc[c.dataIndex].weeks + ' weeks)'}} },
+        scales:{ x:xAx,
+          y:{ grid:{color:cc.grid}, beginAtZero:true,
+              ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>v+'%'} } }
+      });
+    } else {
+      wrapEmpty('cvRoasMaturity',
+        (d.roasCurve && d.roasCurve.note) || 'No Weekly Network rows in range');
+    }
+  }
+
+  // ── Stickiness ──
+  // DAU/MAU per day. Both halves come from the one tab that carries them, so
+  // the ratio is of two numbers that count a user the same way. The headline
+  // is the mean of the daily ratios; a range total would count somebody active
+  // on twenty days twenty times above the line and once below it.
+  const st = (d.stickiness && d.stickiness.daily) || [];
+  if(g('cvStickiness')){
+    if(st.length){
+      makeChart('cvStickiness','line',{
+        labels: st.map(x=>x.date.slice(5)),
+        datasets:[{ label:'Stickiness', data:st.map(x=>x.stickiness),
+          borderColor:cc.violet, backgroundColor:cc.violet+'22', fill:true,
+          tension:.35, borderWidth:2, pointRadius:2, spanGaps:true }]
+      }, {
+        plugins:{ legend:{display:false},
+          tooltip:{callbacks:{label:c=>'  '+(+c.parsed.y).toFixed(1)+'%   DAU '
+            + fmtKn(st[c.dataIndex].dau) + ' / MAU ' + fmtKn(st[c.dataIndex].mau)}} },
+        scales:{ x:xAx,
+          y:{ grid:{color:cc.grid}, beginAtZero:true,
+              ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>v+'%'} } }
+      });
+    } else {
+      wrapEmpty('cvStickiness',
+        (d.stickiness && d.stickiness.note) || 'No stickiness rows in range');
+    }
   }
   const yUsd= {grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>'$'+fmtKn(v)}};
 
