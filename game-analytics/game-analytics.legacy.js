@@ -545,7 +545,7 @@ function normalizeSheetData(raw){
     dayCounts:   prog.dayCounts  || [],
     progWindow:  prog.window     || null,
     stability:   raw.stability   || [],
-    ratings:     raw.ratings     || { daily:[], versions:[] },
+    ratings:     raw.ratings     || { daily:[] },
     ua:          raw.ua          || { daily:[], channels:[], campaigns:[], roasCurve:[] },
     cohortRoas:  raw.cohortRoas  || null,
     sheet1:      raw.sheet1      || null,
@@ -867,7 +867,7 @@ function emptyDataShell(){
     meta:{}, sections:[], daily:[], retention:[],
     ftue:{base:0,steps:[],tenMin:[]}, ftueSteps:[], ftueBase:0, tenMin:[],
     shopLevels:[], dayCounts:[], progWindow:null,
-    stability:[], ratings:{daily:[],versions:[]},
+    stability:[], ratings:{daily:[]},
     ua:{daily:[],channels:[],campaigns:[],roasCurve:[]},
     monetization:{networks:[],ltv:[],whale:[],ftp:[]},
     engagement:{adCohort:[],placements:[],cohortDayKeys:[]},
@@ -3345,7 +3345,6 @@ function renderPlaytime(){
     markTable('playPlacementTbl', pl.length, 'placements');
   }
 
-  if(g('playDistWrap')) g('playDistWrap').innerHTML = noData(d.missing.buckets || 'Session length buckets');
 }
 
 function renderFtue(){
@@ -3483,7 +3482,7 @@ function renderStability(){
 
 function renderRating(){
   const d  = curData();
-  const rt = d.ratings || {daily:[],versions:[]};
+  const rt = d.ratings || {daily:[]};
   const rows = getWindow(rt.daily || []);
   const cc = chartColors();
 
@@ -3553,24 +3552,6 @@ function renderRating(){
            y2:{position:'right',grid:{display:false},min:-100,max:100,ticks:{color:cc.cyan,font:{family:CHART_FONT,size:9}}}} });
   }
 
-  // Rating by app version — no source in this sheet, kept for when one lands.
-  const vers = (rt.versions || []);
-  if(g('cvRatingVersion')){
-    if(vers.length){
-      makeChart('cvRatingVersion','bar',{
-        labels: vers.map(v=>v.version),
-        datasets:[{label:'Rating',data:vers.map(v=>v.rating),
-          backgroundColor:vers.map(v=>(v.rating>=4?cc.lime:v.rating>=3?cc.amber:cc.coral)+'cc'),
-          borderColor:vers.map(v=>v.rating>=4?cc.lime:v.rating>=3?cc.amber:cc.coral),
-          borderWidth:1,borderRadius:4}]
-      }, {
-        indexAxis:'y',
-        plugins:{tooltip:{callbacks:{label:c=>'  '+(+c.parsed.x).toFixed(2)+' ★  ('+vers[c.dataIndex].samples+' samples)'}}},
-        scales:{x:{grid:{color:cc.grid},min:0,max:5,ticks:{color:cc.text,font:{family:CHART_FONT,size:10}}},
-          y:{grid:{display:false},ticks:{color:cc.text,font:{family:CHART_FONT,size:10}}}}
-      });
-    } else { wrapEmpty('cvRatingVersion','No per-version rating source in this sheet — the Ratings tab has no app version column'); }
-  }
 }
 
 /** One live-ops event as a card. Shared by the Overview tile and the Live Ops tab. */
@@ -3840,7 +3821,6 @@ function renderEvents(){
     } else { wrapEmpty('cvProgPlaytime','No progression rows in window'); }
   }
 
-  if(g('eventsFirstPurchaseWrap')) g('eventsFirstPurchaseWrap').innerHTML = noData('First purchase price points');
 }
 
 function weightedMid(rows){
