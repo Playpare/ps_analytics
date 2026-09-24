@@ -351,12 +351,39 @@ function buildNav(){
 // ═════════════════════════════════════════
 // HELPERS
 // ═════════════════════════════════════════
-const fmt     = n => n==null?'—':Number(n).toLocaleString();
-const fmtKn   = n => n==null?'—':(Math.abs(n)>=1e6?(n/1e6).toFixed(2)+'M':Math.abs(n)>=1e3?(n/1e3).toFixed(1)+'K':Math.round(n).toString());
-const fmtPct  = n => n==null?'—':(+n).toFixed(1)+'%';
-const fmtPct2 = n => n==null?'—':(+n).toFixed(2)+'%';
-const fmtSec  = n => n==null?'—':Math.round(n)+'s';
-const fmtPlaytime = n => (n==null||n==='')?'—':Math.round(+n)+'s';
+// ── Formatting ──────────────────────────────────────────────────────────────
+// Every formatter refuses anything that is not a finite number and prints the
+// em dash instead. The old guard was `n == null`, which let three things
+// through that all render as text on a card: NaN from a parse that failed,
+// Infinity from a division whose denominator turned out to be zero, and the
+// empty string from a blank cell. 'NaN%' on a KPI is worse than '—' — it is
+// the same amount of missing information wearing the costume of a value.
+const isNum   = n => n !== null && n !== undefined && n !== '' && isFinite(n);
+
+const fmt     = n => isNum(n) ? Number(n).toLocaleString() : '—';
+const fmtKn   = n => !isNum(n) ? '—'
+                   : Math.abs(n)>=1e6 ? (n/1e6).toFixed(2)+'M'
+                   : Math.abs(n)>=1e3 ? (n/1e3).toFixed(1)+'K'
+                   : Math.round(n).toString();
+const fmtPct  = n => isNum(n) ? (+n).toFixed(1)+'%' : '—';
+const fmtPct2 = n => isNum(n) ? (+n).toFixed(2)+'%' : '—';
+const fmtSec  = n => isNum(n) ? Math.round(n)+'s' : '—';
+const fmtPlaytime = n => isNum(n) ? Math.round(+n)+'s' : '—';
+
+// Money, in one place. Sixteen call sites used to write '$'+something
+// themselves, which is how a negative figure came out as "$-1.2K" - the sign
+// belongs outside the currency symbol, and a page that writes it by hand gets
+// that right in some places and not others.
+//   fmtMoney(n)      -> $1.2K    compact, for headlines and axes
+//   fmtMoney(n, 2)   -> $1,234.56  exact, for tables and small amounts
+const fmtMoney = (n, dp) => {
+  if (!isNum(n)) return '—';
+  const sign = n < 0 ? '-' : '';
+  const a = Math.abs(+n);
+  return sign + '$' + (dp == null ? fmtKn(a)
+    : a.toLocaleString(undefined, { minimumFractionDigits: dp,
+                                    maximumFractionDigits: dp }));
+};
 const sum     = a => a.reduce((s,v)=>s+(+v||0),0);
 const avg     = a => { const f=a.filter(v=>v!=null && v!=='' && !isNaN(v)); return f.length?sum(f)/f.length:0; };
 // Alias used where a value may legitimately be null (dropped as out-of-range),
@@ -1728,8 +1755,8 @@ function renderOverview(){
   const adShare  = revTot>0 ? sum(cur.map(x=>+x.adRevenue||0))/revTot*100 : 0;
 
   const kpis2 = [
-    { cls:'lm', lbl:'Revenue',         val:'$'+fmtKn(revTot),        data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:'ads + IAP',      col:'--lime' },
-    { cls:'cy', lbl:'ARPDAU',          val:'$'+arpdau.toFixed(4),    data:cur.map(x=>+x.arpdau||0),  cur:arpdau, prev:arpdauP, sub:'per active user',col:'--cyan' },
+    { cls:'lm', lbl:'Revenue',         val:fmtMoney(revTot),        data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:'ads + IAP',      col:'--lime' },
+    { cls:'cy', lbl:'ARPDAU',          val:fmtMoney(arpdau, 4),    data:cur.map(x=>+x.arpdau||0),  cur:arpdau, prev:arpdauP, sub:'per active user',col:'--cyan' },
     { cls:'mg', lbl:'Payer Conv.',     val:payerPct?payerPct.toFixed(3)+'%':'—', data:cur.map(x=>+x.payerRate||0), cur:payerPct, prev:payerPrv, sub:'of DAU', col:'--magenta' },
     { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'—',   data:cur.map(x=>+x.sessionsPerUser||0), cur:spd, prev:spdPrev, sub:'per active user', col:'--amber' },
     { cls:'vl', lbl:'Ad Share',        val:adShare?adShare.toFixed(1)+'%':'—', data:[], cur:adShare, prev:null, sub:'rest is IAP', col:'--violet' },
@@ -1936,7 +1963,6 @@ function renderGrowth(){
   // Spend, CPI and ROI have one authority: spend_metrix.gs / Sheet1.
   // Keep them empty while that request is in flight instead of briefly showing
   // similarly named figures from fetchAll that use different sources/definitions.
-  const uaSpend       = sc ? sc.spend : null;
   const prevSpend     = scPrev ? scPrev.spend : null;
   const uaRevenue     = sc ? sc.revenue : null;
   // Match Overview exactly: daily.installs is built from Executive_KPI's for
@@ -1945,9 +1971,6 @@ function renderGrowth(){
   const acqPrevInst   = prevInstalls;
   // CPI uses Sheet1's UA spend but the same Executive KPI install denominator
   // as the two install views above, keeping all three acquisition KPIs aligned.
-  const avgCpi        = uaSpend != null && acqInstalls > 0
-    ? uaSpend / acqInstalls
-    : null;
   // ROAS comes from the Combines_ROAS tab: cohort payback, D7 headline with D0
   // underneath. That is a different question from ROI above — ROI is money in
   // against money out inside the window, this is how much of its own cost an
@@ -1981,7 +2004,35 @@ function renderGrowth(){
   // Sheet1 is the fallback when the tab has no rows.
   const chSpendTot    = sum(chDaily.map(x=>+x.spend||0));
   const chRevTot      = sum(chDaily.map(x=>+x.revenue||0));
+  const agSpendTot    = sc && sc.spendAG != null ? +sc.spendAG : 0;
+  const agSpendPrev   = sheetCards && sheetCards.previous && sheetCards.previous.spendAG != null
+                          ? +sheetCards.previous.spendAG : null;
+
   const chSpendPrev   = sum(chDailyPrev.map(x=>+x.spend||0));
+
+  // ── ONE spend figure, used by every card on this page ──
+  // Channel Performance is the authority: it is per-day and per-channel, it
+  // already feeds the chart and the table below, and it is the only source
+  // where the number behind the headline can be traced to a row. Sheet1 is
+  // the fallback when Channel Performance has no rows for the range - one
+  // fallback, named on the card, not a second authority.
+  const uaSpendTot    = chSpendTot > 0 ? chSpendTot
+                      : agSpendTot > 0 ? agSpendTot : null;
+  const uaSpendPrev   = chSpendTot > 0 ? (chSpendPrev || null)
+                      : agSpendTot > 0 ? agSpendPrev : null;
+  const uaSpendSrc    = chSpendTot > 0 ? 'Channel Performance'
+                      : agSpendTot > 0 ? 'Sheet1 column AG (fallback)'
+                      : 'no spend source for this range';
+  const uaSpendCh     = uaSpendTot;
+  const uaSpendPrevCh = uaSpendPrev;
+
+  // CPI from that same spend. The denominator is TOTAL installs, not
+  // attributed ones, which makes this a blended CPI - and the card says so,
+  // because a blended figure compared against a paid one is a comparison
+  // nobody can win.
+  const avgCpi        = uaSpendTot != null && acqInstalls > 0
+    ? uaSpendTot / acqInstalls
+    : null;
   const roi           = chSpendTot>0 ? chRevTot/chSpendTot*100 : null;
   const prevRoas      = null;
   const ltvRows       = (d.monetization&&d.monetization.ltv)||[];
@@ -2002,12 +2053,7 @@ function renderGrowth(){
   // UA Spend headline: Sheet1 column AG, summed for the window by
   // smCardTotals, which also sums the preceding window so the delta compares
   // like with like.
-  const agSpendTot    = sc && sc.spendAG != null ? +sc.spendAG : 0;
-  const agSpendPrev   = sheetCards && sheetCards.previous && sheetCards.previous.spendAG != null
-                          ? +sheetCards.previous.spendAG : null;
-  const uaSpendCh     = agSpendTot>0 ? agSpendTot : null;
-  const uaSpendPrevCh = agSpendTot>0 ? agSpendPrev : null;
-  const uaSpendSrc    = agSpendTot>0 ? 'Sheet1 column AG' : 'Sheet1 unavailable';
+
 
   const acqKpis = [
     { cls:'cy', lbl:'Organic Installs',
@@ -2017,10 +2063,14 @@ function renderGrowth(){
       sub: organicTotal!=null
              ? 'total '+fmtKn(totalInstalls)+' − assisted '+fmtKn(assistedTotal)
              : 'loading Sheet1…' },
-    { cls:'co', lbl:'UA Spend', val:uaSpendCh!=null?'$'+fmtKn(uaSpendCh):'—',
-      data: agSpendTot>0 ? agKeys.map(k=>+shDaysM[k].spendAG||0) : [],
-      dates: agSpendTot>0 ? agKeys : [], col:'--coral',
-      cur:uaSpendCh, prev:uaSpendPrevCh, sub:uaSpendSrc },
+    { cls:'co', lbl:'UA Spend', val:fmtMoney(uaSpendTot),
+      // The sparkline follows whichever source the headline used, so the
+      // shape under the number is the number's own history.
+      data: chSpendTot>0 ? chDaily.map(x=>+x.spend||0)
+          : agSpendTot>0 ? agKeys.map(k=>+shDaysM[k].spendAG||0) : [],
+      dates: chSpendTot>0 ? chDaily.map(x=>x.date)
+           : agSpendTot>0 ? agKeys : [], col:'--coral',
+      cur:uaSpendTot, prev:uaSpendPrev, sub:uaSpendSrc },
     { cls:'lm', lbl:'ROI', val:roi!=null?roi.toFixed(0)+'%':'—',
       data: chDaily.map(x=>(+x.spend>0 ? (+x.revenue||0)/(+x.spend)*100 : null)),
       dates: chDaily.map(x=>x.date), col:'--lime',
@@ -2030,10 +2080,10 @@ function renderGrowth(){
   // which has no source in this sheet, so one always read 0 and the other just
   // repeated Total Installs.
   const acqKpis2 = [
-    { cls:'mg', lbl:'Avg CPI',   val:avgCpi!=null?'$'+(+avgCpi).toFixed(3):'—',
+    { cls:'mg', lbl:'Avg CPI',   val:fmtMoney(avgCpi, 3),
       data: chDaily.map(x=>(+x.installs>0 ? (+x.spend||0)/(+x.installs) : null)),
       dates: chDaily.map(x=>x.date), col:'--magenta',
-      sub:sc?'UA spend / Executive KPI installs':scStatus },
+      sub: uaSpendTot!=null ? 'blended · spend / all installs' : scStatus },
     { cls:'am', lbl:'ROAS',      val:roas!=null?roas.toFixed(0)+'%':'—', sub:roasSub, col:'--amber' },
     { cls:'vl', lbl:'LTV : CPI', val:ltvCpi!=null?ltvCpi.toFixed(2)+'x':'—', sub:sc?'D0 LTV vs cost':scStatus, col:'--violet' },
   ];
@@ -2154,7 +2204,7 @@ function renderGrowth(){
         (d.stickiness && d.stickiness.note) || 'No stickiness rows in range');
     }
   }
-  const yUsd= {grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>'$'+fmtKn(v)}};
+  const yUsd= {grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>fmtMoney(v)}};
 
   // A date the source never reported comes back null, not 0. Plotting it as zero
   // would draw a day with no installs, which is a different claim from a day
@@ -2273,7 +2323,7 @@ function renderGrowth(){
           + '<div class="mini-bar"><span style="width:'+(share!=null?share.toFixed(1):0)+'%;background:'+cc.cyan+'"></span></div></div>'
         + '<div class="tnum">$'+fmtKn(c.spend!=null?c.spend:c.cost)+'</div>'
         + '<div class="tnum">'+fmtKn(c.installs)+'</div>'
-        + '<div class="tnum">'+(c.cpi!=null?'$'+(+c.cpi).toFixed(2):'—')+'</div>'
+        + '<div class="tnum">'+fmtMoney(c.cpi, 2)+'</div>'
         + '<div class="tnum '+roasCls(c.organic?null:c.roasD0)+'">'+roasCell(c.organic?null:c.roasD0)+'</div>'
         + '<div class="tnum '+roasCls(c.organic?null:(c.roasD7!=null?c.roasD7:c.roas))+'">'+roasCell(c.organic?null:(c.roasD7!=null?c.roasD7:c.roas))+'</div>'
         + '<div class="tnum '+roasCls(c.organic?null:c.roasD28)+'">'+roasCell(c.organic?null:c.roasD28)+'</div>'
@@ -2294,7 +2344,7 @@ function renderGrowth(){
       + '<div class="tname">'+(c.campaign||'—')+'</div>'
       + '<div class="tnum">$'+fmtKn(c.cost)+'</div>'
       + '<div class="tnum">'+fmtKn(c.installs)+'</div>'
-      + '<div class="tnum">'+(c.ecpi!=null?'$'+(+c.ecpi).toFixed(2):'—')+'</div>'
+      + '<div class="tnum">'+fmtMoney(c.ecpi, 2)+'</div>'
       + '<div class="tnum '+roasCls(c.roasD0)+'">'+roasCell(c.roasD0)+'</div>'
       + '<div class="tnum '+roasCls(c.roasD7)+'">'+roasCell(c.roasD7)+'</div>'
       + '<div class="tnum '+roasCls(c.roasD28)+'">'+roasCell(c.roasD28)+'</div>'
@@ -2361,12 +2411,12 @@ function renderGrowth(){
 
   const chDates = chDaily.map(x=>x.date);
   const monKpis = [
-    { cls:'lm', lbl:'Revenue', val:revTotM!=null?'$'+fmtKn(revTotM):'—', cur:revTotM, prev:prevRevM, sub:revSrc,
+    { cls:'lm', lbl:'Revenue', val:fmtMoney(revTotM), cur:revTotM, prev:prevRevM, sub:revSrc,
       data: useChRev ? chDaily.map(x=>+x.revenue||0) : [],
       dates: useChRev ? chDates : [], col:'--lime' },
-    { cls:'cy', lbl:'ARPDAU', val:'$'+arpdau.toFixed(4), cur:arpdau, prev:prevArpd,
+    { cls:'cy', lbl:'ARPDAU', val:fmtMoney(arpdau, 4), cur:arpdau, prev:prevArpd,
       sub:'per active user', data: cur.map(x=>+x.arpdau||0), dates:curDatesG, col:'--cyan' },
-    { cls:'mg', lbl:'ARPPU', val:arppu?'$'+arppu.toFixed(2):'—', sub:'sales / paying user',
+    { cls:'mg', lbl:'ARPPU', val:fmtMoney(arppu, 2), sub:'sales / paying user',
       data: cur.map(x=>+x.arppu||null), dates:curDatesG, col:'--magenta' },
     { cls:'am', lbl:'Purchase Rate', val:payerPct?payerPct.toFixed(3)+'%':'—', sub:'paying / active users',
       data: cur.map(x=>+x.payerRate||null), dates:curDatesG, col:'--amber' },
@@ -2377,16 +2427,16 @@ function renderGrowth(){
   const iapPct = splitTot>0 ? iapTot/splitTot*100 : null;
   const adPct  = splitTot>0 ? adTot/splitTot*100  : null;
   const monKpis2 = [
-    { cls:'vl', lbl:'IAP Revenue', val:iapTot!=null?'$'+fmtKn(iapTot):'—',
+    { cls:'vl', lbl:'IAP Revenue', val:fmtMoney(iapTot),
       sub:(iapPct!=null?iapPct.toFixed(1)+'% of revenue':'—')+' · from purchases',
       data: useShRev ? shSeries('inappTotal') : [],
       dates: useShRev ? curDatesG : [], col:'--violet' },
-    { cls:'co', lbl:'Ad Revenue', val:adTot!=null?'$'+fmtKn(adTot):'—',
+    { cls:'co', lbl:'Ad Revenue', val:fmtMoney(adTot),
       sub:(adPct!=null?adPct.toFixed(1)+'% of revenue':'—')+' · from ads',
       data: useShRev ? shSeries('adTotal') : [],
       dates: useShRev ? curDatesG : [], col:'--coral' },
-    { cls:'cy', lbl:'LTV D0 / D7 / D28', val:ltvRows.length?'$'+ltvD0.toFixed(3):'—', sub:ltvRows.length?'D7 '+(ltvD7!=null?'$'+ltvD7.toFixed(3):'—')+' · D28 '+(ltvD28!=null?'$'+ltvD28.toFixed(3):'—'):'no LTV rows' },
-    { cls:'lm', lbl:'ARPU', val:arpu?'$'+arpu.toFixed(4):'—', sub:'per active user',
+    { cls:'cy', lbl:'LTV D0 / D7 / D28', val:ltvRows.length?fmtMoney(ltvD0, 3):'—', sub:ltvRows.length?'D7 '+fmtMoney(ltvD7, 3)+' · D28 '+fmtMoney(ltvD28, 3):'no LTV rows' },
+    { cls:'lm', lbl:'ARPU', val:fmtMoney(arpu, 4), sub:'per active user',
       data: cur.map(x=>{ const dv=+x.dau||0; return dv>0 ? (+x.revenue||0)/dv : null; }),
       dates:curDatesG, col:'--lime' },
   ];
@@ -2462,7 +2512,7 @@ function renderGrowth(){
         // Cumulative revenue starts at zero, so the axis must too — otherwise a
         // few cents of movement looks like a cliff.
         scales:{x:xAx,y:{grid:{color:cc.grid},beginAtZero:true,min:0,
-          ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>'$'+(+v).toFixed(3)}}}
+          ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>fmtMoney(v, 3)}}}
       });
       const ltvCard = g('cvGrowthLtv') && g('cvGrowthLtv').closest ? g('cvGrowthLtv').closest('.card') : null;
       const ltvHd = ltvCard && ltvCard.querySelector('.card-hd');
@@ -2485,7 +2535,7 @@ function renderGrowth(){
       + '<div class="tname">'+n.network+'</div>'
       + '<div class="tnum">$'+fmtKn(n.revenue)+'</div>'
       + '<div class="tnum">'+fmtKn(n.impressions)+'</div>'
-      + '<div class="tnum">'+(n.ecpm!=null?'$'+n.ecpm.toFixed(2):'—')+'</div>'
+      + '<div class="tnum">'+fmtMoney(n.ecpm, 2)+'</div>'
       + '<div class="tnum">'+(n.fillRate!=null?n.fillRate.toFixed(1)+'%':'—')+'</div>'
       + '</div>').join('')
       // The server explains an empty table — which tab, which date, which platform.
