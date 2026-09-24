@@ -1754,12 +1754,31 @@ function renderOverview(){
   const spdPrev  = avgNN(prev.map(x=>x.sessionsPerUser));
   const adShare  = revTot>0 ? sum(cur.map(x=>+x.adRevenue||0))/revTot*100 : 0;
 
+  /* UA spend, from the same source Growth uses. Two pages showing spend from
+     two tabs is the fault just removed from Growth, and adding a second one
+     here would put it straight back - so this reads ua.channelDaily,
+     restricted to the visible window like everything else in this row, and
+     names the source on the card. */
+  const ovChDaily = getWindow((d.ua && d.ua.channelDaily) || []);
+  const ovChPrev  = getPrevWindow((d.ua && d.ua.channelDaily) || []);
+  const spendTot  = sum(ovChDaily.map(x=>+x.spend||0));
+  const spendPrev = sum(ovChPrev.map(x=>+x.spend||0));
+  /* Zero is not the same as absent. No Channel Performance rows for a range
+     means nobody knows what was spent; a confident $0 would say nothing was. */
+  const spendCur  = spendTot > 0 ? spendTot : null;
+
   const kpis2 = [
     { cls:'lm', lbl:'Revenue',         val:fmtMoney(revTot),        data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:'all revenue, ads + IAP',      col:'--lime' },
     { cls:'cy', lbl:'ARPDAU',          val:fmtMoney(arpdau, 4),    data:cur.map(x=>+x.arpdau||0),  cur:arpdau, prev:arpdauP, sub:'per active user',col:'--cyan' },
     { cls:'mg', lbl:'Payer Conv.',     val:payerPct?payerPct.toFixed(3)+'%':'—', data:cur.map(x=>+x.payerRate||0), cur:payerPct, prev:payerPrv, sub:'of DAU', col:'--magenta' },
     { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'—',   data:cur.map(x=>+x.sessionsPerUser||0), cur:spd, prev:spdPrev, sub:'per active user', col:'--amber' },
     { cls:'vl', lbl:'Ad Share',        val:adShare?adShare.toFixed(1)+'%':'—', data:[], cur:adShare, prev:null, sub:'rest is IAP', col:'--violet' },
+    { cls:'co', lbl:'UA Spend',        val:fmtMoney(spendCur),
+      data: spendCur!=null ? ovChDaily.map(x=>+x.spend||0) : [],
+      dates: spendCur!=null ? ovChDaily.map(x=>x.date) : [],
+      cur:spendCur, prev:spendCur!=null&&spendPrev>0?spendPrev:null,
+      sub: spendCur!=null ? 'Channel Performance' : 'no spend rows in range',
+      col:'--coral' },
   ];
   if(g('heroKpis2')){
     g('heroKpis2').innerHTML = kpis2.map((k,i)=>`

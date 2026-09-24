@@ -252,6 +252,7 @@ body.sb-collapsed .nav-item.active::before{top:6px;bottom:6px}
 .kpi-grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .kpi-grid.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .kpi-grid.g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.kpi-grid.g6{grid-template-columns:repeat(6,minmax(0,1fr))}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px 12px;position:relative;overflow:hidden;transition:all .2s;min-width:0}
 .kpi:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,0.3)}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--cyan));box-shadow:0 0 10px var(--kc,var(--cyan));z-index:3}
