@@ -27,14 +27,13 @@ carry either.
 
 ---
 
-## The one thing that is not done: deploying
+## Deploying is a separate step from merging
 
 **Merging to `main` does not put anything live.** The backend runs in Google
-Apps Script, and the repo is a mirror of it. Two separate steps are needed:
+Apps Script, and the repo is a mirror of it. Pushing is a separate act:
 
 ```bash
-cd ps-analytics-backend/projects/game-dashboard && clasp push
-cd ps-analytics-backend/projects/monetization   && clasp push
+cd ps-analytics-backend/projects/game-dashboard && npx clasp push
 ```
 
 And then — this is the part that catches people — **`clasp push` updates
@@ -44,15 +43,16 @@ version is deployed from the Apps Script editor. Triggers run Head, so a
 scheduled job picks the change up immediately while the web app does not. That
 asymmetry has produced "the fix didn't work" more than once.
 
-At the time of writing, **the following are merged but not yet pushed or
-deployed**, so the live dashboard is behind the repo:
+**Always `npm run pull` before pushing.** `clasp push` overwrites the live
+project with whatever is on disk, so a push from a stale checkout silently
+reverts anything edited in the browser since. Pulling first puts the diff in
+front of you. That is not hypothetical here: the pull that preceded this
+document found the live copy of `imp/user_automation.js` a thousand lines
+shorter than the repo's, which a blind push would have undone.
 
-- ROAS maturity and stickiness (new cards)
-- placement de-duplication in the weekly report
-- the stickiness worldwide-row fix
-- the split between an absent column and an immature cohort
-
----
+As of this document, Head matches the repo for every project. Whether the
+deployed **Version** matches Head is a separate question, answered only in the
+Apps Script editor.
 
 ## What is where
 
@@ -237,6 +237,20 @@ should be done as part of the transfer rather than after it.
 - **A Google service-account private key** was last seen at
   `Downloads\play-console-automation-498412-*.json`. It should be moved
   somewhere deliberate and removed from Downloads.
+
+---
+
+## A trigger that may be calling a function that is gone
+
+`imp/user_automation.js` once held `installCohortCombinedTrigger`, which
+installs a **daily trigger at about 08:00 PKT** with the handler string
+`'syncCohortCombined'`. That function is no longer in the live project.
+
+A trigger survives the deletion of the function it names, and then fails every
+morning into an execution log nobody is required to read. **Open the
+game-dashboard project, look at Triggers for a handler called
+`syncCohortCombined`, and at Executions for how long it has been failing.**
+Either the function comes back or the trigger goes.
 
 ---
 
