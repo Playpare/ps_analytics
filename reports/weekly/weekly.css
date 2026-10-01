@@ -33,7 +33,7 @@ body.live-error::before{content:'Live data could not be loaded. Use the controls
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Poppins',system-ui,sans-serif;background:#1a1a1a;display:flex;flex-direction:column;align-items:center;gap:34px;padding:34px 0;}
 .mono{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;}
-.slide{width:min(1520px,100%);min-height:calc(min(1520px,100vw)*0.5625);height:auto;background:var(--bg);color:var(--t1);position:relative;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;container-type:inline-size;}
+.slide{width:min(1520px,100%);min-height:min(calc(min(1520px,100vw)*0.5625),100vh);height:auto;background:var(--bg);color:var(--t1);position:relative;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;container-type:inline-size;}
 .sh{height:58px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;background:var(--glass);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
 .brand{font-family:'Quicksand',sans-serif;font-weight:700;font-size:16px;color:var(--t1);letter-spacing:.01em;}
 .brand b{font-weight:700;}
@@ -423,3 +423,16 @@ body.lt .slide{background:#ffffff;box-shadow:0 10px 34px rgba(30,50,90,.10)}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
   .kpi-row,.kpi-row.three{grid-template-columns:minmax(0,1fr);}
 }
+
+
+/* ── A slide never taller than the frame it is shown in ─────────────────
+   min-height was 16:9 of the viewport WIDTH alone: on a 1520px frame that
+   is 855px, and the hub's frame is whatever is left under the topbar -
+   often less. So the first slide was always slightly taller than the space
+   it had, and the report looked cut off at the bottom no matter how much
+   room the shell gave it.
+
+   Capped at 100vh, which inside the iframe is the frame's own height. Wide
+   screen, narrow screen, standalone: a slide takes 16:9 when there is room
+   for it and the available height when there is not. The cap is on
+   min-height only, so a slide with more content than that still grows. */

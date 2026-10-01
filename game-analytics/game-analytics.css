@@ -781,17 +781,37 @@ table.mx{width:max-content;min-width:100%;border-collapse:separate;border-spacin
    cache and its own 200 KB of chart building, and none of it can jank the
    section the user is actually looking at. Folding them in costs a registry
    entry instead of a port. */
-.tab-pane.report-pane.on{display:block;padding:0;gap:0}
+/* A report fills whatever is left below the chrome, measured rather than
+   predicted.
+
+   This used to be height:calc(100vh - 170px) - the topbar at 56px, the range
+   bar at ~53px, and the content padding, added up by hand. Two things were
+   wrong with that and only one of them was arithmetic.
+
+   The range bar is display:none on every report scope (see the rule near the
+   bottom of this file), so 53px of space that was not there was being
+   subtracted anyway, and the report lost the bottom of every slide. That is
+   the "cut off at the bottom" this was reported as.
+
+   The deeper problem is that a hand-added number has to be re-derived every
+   time anything above it changes height, on every screen size, and nothing
+   tells you when it has gone stale. .main is already a flex column, so the
+   frame can simply take the space that is actually left - which is what
+   adaptive means here. No viewport arithmetic, nothing to keep in step.
+
+   .content is given a definite height by flex:1, so height:100% below it
+   resolves against real space rather than collapsing to nothing. */
+.content:has(> .report-pane.on){
+  display:flex;flex-direction:column;min-height:0;padding-bottom:24px;
+}
+
+.tab-pane.report-pane.on{display:flex;padding:0;gap:0;flex:1;min-height:0}
 .report-frame{
   display:block;width:100%;border:0;
-  /* Fills what is left under the topbar (56px) and the range bar (~53px),
-     less the content padding, so the report scrolls inside its own frame
-     rather than the page growing to fit it. */
-  height:calc(100vh - 170px);min-height:520px;
+  flex:1;min-height:520px;
   background:var(--surface);
   border-radius:var(--r-lg);
 }
-@media(max-width:860px){ .report-frame{height:calc(100vh - 220px)} }
 
 /* ═══════════════════════════════════════════════════════════════════════
    ONE IDENTITY
