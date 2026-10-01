@@ -663,6 +663,15 @@ function renderFormatTrends(data,platform,format){
 }
 function drawCohort(data,platform,format,base,metric){
   const c=data.trend?.[platform]?.cohort?.[format],vals=c?.[metric]||[],b=metric==='d0'?benchValue(data,platform,format,'D0_IPU'):null,labels=c?.labels||data.trend?.labels||[],cfg=FORMAT[format];
+  /* dailyCohortTrend_ pushes null for a date it has no cohort row for, which
+     is the honest answer - but a chart of nothing but nulls draws nothing at
+     all, and a 200px box with nothing in it reads as the page being broken
+     rather than as the data being absent. Say which. */
+  if(!vals.some(finite)){
+    const pendingEl=document.getElementById(base+'_pending');if(pendingEl)pendingEl.style.display='none';
+    noChart(base,'No cohort rows for this range');
+    return;
+  }
   lineChart(base,labels,[{label:metric.toUpperCase()+' cumulative',data:vals,color:cfg.color,fill:true},{label:'Competitor global',data:finite(b)?new Array(labels.length).fill(b):null,color:'#edf2ff',dash:true}],v=>num(v,1));
   const pending=document.getElementById(base+'_pending');if(pending)pending.style.display='none';
 }
