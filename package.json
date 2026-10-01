@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "smoke": "node tools/smoke.mjs",
     "glance": "node tools/glance-test.mjs",
-    "test:fmt": "node tools/test-formatters.mjs"
+    "test:fmt": "node tools/test-formatters.mjs",
+    "test:markup": "node tools/test-markup.mjs",
+    "test": "node tools/test-formatters.mjs && node tools/test-markup.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",
