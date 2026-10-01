@@ -649,7 +649,7 @@ function renderFormatSnapshot(data,platform,format){
   const share=(w.rib_total? w[cfg.field]/w.rib_total:null);setKpi(s,'Revenue Share of Ad Mix',pct(share,0,true),null,null,null,'of standard-format revenue | live');
   const checks=[[w[cfg.ecpm],bEcpm],[w[cfg.avr],bAvr],[c.d0,bD0]].filter(x=>finite(x[1])),passed=checks.filter(x=>x[0]>=x[1]).length;setKpi(s,'Benchmark Scorecard',checks.length?passed+'/'+checks.length:'N/A',null,null,null,checks.length?'metrics at/above returned benchmarks':'No comparable benchmark returned');
   const reporting=[...s.querySelectorAll('div')].find(x=>clean(x.textContent).startsWith('Reporting week')&&x.style.fontSize==='8.5px');
-  if(reporting)reporting.innerHTML='<b>Reporting week = '+longRange(data.meta.curStart,data.meta.curEnd)+'.</b> Current and Previous values come from the selected live week pair. Cohort D0/D7/D27 values are cumulative and retain the returned projection flag. Benchmark cells use the live Benchmark sheet response; unavailable comparisons are shown as no comp.';
+  if(reporting)reporting.innerHTML='<b>Reporting week = '+longRange(data.meta.curStart,data.meta.curEnd)+'.</b> Current and Previous values come from the selected live week pair. Cohort D0/D7/D27 are cumulative and show only cohorts old enough to have reached that day - nothing is projected, so D7 and D27 are blank for install days younger than 7 and 27 days. Benchmark cells use the live Benchmark sheet response; unavailable comparisons are shown as no comp.';
 }
 
 function renderFormatTrends(data,platform,format){
@@ -669,7 +669,21 @@ function drawCohort(data,platform,format,base,metric){
      rather than as the data being absent. Say which. */
   if(!vals.some(finite)){
     const pendingEl=document.getElementById(base+'_pending');if(pendingEl)pendingEl.style.display='none';
-    noChart(base,'No cohort rows for this range');
+    /* Two different emptinesses, and telling somebody the wrong one sends
+       them looking for a data problem that is not there.
+
+       D7 and D27 are reported only once a cohort has actually reached them -
+       no projection - so on a two-week range D27 is empty for the ordinary
+       reason that no install in it is 27 days old yet. That is the chart
+       working. "No cohort rows" would read as the sheet being empty.
+
+       D0 having points is what separates the two: rows arrived, they are
+       simply too young for this column. */
+    const d0=c?.d0||[];
+    const tooYoung=metric!=='d0' && d0.some(finite);
+    noChart(base, tooYoung
+      ? 'No cohort in this range has reached '+metric.toUpperCase()+' yet'
+      : 'No cohort rows for this range');
     return;
   }
   lineChart(base,labels,[{label:metric.toUpperCase()+' cumulative',data:vals,color:cfg.color,fill:true},{label:'Competitor global',data:finite(b)?new Array(labels.length).fill(b):null,color:'#edf2ff',dash:true}],v=>num(v,1));
