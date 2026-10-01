@@ -33,7 +33,7 @@ body.live-error::before{content:'Live data could not be loaded. Use the controls
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Poppins',system-ui,sans-serif;background:#1a1a1a;display:flex;flex-direction:column;align-items:center;gap:34px;padding:34px 0;}
 .mono{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;}
-.slide{width:min(1520px,100vw);min-height:calc(min(1520px,100vw)*0.5625);height:auto;background:var(--bg);color:var(--t1);position:relative;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;container-type:inline-size;}
+.slide{width:min(1520px,100%);min-height:calc(min(1520px,100vw)*0.5625);height:auto;background:var(--bg);color:var(--t1);position:relative;overflow:visible;box-shadow:0 18px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;container-type:inline-size;}
 .sh{height:58px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;background:var(--glass);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
 .brand{font-family:'Quicksand',sans-serif;font-weight:700;font-size:16px;color:var(--t1);letter-spacing:.01em;}
 .brand b{font-weight:700;}
@@ -150,7 +150,10 @@ table.airy thead th{padding:9px 6px;}
 #tabnav button{font-family:'Quicksand',sans-serif;font-weight:700;font-size:14px;color:#a6b8d4;background:#0b0c0f;border:1px solid rgba(255,255,255,.12);padding:9px 22px;border-radius:22px;cursor:pointer;}
 #tabnav button.active{color:#031018;background:linear-gradient(135deg,#00e5c3,#4d9fff);border-color:transparent;}
 .tabview{display:flex;flex-direction:column;align-items:center;gap:34px;width:100%;} .tabview.hidden{display:none;}
-.tabview .slide{width:100vw;max-width:none;box-shadow:none;}
+/* 100vw counts the vertical scrollbar; 100% does not. Measured inside the
+   report frame: viewport 945px, slide 955px, overflow 5px - the 10px
+   difference being the scrollbar the slide was sized against. */
+.tabview .slide{width:100%;max-width:none;box-shadow:none;}
 .subnav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px 12px;position:sticky;top:0;z-index:60;background:rgba(11,12,15,.9);backdrop-filter:blur(8px);border:1px solid var(--borderB);border-radius:999px;margin-bottom:-6px;}
 .subnav button{cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.03em;color:var(--t2);background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:999px;padding:7px 20px;transition:background .15s,color .15s;}
 .subnav button:hover{color:var(--t1);background:rgba(255,255,255,.1);}
