@@ -12,7 +12,8 @@
     "glance": "node tools/glance-test.mjs",
     "test:fmt": "node tools/test-formatters.mjs",
     "test:markup": "node tools/test-markup.mjs",
-    "test": "node tools/test-formatters.mjs && node tools/test-markup.mjs"
+    "test:fit": "node tools/test-fit.mjs",
+    "test": "node tools/test-formatters.mjs && node tools/test-markup.mjs && node tools/test-fit.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",
