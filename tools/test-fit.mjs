@@ -124,6 +124,74 @@ const wide = await measure(1400);
 ok('nothing crosses the right edge at 1400px', wide.overflowing, []);
 ok('the two cards are still side by side at 1400px', wide.columns, 2);
 
+/* ═══════════════════════════════════════════════════════════════════════
+   The shell, at four screen sizes
+   ═══════════════════════════════════════════════════════════════════════
+   The report lives in an iframe whose height used to be
+   calc(100vh - 170px) - the topbar, the range bar and the content padding
+   added up by hand. The range bar is display:none on every report scope, so
+   53px that was not there was subtracted anyway, and the bottom of every
+   slide was lost.
+
+   Four sizes rather than one, because a hand-added number can be right at
+   the size it was tuned on and wrong everywhere else. That is the whole
+   claim being tested: the frame takes the space that is actually left, at
+   any size, without anyone re-deriving a number. */
+
+const shellCss = readFileSync(join(ROOT, 'game-analytics/game-analytics.css'), 'utf8');
+
+/* data-scope is deliberately NOT "game": that is what a report section sets,
+   and it is what hides the range bar. A fixture that left it as "game" would
+   test the one case where the old arithmetic happened to be closest. */
+const shell = `<!DOCTYPE html><html data-theme="dark"><head><meta charset="utf-8">
+<style>${shellCss}</style><style>html,body{margin:0;padding:0}</style></head>
+<body data-scope="weekly">
+  <div class="shell" id="appShell">
+    <aside class="sidebar"></aside>
+    <div class="main">
+      <div class="topbar"><div class="topbar-title">Monetization</div></div>
+      <div id="freshBanner"></div>
+      <div class="rangebar"><div class="range-pills"></div></div>
+      <div class="content">
+        <div class="tab-pane report-pane on"><iframe class="report-frame"></iframe></div>
+      </div>
+    </div>
+  </div>
+</body></html>`;
+
+async function shellAt(width, height) {
+  const p = await browser.newPage({ viewport: { width, height } });
+  await p.setContent(shell, { waitUntil: 'load' });
+  const r = await p.evaluate(() => {
+    const f = document.querySelector('.report-frame');
+    const rect = f.getBoundingClientRect();
+    const rb = document.querySelector('.rangebar');
+    return {
+      frameH: Math.round(rect.height),
+      wastedBelow: Math.round(innerHeight - rect.bottom),
+      rangeBarShown: getComputedStyle(rb).display !== 'none',
+      outerScroll: document.documentElement.scrollHeight
+                   > document.documentElement.clientHeight + 1
+    };
+  });
+  await p.close();
+  return r;
+}
+
+const SIZES = [[1280, 720], [1366, 768], [1920, 1080], [2560, 1440]];
+
+for (const [w, h] of SIZES) {
+  const r = await shellAt(w, h);
+  /* Hidden on a report scope. If this ever goes true the numbers below change
+     meaning, so it is asserted rather than assumed. */
+  ok(`${w}x${h}: the range bar is hidden on a report scope`, r.rangeBarShown, false);
+  /* Only .content's bottom padding may remain. More than that is the frame
+     failing to claim space that is there. */
+  ok(`${w}x${h}: no more than the content padding is left below the frame`,
+     r.wastedBelow <= 28, true);
+  ok(`${w}x${h}: the shell itself does not scroll`, r.outerScroll, false);
+}
+
 await browser.close();
 console.log(bad ? `\n  ${bad} of ${n} FAILED\n` : `\n  fit: all ${n} passed\n`);
 process.exit(bad ? 1 : 0);
