@@ -194,11 +194,27 @@ body.sb-collapsed .nav-item.active::before{top:6px;bottom:6px}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 .topbar{position:sticky;top:0;z-index:20;background:rgba(7,11,20,0.85);border-bottom:1px solid var(--border);padding:0 26px;height:56px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(12px)}
 [data-theme=light] .topbar{background:rgba(243,246,252,0.85)}
-.topbar-title{font-size:16px;font-weight:700;letter-spacing:-.2px;flex:1}
+/* ---- the top bar has to fit, and used to not ----------------------------
+   Measured at a 1073px window with the sidebar open: the bar was 833px and
+   its children wanted 1003px plus seven 14px gaps. Nothing gave way - the
+   range block and both icon buttons were flex-shrink:0, the game select had
+   a 230px floor, and the title, the sync line and the name were all at their
+   content width with min-width:auto under them. So the page scrolled
+   sideways and the SYNC button sat off the edge.
+
+   The order things give up space in is deliberate, least useful first:
+   the sync line truncates then disappears, the name disappears, the game
+   select narrows, and the title truncates. The two buttons and the range
+   control never shrink, because those are the things somebody came to press.
+   -------------------------------------------------------------------------- */
+.topbar-title{font-size:16px;font-weight:700;letter-spacing:-.2px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .topbar-range{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.game-select{padding:7px 32px 7px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23aebbd0' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;min-width:230px;outline:none;transition:border-color .15s}
+.game-select{padding:7px 32px 7px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23aebbd0' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;min-width:0;flex:0 1 230px;outline:none;transition:border-color .15s}
 .game-select:focus{border-color:var(--cyan)}
-.sync-info{font-family:var(--mono);font-size:10px;color:var(--text3);display:flex;align-items:center;gap:6px;white-space:nowrap}
+/* 254px of it, and the longest thing in the bar. Allowed to truncate rather
+   than hold the whole row open; the full text is on the title attribute. */
+.sync-info{font-family:var(--mono);font-size:10px;color:var(--text3);display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:0;flex:0 1 auto;overflow:hidden}
+.sync-info #syncInfo{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .refresh-btn{width:34px;height:34px;border-radius:var(--r);background:var(--surface);border:1px solid var(--border2);display:grid;place-items:center;cursor:pointer;color:var(--text2);transition:all .15s;flex-shrink:0}
@@ -858,3 +874,10 @@ body:not([data-scope="game"]) #freshBanner { display: none; }
    topbar, which put "end my session" a few pixels from "reload the data". */
 .sb-signout{color:var(--text3)}
 .sb-signout:hover{color:var(--magenta);border-color:var(--magenta)}
+
+
+/* Below these widths the bar cannot hold everything at a readable size, so it
+   drops what can be read elsewhere rather than scrolling sideways. The sync
+   line repeats on the fresh-data banner; the name is on the sidebar footer. */
+@media (max-width:1250px){ .topbar .sync-info{display:none} }
+@media (max-width:1050px){ .topbar .uname{display:none} }
