@@ -43,7 +43,7 @@ body{font-family:'Poppins',system-ui,sans-serif;background:#1a1a1a;display:flex;
 .eyebrow{font-family:'DM Mono',monospace;font-weight:500;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--t3);}
 .h1{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--t1);margin-top:4px;margin-bottom:13px;line-height:1.05;}
 .sf{height:32px;padding:0 40px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);font-family:'DM Mono',monospace;font-size:9.5px;color:var(--t3);}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px;}
 .kpis{margin-bottom:28px;}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh);}
 .kpi .l{font-family:'DM Mono',monospace;font-size:9.5px;font-weight:500;text-transform:uppercase;color:var(--t3);letter-spacing:.06em;}
@@ -85,11 +85,11 @@ table.airy thead th{padding:9px 6px;}
 .product-wow-cell{background:rgba(var(--heat-rgb),var(--heat-alpha));}
 .src-row{display:flex;align-items:center;gap:12px;margin-bottom:11px;}
 .src-name{width:120px;font-size:12px;font-weight:600;color:var(--t1);}
-.src-bar-track{flex:1;height:22px;background:var(--card2);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;align-items:center;}
+.src-bar-track{flex:1;min-width:0;height:22px;background:var(--card2);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;align-items:center;}
 .src-bar{height:100%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#020d1a;font-family:'DM Mono',monospace;font-size:10px;font-weight:700;border-radius:5px;}
 .src-val{width:90px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--t1);}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0;}
-.row-23{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;flex:1;min-height:0;}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;flex:1;min-height:0;}
+.row-23{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;flex:1;min-height:0;}
 .chart-box{position:relative;}
 .chart-box canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
 .tag{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;font-weight:700;padding:3px 11px;border-radius:20px;margin-bottom:8px;}
@@ -228,7 +228,7 @@ body.lt .tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(39,54,75,.7)}
 th.idx,td.idx{width:34px;min-width:34px;text-align:right;color:var(--t3);background:#11151b;}
 /* UA layout aliases available for structural conversion */
 .chartbox{position:relative;height:250px;}.chartbox.tall{height:300px;}
-.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;}.kpi-row.three{grid-template-columns:repeat(3,1fr);}.kpi-row.four{grid-template-columns:repeat(4,1fr);}
+.kpi-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:12px;}.kpi-row.three{grid-template-columns:repeat(3,minmax(0,1fr));}.kpi-row.four{grid-template-columns:repeat(4,minmax(0,1fr));}
 .kpi-row{margin-bottom:28px;}.mt{margin-top:28px;}.stack{row-gap:28px;}
 .h1,.card h2,.card-title,.subhead h2{font-family:'Segoe UI',Arial,sans-serif!important;}
 body{font-family:'Segoe UI',Arial,sans-serif;}
@@ -251,7 +251,7 @@ font-size:13px!important;font-weight:700!important;line-height:1;color:#c0ccdf}
 font-size:13px!important;font-weight:700!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 #weeklyDateHost .date-controls select.date{height:34px!important;min-height:34px!important;padding:0 34px 0 16px!important;
 border-radius:20px!important;line-height:34px!important;font-size:13px!important}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.grid-main{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(240px,.6fr);gap:14px;}.stack{display:grid;gap:12px;}.piebox{position:relative;height:360px;}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;}.grid-main{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(240px,.6fr);gap:14px;}.stack{display:grid;gap:12px;}.piebox{position:relative;height:360px;}
 /* ===== deeper UA match: KPI + card + eyebrow sizing exactly as ua_report.html ===== */
 .kpi{padding:15px 18px;}
 .kpi .v{font-size:26px;}
@@ -347,7 +347,7 @@ body.lt #weeklyLiveControls .date-span{color:#5b6b85;}
 /* Give the ad-format section the full report width ONLY while the Rewarded
    Placement Share card next to it has no data. renderPlacementShare()
    removes .no-placement as soon as the payload carries placements. */
-.ad-format-wide.no-placement{grid-template-columns:1fr!important;height:auto!important;}
+.ad-format-wide.no-placement{grid-template-columns:minmax(0,1fr)!important;height:auto!important;}
 .ad-format-wide>.card:first-child{min-height:320px;padding:22px 24px;}
 .ad-format-wide>.card:first-child .src-row{margin-bottom:15px;gap:14px;}
 .ad-format-wide>.card:first-child .src-bar-track{height:27px;}
@@ -392,3 +392,34 @@ body.lt #weeklyLiveControls select.date{background-image:linear-gradient(45deg,t
 body.lt #uaLoader{background:rgba(238,241,247,.9)}
 body.lt select.date option{background:#ffffff;color:#0d1b2e}
 body.lt .slide{background:#ffffff;box-shadow:0 10px 34px rgba(30,50,90,.10)}
+
+
+/* ── Fitting a frame narrower than the design ───────────────────────────
+   The hub gives the report whatever is left beside the sidebar. Measured on
+   a 771px frame: a .card in .row2.ad-format-wide was 474px wide and hung
+   76px past the right edge, with nothing inside it forcing that width.
+
+   Two separate causes, and fixing only the first moves the overflow inward
+   rather than removing it:
+
+   1. A bare `1fr` column is `minmax(auto,1fr)`, so it will not go below its
+      content's min-content width - the grid overflows instead of shrinking.
+      Every grid above now says minmax(0,1fr). This is the grid form of the
+      flex min-width:auto trap that cost a day on the topbar.
+
+   2. 474px is that card's honest minimum: .src-name and .src-val are fixed
+      at 120px and 90px, plus padding. Two of them need 2x474 + 14 = 962px,
+      so below that the columns are stacked rather than squeezed - a chart
+      crushed to 370px is not a smaller chart, it is an unreadable one.
+
+   .slide carries container-type:inline-size, so these measure the slide
+   rather than the window: the same report is correct in a wide frame, a
+   narrow frame, and standalone, without any of them being a special case. */
+@container (max-width: 980px){
+  .row2,.row-23,.two{grid-template-columns:minmax(0,1fr);}
+  .kpi-row.four{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@container (max-width: 640px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .kpi-row,.kpi-row.three{grid-template-columns:minmax(0,1fr);}
+}
