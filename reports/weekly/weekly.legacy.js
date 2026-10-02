@@ -407,16 +407,54 @@ function barChart(id,labels,series){
   options.plugins.tooltip.itemSort=(a,b)=>b.datasetIndex-a.datasetIndex;
   STATE.charts[id]=new Chart(el,{type:'bar',data:{labels,datasets:series.map((s,i)=>({label:s.label,data:s.data,backgroundColor:s.color||COLORS[i],borderRadius:4}))},options});
 }
+/* One row of the benchmark table.
+ *
+ * WHAT WAS REMOVED, AND WHY
+ *
+ * Every value cell used to carry a tinted background. Three things were
+ * wrong with it, and the first is the one that matters:
+ *
+ *   alpha = 0.36 - 0.20 * rank, over ranks sorted ascending
+ *
+ * so the STRONGEST tint landed on the SMALLEST number. Anyone reading
+ * intensity as magnitude - which is the only reason to tint a number - read
+ * it backwards.
+ *
+ * Second, the rank was taken across actual, US, benchmark and previous. Those
+ * are a week, a sub-population, a target and a different week: four things
+ * that are not on one scale, so ranking them against each other says nothing.
+ *
+ * Third, the hue was chosen from the metric's NAME by regular expression -
+ * eCPM magenta, viewer rate blue - which is decoration wearing the clothes of
+ * data.
+ *
+ * Colour now appears in one place only: the direction of a change. That is a
+ * real two-sided quantity and the one thing in this table a reader scans for.
+ *
+ * The reference value and its change also share a cell now. Eight columns at
+ * a glance were four pairs the eye had to re-pair; six is the same
+ * information with the pairing already done.
+ */
 function rowHtml(label,actual,us,bench,prev,formatter){
   const f=formatter||num,b=finite(bench),d1=b?change(actual,bench):null,d2=change(actual,prev);
-  const metricRanks=[...new Set([actual,us,bench,prev].filter(finite).map(v=>Math.abs(v)))].sort((a,b)=>a-b);
-  const metricRank=value=>{const v=Math.abs(value),i=metricRanks.indexOf(v);return metricRanks.length>1?i/(metricRanks.length-1):1};
-  const cmpRanks=[...new Set([d1,d2].filter(finite).map(v=>Math.abs(v)))].sort((a,b)=>a-b);
-  const cmpRank=value=>{const v=Math.abs(value),i=cmpRanks.indexOf(v);return cmpRanks.length>1?i/(cmpRanks.length-1):1};
-  const metricRgb=/ecpm/i.test(label)?'236,10,155':/viewer/i.test(label)?'77,159,255':/imp\/dau/i.test(label)?'139,92,246':/d0/i.test(label)?'255,184,0':/d7/i.test(label)?'167,139,250':/d27/i.test(label)?'34,211,238':/^dau$/i.test(label)?'249,115,22':/arpdau/i.test(label)?'59,130,246':'139,92,246';
-  const heat=value=>finite(value)?'background:rgba('+metricRgb+','+(0.36-0.20*metricRank(value)).toFixed(3)+')':'';
-  const cmpCell=v=>{if(!finite(v))return '<td class="num" style="color:var(--t3)">no comp</td>';const up=v>=0,rgb=up?'77,159,255':'255,77,109',alpha=(0.36-0.20*cmpRank(v)).toFixed(3);return '<td class="num" style="color:'+(up?'var(--blue)':'var(--coral)')+';background:rgba('+rgb+','+alpha+')">'+(up?'+':'-')+num(Math.abs(v)*100,0)+'%</td>';};
-  return '<tr><td class="fmt-name">'+label+'</td><td class="num b" style="'+heat(actual)+'">'+f(actual)+'</td><td class="num" style="color:var(--t2);'+heat(us)+'">'+(finite(us)?f(us):'\u2014')+'</td><td class="num mut" style="'+heat(bench)+'">'+(b?f(bench):'--')+'</td>'+cmpCell(d1)+'<td class="num mut" style="'+heat(prev)+'">'+f(prev)+'</td>'+cmpCell(d2)+'</tr>';
+
+  /* Green up, coral down - the same pair the product table and this slide's
+     own footnote already use. The benchmark table had been using blue for
+     up, which agreed with neither. */
+  const delta=v=>{
+    if(!finite(v))return '<span class="cmp-d none">no comp</span>';
+    const up=v>=0;
+    return '<span class="cmp-d '+(up?'up':'down')+'">'+(up?'+':'-')+num(Math.abs(v)*100,0)+'%</span>';
+  };
+  const pairCell=(value,shown,d)=>
+    '<td class="num cmp-cell"><span class="cmp-v">'+(finite(value)?shown:'--')+'</span>'+delta(d)+'</td>';
+
+  return '<tr><td class="fmt-name">'+label+'</td>'
+    +'<td class="num b">'+f(actual)+'</td>'
+    +'<td class="num" style="color:var(--t2)">'+(finite(us)?f(us):'—')+'</td>'
+    +pairCell(bench,b?f(bench):'--',d1)
+    +pairCell(prev,f(prev),d2)
+    +'</tr>';
 }
 // Inserts a "US" <th> right after the current-week "Actual" column (once).
 // Robust to the leading "#" column that numberTables() adds on later renders.
@@ -621,7 +659,10 @@ function renderImmersive(data,platform){
      left alone rather than widened past the request. */
   if(platform!=='iOS')
     setKpi(s,'AdMob Failover',pct(w.failover_pct,1,false),null,null,null,(finite(w.failover_pct)&&w.failover_pct<=10?'Within':'Above')+' 10% target | '+money(w.failover));
-  const table=s.querySelector('table'),tbody=table?.querySelector('tbody');if(tbody){const winner=(a,b,low)=>!finite(a)||!finite(b)?'N/A':((low?a<b:a>b)?'Gadsme':'Anzu'),rows=[['Revenue',w.gadsme,w.anzu,money,'139,92,246'],['Impressions',w.gadsme_imp,w.anzu_imp,num,'77,159,255'],['eCPM',w.gadsme_ecpm,w.anzu_ecpm,v=>money(v,3),'236,10,155'],['Fill Rate',w.gadsme_fill,w.anzu_fill,v=>pct(v,2,false),'255,184,0']];tbody.innerHTML=rows.map(r=>{const values=[...new Set([r[1],r[2]].filter(finite).map(v=>Math.abs(v)))].sort((a,b)=>a-b),shade=v=>{const i=values.indexOf(Math.abs(v||0)),t=values.length>1?i/(values.length-1):1;return'background:rgba('+r[4]+','+(0.36-0.20*t).toFixed(3)+')'},win=winner(r[1],r[2]);return '<tr><td class="fmt-name">'+r[0]+'</td><td class="num b" style="'+shade(r[1])+'">'+r[3](r[1])+'</td><td class="num b" style="'+shade(r[2])+'">'+r[3](r[2])+'</td><td class="num" style="color:var(--blue);background:rgba(77,159,255,.16);font-weight:600!important">'+win+'</td></tr>';}).join('');}
+  const table=s.querySelector('table'),tbody=table?.querySelector('tbody');if(tbody){const winner=(a,b,low)=>!finite(a)||!finite(b)?'N/A':((low?a<b:a>b)?'Gadsme':'Anzu'),rows=[['Revenue',w.gadsme,w.anzu,money,'139,92,246'],['Impressions',w.gadsme_imp,w.anzu_imp,num,'77,159,255'],['eCPM',w.gadsme_ecpm,w.anzu_ecpm,v=>money(v,3),'236,10,155'],['Fill Rate',w.gadsme_fill,w.anzu_fill,v=>pct(v,2,false),'255,184,0']];tbody.innerHTML=rows.map(r=>{const values=[...new Set([r[1],r[2]].filter(finite).map(v=>Math.abs(v)))].sort((a,b)=>a-b),/* No shading. This table has a Winner column that says outright which of
+       the two is bigger, and the tint said the same thing again - backwards,
+       since the ramp put the strongest colour on the smaller number. */
+      shade=()=>'',win=winner(r[1],r[2]);return '<tr><td class="fmt-name">'+r[0]+'</td><td class="num b" style="'+shade(r[1])+'">'+r[3](r[1])+'</td><td class="num b" style="'+shade(r[2])+'">'+r[3](r[2])+'</td><td class="num" style="color:var(--blue);background:rgba(77,159,255,.16);font-weight:600!important">'+win+'</td></tr>';}).join('');}
   /* The detail block under the table, same reasoning. The markup for it is
      gone from the iOS slide, so this would find nothing there anyway - the
      guard says why rather than relying on a querySelector missing. */
@@ -715,10 +756,15 @@ function renderProductTables(s,current,previous){
   if(!s)return;const card=[...s.querySelectorAll('.card')].find(c=>clean(c.querySelector('h2')?.textContent).includes('All IAP Products')),tables=card?[...card.querySelectorAll('table')]:[];if(!tables.length)return;
   const names=[...new Set([...Object.keys(current),...Object.keys(previous)])].sort((a,b)=>(current[b]||0)-(current[a]||0)),mid=Math.ceil(names.length/2);
   const previousRanks=[...new Set(names.map(n=>previous[n]||0))].sort((a,b)=>a-b),currentRanks=[...new Set(names.map(n=>current[n]||0))].sort((a,b)=>a-b);
-  const heat=(value,values,rgb)=>{const i=values.indexOf(value),t=values.length>1?i/(values.length-1):1;return'--heat-rgb:'+rgb+';--heat-alpha:'+(0.36-0.20*t).toFixed(3)+';font-size:9.5px'};
+  /* 0.12 + 0.24*t, not 0.36 - 0.20*t. The ranks are sorted ascending, so the
+     old form put the STRONGEST tint on the SMALLEST number and the whole
+     scale read backwards. Here the tint IS a magnitude encoding - rank
+     within one column, every cell the same kind of thing - so it is kept
+     and turned the right way up rather than removed. */
+  const heat=(value,values,rgb)=>{const i=values.indexOf(value),t=values.length>1?i/(values.length-1):1;return'--heat-rgb:'+rgb+';--heat-alpha:'+(0.12+0.24*t).toFixed(3)+';font-size:9.5px'};
   const grid=tables[0]?.parentElement;if(grid)grid.classList.add('product-split-grid');
   const wowByName=Object.fromEntries(names.map(n=>[n,change(current[n]||0,previous[n]||0)])),wowRanks=[...new Set(names.map(n=>wowByName[n]).filter(finite).map(Math.abs))].sort((a,b)=>a-b);
-  [names.slice(0,mid),names.slice(mid)].forEach((list,i)=>{if(!tables[i])return;const table=tables[i];table.classList.add('product-split-table');table.dataset.rowStart=String(i===0?1:mid+1);const tb=table.querySelector('tbody');if(tb)tb.innerHTML=list.map(n=>{const c=current[n]||0,p=previous[n]||0,d=wowByName[n],wi=wowRanks.indexOf(Math.abs(d)),wowStrength=wowRanks.length>1?wi/(wowRanks.length-1):1;return '<tr><td style="font-size:9.5px">'+escapeHtml(n)+'</td><td class="num mut product-value-cell" style="'+heat(p,previousRanks,'77,159,255')+'">'+money(p)+'</td><td class="num b product-value-cell" style="'+heat(c,currentRanks,'0,229,195')+'">'+money(c)+'</td><td class="num product-wow-cell" style="--heat-rgb:'+(finite(d)&&d>=0?'0,224,154':'255,61,103')+';--heat-alpha:'+(0.36-0.20*wowStrength).toFixed(3)+'"><span class="delta '+(finite(d)&&d>=0?'up':'down')+'">'+(finite(d)?(d>=0?'+':'-')+num(Math.abs(d)*100,0)+'%':(c?'new':'N/A'))+'</span></td></tr>';}).join('');});
+  [names.slice(0,mid),names.slice(mid)].forEach((list,i)=>{if(!tables[i])return;const table=tables[i];table.classList.add('product-split-table');table.dataset.rowStart=String(i===0?1:mid+1);const tb=table.querySelector('tbody');if(tb)tb.innerHTML=list.map(n=>{const c=current[n]||0,p=previous[n]||0,d=wowByName[n],wi=wowRanks.indexOf(Math.abs(d)),wowStrength=wowRanks.length>1?wi/(wowRanks.length-1):1;return '<tr><td style="font-size:9.5px">'+escapeHtml(n)+'</td><td class="num mut product-value-cell" style="'+heat(p,previousRanks,'77,159,255')+'">'+money(p)+'</td><td class="num b product-value-cell" style="'+heat(c,currentRanks,'0,229,195')+'">'+money(c)+'</td><td class="num product-wow-cell" style="--heat-rgb:'+(finite(d)&&d>=0?'0,224,154':'255,61,103')+';--heat-alpha:'+(0.12+0.24*wowStrength).toFixed(3)+'"><span class="delta '+(finite(d)&&d>=0?'up':'down')+'">'+(finite(d)?(d>=0?'+':'-')+num(Math.abs(d)*100,0)+'%':(c?'new':'N/A'))+'</span></td></tr>';}).join('');});
 }
 
 function canonicalNetworkName(raw){

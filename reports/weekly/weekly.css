@@ -452,3 +452,23 @@ body.lt .slide{background:#ffffff;box-shadow:0 10px 34px rgba(30,50,90,.10)}
    screen, narrow screen, standalone: a slide takes 16:9 when there is room
    for it and the available height when there is not. The cap is on
    min-height only, so a slide with more content than that still grows. */
+
+
+/* ── A reference value and its change, in one cell ──────────────────────
+   The benchmark table used to spend eight columns on four pairs - a value,
+   then its change, four times - and the eye had to re-pair them on every
+   row. Six columns carry the same numbers with the pairing already done.
+
+   The value stays in ordinary muted text. Only the change is coloured,
+   because a change is the one two-sided quantity here and the one thing
+   anybody scans this table for. Tabular figures so the percentages line up
+   down the column rather than wandering with the digits. */
+.cmp-cell{white-space:nowrap;}
+.cmp-cell .cmp-v{color:var(--t2);font-variant-numeric:tabular-nums;}
+.cmp-cell .cmp-d{
+  display:inline-block;min-width:54px;text-align:right;
+  font-weight:600;font-variant-numeric:tabular-nums;
+}
+.cmp-cell .cmp-d.up{color:var(--green);}
+.cmp-cell .cmp-d.down{color:var(--coral);}
+.cmp-cell .cmp-d.none{color:var(--t3);font-weight:500;}
