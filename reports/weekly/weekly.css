@@ -415,7 +415,23 @@ body.lt .slide{background:#ffffff;box-shadow:0 10px 34px rgba(30,50,90,.10)}
    .slide carries container-type:inline-size, so these measure the slide
    rather than the window: the same report is correct in a wide frame, a
    narrow frame, and standalone, without any of them being a special case. */
-@container (max-width: 980px){
+/* 700px, not 980px, and the difference matters more than it looks.
+
+   980 came from a card measuring 474px wide. That measurement was taken
+   BEFORE .src-bar-track was given min-width:0 in the same change, and that
+   one line was what had been holding the card open. Measured again
+   afterwards, in the live report, the two cards in .row2 come to 108px and
+   267px - so two of them need 267x2 + 14 = 548px, not 962px.
+
+   Stacking them at 980 therefore bought nothing and cost a great deal: side
+   by side the row is as tall as its tallest card (449px); stacked it is
+   449 + 253 + 14 = 716px. That 267px pushed the first slide to 980px inside
+   a 810px frame, and the report went back to looking cut off at the bottom -
+   a horizontal overflow traded for a vertical one.
+
+   700 leaves room: at that width a column is about 303px against a 267px
+   minimum. Below it the cards genuinely cannot sit side by side. */
+@container (max-width: 700px){
   .row2,.row-23,.two{grid-template-columns:minmax(0,1fr);}
   .kpi-row.four{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
