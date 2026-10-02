@@ -1720,7 +1720,7 @@ function renderOverview(){
   const ftueComplete  = (ftueRef.engagement != null) ? ftueRef.engagement : null;
 
   const kpis = [
-    { cls:'cy', lbl:'Installs',      val:fmtKn(totalInstalls),  data:cur.map(x=>+x.installs||0), dates:curDates, cur:totalInstalls, prev:prevInstalls, sub:'all installs, paid + organic', col:'--cyan',    fmt:fmtKn },
+    { cls:'cy', lbl:'Installs',      val:fmtKn(totalInstalls),  data:cur.map(x=>x.installs==null?null:+x.installs), dates:curDates, cur:totalInstalls, prev:prevInstalls, sub:'Play Console installs · Android', col:'--cyan',    fmt:fmtKn },
     { cls:'mg', lbl:'DAU',           val:fmtKn(dauAvg),         data:cur.map(x=>+x.dau||0),      dates:curDates, cur:dauAvg,        prev:prevDau,      sub:'period avg',   col:'--magenta', fmt:fmtKn },
     { cls:'vl', lbl:'D1 Retention',  val:d1?fmtPct(d1):'—',     data:cohortsCur.map(x=>+x.d1||0), dates:cohortsCur.map(x=>x.date), cur:d1, prev:prevD1, sub:'cohort-weighted',   col:'--violet',  fmt:fmtPct },
     { cls:'lm', lbl:'D0 Playtime',   val:fmtSec(d0Play),        data:cur.map(x=>+x.d0Playtime||0), dates:curDates, cur:d0Play,     prev:prevD0Play,   sub:'avg new user', col:'--lime',    fmt:fmtSec },
