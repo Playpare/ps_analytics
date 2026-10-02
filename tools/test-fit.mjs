@@ -40,12 +40,16 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const css = readFileSync(join(ROOT, 'reports/weekly/weekly.css'), 'utf8');
 
-/* 474px is not a guess. It is what the real card measured in the browser at
-   a 771px frame, where it hung 76px past the right edge. The fixture cannot
-   reproduce that from .src-name and .src-val alone - those come to about
-   316px - so the measured minimum is stated outright rather than approximated
-   by piling in markup until the number happens to come out right. */
-const MEASURED_CARD_MIN = 474;
+/* Measured in the live report, by cloning each card of .row2 and setting
+   width:min-content on the clone. The two cards come to 108px and 267px.
+
+   It was 474px before .src-bar-track was given min-width:0, and that one
+   line was what had been holding the card open. The first number went into
+   this fixture and into a 980px stacking breakpoint, and both were wrong the
+   moment the same change landed - a measurement taken before the fix and
+   used to justify the fix around it. Re-measured afterwards, which is the
+   only reason this reads 267. */
+const MEASURED_CARD_MIN = 267;
 
 const card = (title) => `
   <div class="card">
@@ -101,12 +105,16 @@ async function measure(width) {
       .map((el) => el.tagName.toLowerCase() + '.' + String(el.className).split(/\s+/)[0]);
     const row = document.querySelector('.row2');
     const cards = [...row.children].map((c) => Math.round(c.getBoundingClientRect().top));
+    const kids = [...row.children].map((c) => c.getBoundingClientRect().height);
     return {
       docW: W,
       scrollW: document.documentElement.scrollWidth,
       overflowing: [...new Set(over)],
       /* Same top = side by side. Different tops = stacked. */
-      columns: new Set(cards).size === 1 ? 2 : 1
+      columns: new Set(cards).size === 1 ? 2 : 1,
+      /* The vertical cost of stacking, which is what was actually reported. */
+      rowH: Math.round(row.getBoundingClientRect().height),
+      tallestCard: Math.round(Math.max(...kids))
     };
   });
   await p.close();
@@ -114,10 +122,21 @@ async function measure(width) {
 }
 
 /* ---- the width that was actually measured in the browser --------------- */
+/* Two cards need 267x2 + 14 = 548px, so at 771 they belong side by side.
+   Stacking them here is not a harmless precaution: the row stops being as
+   tall as its tallest card and becomes the sum of both, which is what pushed
+   the first slide 228px past the height of its frame. */
 const narrow = await measure(771);
 ok('nothing crosses the right edge at 771px', narrow.overflowing, []);
 ok('no horizontal scroll at 771px', narrow.scrollW <= narrow.docW, true);
-ok('the two cards are stacked at 771px', narrow.columns, 1);
+ok('the two cards are side by side at 771px', narrow.columns, 2);
+ok('the row is no taller than its tallest card at 771px',
+   narrow.rowH <= narrow.tallestCard + 2, true);
+
+/* ---- and where they genuinely cannot fit ------------------------------- */
+const tiny = await measure(600);
+ok('the two cards stack at 600px', tiny.columns, 1);
+ok('nothing crosses the right edge at 600px', tiny.overflowing, []);
 
 /* ---- and the width the report is drawn for ----------------------------- */
 const wide = await measure(1400);
