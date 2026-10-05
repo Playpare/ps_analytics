@@ -1191,10 +1191,27 @@ function isoInSheetTz(d){
 
 function sheetToday(){ return isoInSheetTz(new Date()); }
 
-/** N days before the sheet's today. Shifts the date STRING, so no clock drift. */
-function isoDaysAgo(n){
-  return isoShift(sheetToday(), -n);
-}
+/**
+ * The last day that is finished. Every default range ends here.
+ *
+ * Presets used to run to sheetToday(), so "Last 14 days" meant today-13 ..
+ * today - and today is a part-day. Whatever hours of it had been synced were
+ * shown as the day's total. A partial day is not visibly partial; it just
+ * looks like a bad day, and then it changes by itself overnight.
+ *
+ * It moved more than the last bar. Every total, average and week-over-week
+ * comparison was measured over a window with that hole in it.
+ *
+ * mxDates already stepped back a day for this reason, in one place, with the
+ * note "Today is still filling, so it can never close a week." That was right
+ * and it was the only place doing it. This is the same idea, named once and
+ * used everywhere a range end is defaulted.
+ */
+function dataThrough(){ return isoShift(sheetToday(), -1); }
+
+/* isoDaysAgo(n) used to live here. Nothing calls it now that every range end
+   comes from dataThrough(), and leaving it would leave a ready-made way to
+   build a window ending today for whoever needs one next. */
 
 /**
  * The background queue, in the order a user is most likely to need it.
@@ -1237,7 +1254,11 @@ function prefetchQueue(currentGameId){
 
   // 2. every preset, current platform first, then the others
   PRESET_DAYS.forEach(function(days){
-    const w = { from: isoDaysAgo(days - 1), to: isoDaysAgo(0) };
+    /* The warm windows have to be the SAME windows a preset asks for, or
+       every preset misses the cache it was meant to hit - the server keys on
+       from+to. Both ends now come from dataThrough(). */
+    const end = dataThrough();
+    const w = { from: isoShift(end, -(days - 1)), to: end };
     add(currentGameId, w.from, w.to, 'last ' + days + ' days');
     others.forEach(function(id){ add(id, w.from, w.to, id + ' last ' + days + ' days'); });
   });
@@ -1620,9 +1641,10 @@ async function checkForNewData(){
 }
 
 function applyPresetToInputs(days){
-  // Both ends derived from the sheet's today, so a preset lands on exactly the
-  // window the server warmed.
-  const toStr   = sheetToday();
+  // Both ends derived from dataThrough() - the last finished day - so a preset
+  // lands on exactly the window the server warmed, and never includes the
+  // part-day that today still is.
+  const toStr   = dataThrough();
   const fromStr = isoShift(toStr, -(days - 1));
   g('rangeFrom').value = fromStr;
   g('rangeTo').value   = toStr;
@@ -2745,11 +2767,12 @@ function mxPeriods(dates, grain){
  * last complete Sunday at or before the range end.
  */
 function mxDates(){
-  const rangeEnd = dateTo || sheetToday();
+  const rangeEnd = dateTo || dataThrough();
   let start, n;
 
   if(MX_SNAP_TO_SUNDAY){
-    // Today is still filling, so it can never close a week.
+    // Today is still filling, so it can never close a week. dataThrough()
+    // already excludes it; this stays for a range the user typed by hand.
     let anchor = (rangeEnd === sheetToday()) ? isoShift(rangeEnd, -1) : rangeEnd;
     const dow  = mxDow(anchor);
     const end  = (dow === 0) ? anchor : isoShift(anchor, -dow);
@@ -3794,7 +3817,7 @@ function isoShift(dateStr, days){
 
 /** N whole weeks ending on the last day of the dashboard range. */
 function progWindow(){
-  const to = dateTo || sheetToday();
+  const to = dateTo || dataThrough();
   return { from: isoShift(to, -(progRangeDays - 1)), to: to };
 }
 
@@ -4584,7 +4607,7 @@ function onPresetChange(){
     return;
   }
   if(v === 'single'){
-    if(!g('rangeTo').value) g('rangeTo').value = dateTo || sheetToday();
+    if(!g('rangeTo').value) g('rangeTo').value = dateTo || dataThrough();
     return;
   }
 
