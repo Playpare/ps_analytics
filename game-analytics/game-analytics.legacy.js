@@ -108,7 +108,11 @@ const SECTION_META = {
   playtime:   { group:'Player Metrics', label:'Engagement',      order:40,  scope:'game' },
   ftue:       { group:'Player Metrics', label:'FTUE Funnel',     order:50,  scope:'game' },
   events:     { group:'Gameplay',       label:'Progress Events', order:80,  scope:'game' },
-  liveops:    { group:'Live Ops',       label:'Live Ops',        order:90,  scope:'game' },
+  /* hidden: drawn nowhere and reachable from nowhere, but kept here with
+     its render and its markup intact. Live Ops has no data behind it yet;
+     deleting the section would mean rebuilding it when it does. One word
+     here is the whole switch. */
+  liveops:    { group:'Live Ops',       label:'Live Ops',        order:90,  scope:'game', hidden:true },
   stability:  { group:'App Health',     label:'Stability',       order:100, scope:'game' },
   rating:     { group:'App Health',     label:'Player Rating',   order:110, scope:'game' },
 
@@ -310,7 +314,14 @@ function getEnabledSections(){
     });
   }
 
-  return list.sort(function(a,b){ return a.order - b.order; });
+  /* One choke point for hiding. Both branches above build the list their
+     own way and isEnabled() reads the same function, so a section filtered
+     here is gone from the nav, from goTab and from every other check at
+     once - rather than being removed from the sidebar and still reachable
+     by a stale URL. */
+  return list
+    .filter(function(s){ return !(SECTION_META[s.id] || {}).hidden; })
+    .sort(function(a,b){ return a.order - b.order; });
 }
 
 function isEnabled(id){
@@ -3632,8 +3643,10 @@ function renderRating(){
 
   g('ratingKpis').innerHTML = [
     { cls:'am', lbl:'In-Game Rating', val:overall?overall.toFixed(2):'—', sub:overall?starStr(overall):'awaiting data' },
-    { cls:(npsVal && npsVal>=thresholds.nps.val)?'lm':'co', lbl:'NPS', val:npsVal?npsVal.toFixed(0):'—', sub:'target '+thresholds.nps.val },
-    { cls:'cy', lbl:'Responses',      val:sm.responses?fmtKn(sm.responses):'—', sub:'surveyed in range' },
+    /* The NPS and Responses tiles are hidden with the NPS card. Leaving them
+       would have the section still reporting a score whose card is gone, and
+       a response count for a survey nobody is being shown. npsVal is still
+       computed above; only the two tiles are withheld. */
     { cls: last>=first?'lm':'co', lbl:'Movement', val:(last&&first)?((last-first)>=0?'+':'')+(last-first).toFixed(2):'—', sub:'first vs last day in range' },
   ].map(k=>'<div class="kpi '+k.cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">'+k.sub+'</div></div>').join('');
 
