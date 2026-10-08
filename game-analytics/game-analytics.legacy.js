@@ -172,8 +172,16 @@ const SCOPES = {
  * fingerprint the HTML documents themselves, so without this a deploy leaves
  * everyone's cached copy of the report in place.
  *
- * The UA report carries a second endpoint because its own nav has a Negative
- * Spend tab inside it.
+ * The UA report carries extra endpoints because it reaches past its own
+ * backend. Its nav has a Negative Spend tab inside it, and its platform slides
+ * now show the ad network table, which lives in THIS project's workbook rather
+ * than UA's - the UA spreadsheet has no Network tab at all.
+ *
+ * Handing it the URL is better than the two alternatives. UA's backend could
+ * openById across to this workbook, but its own debug.js records that
+ * cross-workbook open as measurably slow, and the aggregation would then exist
+ * twice and drift. Or the Network tab could be synced into UA's workbook,
+ * which buys a second copy of the data and a staleness problem.
  */
 function reportUrl(section) {
   const api = API_URLS[section.api];
@@ -181,6 +189,14 @@ function reportUrl(section) {
   if (api) url += '&api=' + encodeURIComponent(api);
   if (section.api === 'ua' && API_URLS.negative) {
     url += '&negativeApi=' + encodeURIComponent(API_URLS.negative);
+  }
+  /* The key travels with the URL because this project's route() checks it
+     before anything else; the session token does not, because UA reads the
+     same sessionStorage entry this page wrote. Passing the token through the
+     query string would put it in the iframe's URL for no gain. */
+  if (section.api === 'ua' && API_URLS.game) {
+    url += '&gameApi=' + encodeURIComponent(API_URLS.game);
+    if (GAME_API_KEY) url += '&gameKey=' + encodeURIComponent(GAME_API_KEY);
   }
   return url;
 }

@@ -583,9 +583,12 @@ function visibleShareEntries(entries,valueAt){
 function rankScales(rows,cols){const out={};cols.forEach(c=>{out[c]=[...new Set(rows.map(r=>Number(r[c])).filter(Number.isFinite))].sort((a,b)=>a-b)});return out}
 function rankShade(value,values,rgb){const v=Number(value);if(!Number.isFinite(v)||!values?.length)return'';const rank=values.indexOf(v),t=values.length>1?rank/(values.length-1):1;return`background:rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.36-0.20*t).toFixed(3)})`}
 function table(target,rows,columns){const el=$(target);if(!el)return;if(!rows.length){el.innerHTML='<div class="empty">No rows returned for this dataset</div>';return}const cols=columns||Object.keys(rows[0]),numericList=cols.filter(c=>rows.some(r=>typeof r[c]==='number')),numericCols=new Set(numericList),ranks=rankScales(rows,numericList);el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th class="${numericCols.has(c)?'num':''}">${label(c)}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>`<td class="${numericCols.has(c)?'num ':''}" style="${numericCols.has(c)?rankShade(r[c],ranks[c],colHue(c,target)):''}">${formatCell(c,r[c])}</td>`).join('')+'</tr>').join('')+'</tbody></table>'}
-function label(s){return String(s).replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}
+/* Title-casing turns 'ecpm' into 'Ecpm'. Only acronyms that would read wrong
+   are overridden; every other header keeps the existing behaviour. */
+const LABEL_OVERRIDES={ecpm:'eCPM'};
+function label(s){const k=String(s).toLowerCase();if(LABEL_OVERRIDES[k])return LABEL_OVERRIDES[k];return String(s).replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}
 function heat(c){c=String(c);if(/cost|spend/.test(c))return'heat-blue';if(/install/.test(c))return'heat-teal';if(/ad_revenue/.test(c))return'heat-pink';if(/^revenue|all_revenue|iap/.test(c))return'heat-amber';if(/roi|roas/.test(c))return'heat-green';return''}
-function formatCell(k,v){if(v==null||v==='')return'-';const key=String(k).toLowerCase();if(typeof v!=='number'){if(/week|date|day/.test(key)&&dateVal(v))return shortDate(v);return String(v)}if(key==='roi')return v.toFixed(2);if(key==='cpi'||key==='ecpi'||/cost|revenue|spend/.test(key))return tableMoney(v);if(/roas|retention|share|rate/.test(key))return (v*100).toFixed(1)+'%';return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v)}
+function formatCell(k,v){if(v==null||v==='')return'-';const key=String(k).toLowerCase();if(typeof v!=='number'){if(/week|date|day/.test(key)&&dateVal(v))return shortDate(v);return String(v)}if(key==='roi')return v.toFixed(2);if(key==='cpi'||key==='ecpi'||key==='ecpm'||/cost|revenue|spend/.test(key))return tableMoney(v);if(/roas|retention|share|rate/.test(key))return (v*100).toFixed(1)+'%';return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v)}
 function field(row,name){const wanted=name.toLowerCase().replace(/[^a-z0-9]/g,'');const key=Object.keys(row||{}).find(k=>k.toLowerCase().replace(/[^a-z0-9]/g,'')===wanted);return key==null?null:row[key]}
 function firstField(row,names){for(const name of names){const value=field(row,name);if(value!==null&&value!=='')return value}return 0}
 function analysisRoi(platform){const rows=filterRows(DATA.rev_cost_analysis?.rows||[]);let revenueGroups,costGroups;if(platform==='android'){revenueGroups=[['And_Revenue','And_Reveue']];costGroups=[['And_Cost']]}else if(platform==='ios'){revenueGroups=[['IOS_Revenue','IOS_Reveue']];costGroups=[['IOS_Cost']]}else{revenueGroups=[['And_Revenue','And_Reveue'],['IOS_Revenue','IOS_Reveue']];costGroups=[['And_Cost'],['IOS_Cost']]}const revenue=rows.reduce((s,r)=>s+revenueGroups.reduce((x,names)=>x+num(firstField(r,names)),0),0),cost=rows.reduce((s,r)=>s+costGroups.reduce((x,names)=>x+num(firstField(r,names)),0),0);return cost?revenue/cost:0}
@@ -736,11 +739,149 @@ function render(){syncCardTitles();const overall=filterRows(DATA.overall_data?.r
      overview' - which is why Overall read $14.2M revenue against $426.9K spend
      while Android + iOS added up to ~$594K. That tab carries zero-cost buckets
      ('Untrusted Devices', 'Organic') that are not UA performance. */
-  ['android','ios'].forEach(p=>{const ow=overall.filter(r=>appIs(r,p)),dd=daily.filter(r=>appIs(r,p)&&platformChannelAllowed(p,r.channel)),spendShareRows=daily.filter(r=>appIs(r,p)&&(platformChannelAllowed(p,r.channel)||googleAds(r))),weeklyAnalysis=analysisItems(p,'weekly').filter(r=>platformChannelAllowed(p,field(r,'channel'))),dailyAnalysis=analysisItems(p,'daily').filter(r=>platformChannelAllowed(p,field(r,'channel')));combo(p+'Weekly',weeklyAnalysis.length?weeklyAnalysis:groupedWeekly(dd,6));combo(p+'Daily',dailyAnalysis.length?dailyAnalysis:grouped(dd,'day',14));setKpis(p,p);const shares=visibleShareEntries(channelAgg(spendShareRows,'network_cost'));pie(p+'SpendShare',shares.map(x=>x[0]),shares.map(x=>x[1]),'Spend Share',SIDE_PIE);renderPlatformNetwork(p,ow,dd)});logPlatformSplit(daily);
+  ['android','ios'].forEach(p=>{const ow=overall.filter(r=>appIs(r,p)),dd=daily.filter(r=>appIs(r,p)&&platformChannelAllowed(p,r.channel)),spendShareRows=daily.filter(r=>appIs(r,p)&&(platformChannelAllowed(p,r.channel)||googleAds(r))),weeklyAnalysis=analysisItems(p,'weekly').filter(r=>platformChannelAllowed(p,field(r,'channel'))),dailyAnalysis=analysisItems(p,'daily').filter(r=>platformChannelAllowed(p,field(r,'channel')));combo(p+'Weekly',weeklyAnalysis.length?weeklyAnalysis:groupedWeekly(dd,6));combo(p+'Daily',dailyAnalysis.length?dailyAnalysis:grouped(dd,'day',14));setKpis(p,p);const shares=visibleShareEntries(channelAgg(spendShareRows,'network_cost'));pie(p+'SpendShare',shares.map(x=>x[0]),shares.map(x=>x[1]),'Spend Share',SIDE_PIE);renderPlatformNetwork(p,ow,dd);/* Deliberately not awaited: a second backend must not delay this slide. */renderAdNetworks(p)});logPlatformSplit(daily);
   const rs=DATA.revenue_share||{};renderCurrentWeekPies(overall);renderPlatformRevenuePies(rs);
   const networks=daily;table('networkTable',networks,['day','app','channel','network_cost','all_revenue','roas_all_d0','all_revenue_total_d0','roas_ad_d0','ad_revenue']);const na=channelAgg(overall,'all_revenue');table('networkShareTable',na.map(([channel,total])=>({channel,total})),['channel','total']);pie('networkIapShare',na.slice(0,10).map(x=>x[0]),na.slice(0,10).map(x=>x[1]),'Revenue Share');table('revCostTable',filterRows(DATA.rev_cost_analysis?.rows||[]));
   renderGoogleAds(filterRows(DATA.campaigns_data?.rows||[]));renderLegacy();renderPrimaryKpiDeltas();renderSupplementalKpiDeltas();updateDates([...overall,...daily]);}
 function renderGoogleAds(campaigns){const rows=campaigns.filter(googleAds);const weekly=grouped(rows,'week',14);combo('googleAdsTrend',weekly);combo('googleAdsCost',weekly);const cost=sum(rows,'cost'),revenue=sum(rows,'all_revenue')||sum(rows,'revenue');$('googleCost').textContent=money(cost);$('googleRevenue').textContent=money(revenue);$('googleInstalls').textContent=compact(sum(rows,'installs'));$('googleRoas').textContent=cost?(revenue/cost).toFixed(2)+'x':'-';table('googleCampaignTable',rows)}
+
+/* ===========================================================================
+   AD NETWORKS - ad revenue by mediation network
+
+   READ THIS BEFORE READING THE NUMBERS. Everything else on these slides is
+   cut by CHANNEL: where installs were bought. This is cut by NETWORK: who
+   paid for the ad impressions. Several names appear in both lists - Unity and
+   Mintegral sell installs and also buy inventory - and when they do, the two
+   numbers against that name are not the same number and do not add up to
+   anything meaningful.
+
+   WHY IT ARRIVES FROM SOMEWHERE ELSE
+
+   UA's workbook has no Network tab. The data lives in the game-analytics
+   workbook, so it comes from that project's backend through its `adNetworks`
+   action, with the URL handed over by the shell as ?gameApi= - the same way
+   the Negative Spend tab already receives ?negativeApi=.
+
+   The two alternatives were worse. UA's own backend could openById across to
+   that workbook, but its debug.js records that cross-workbook open as
+   measurably slow, and the aggregation - the network aliases, and fill rate as
+   responses over attempts rather than a mean of per-row rates - would then
+   exist in two places and drift apart the first time either changed. Or the
+   tab could be synced into UA's workbook, which buys a second copy of the
+   data and a staleness problem to go with it.
+
+   It is fetched WITHOUT BLOCKING the rest of the slide. The pies above render
+   from data already in hand; these two cards fill in when the second request
+   returns. A slow, missing or unauthorised endpoint therefore costs two cards
+   and explains itself inside them, rather than holding up the page.
+   =========================================================================== */
+
+const AD_NET = {
+  url: new URLSearchParams(location.search).get('gameApi') || '',
+  key: new URLSearchParams(location.search).get('gameKey') || '',
+  /* The same sessionStorage entry API.token reads. One sign-in covers both
+     backends, because both verify the same shared signature rather than each
+     issuing its own. */
+  get token(){ return sessionStorage.getItem('mss3d_token') || ''; }
+};
+
+const adNetEsc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+/* The window this slide is showing, as the ISO pair the backend requires.
+   It refuses a half-given range rather than widening it - a silently widened
+   window returns a plausible table for the wrong dates, and nothing in the
+   numbers would say so - so both are sent, or neither is. */
+function adNetWindow(){
+  const rows = (DATA.networks_overview && DATA.networks_overview.rows)
+            || (DATA.overall_data && DATA.overall_data.rows) || [];
+  const b = activePeriodBounds(rows);
+  if(!b) return null;
+  return { from: localISO(new Date(b.start)), to: localISO(new Date(b.end)) };
+}
+
+async function fetchAdNetworks(plat){
+  if(!AD_NET.url){
+    return { error:'Opened without a gameApi URL, so the ad network data cannot be reached. Open this report from the hub.' };
+  }
+  if(!AD_NET.token) return { error:'Not signed in - open the hub and sign in.' };
+
+  const win = adNetWindow();
+  const params = [
+    'action=adNetworks',
+    'gameId=' + encodeURIComponent(plat === 'ios' ? 'mss_ios' : 'mss_android'),
+    'token='  + encodeURIComponent(AD_NET.token),
+    AD_NET.key ? 'key=' + encodeURIComponent(AD_NET.key) : '',
+    win ? 'from=' + encodeURIComponent(win.from) : '',
+    win ? 'to='   + encodeURIComponent(win.to)   : '',
+    '_cb=' + Date.now()
+  ].filter(Boolean).join('&');
+
+  try{
+    const res = await fetch(AD_NET.url + '?' + params, { redirect:'follow', cache:'no-store' });
+    if(!res.ok) return { error:'HTTP ' + res.status + ' from the game backend' };
+    const data = await res.json();
+    /* That backend reports its refusals in the body with a 200, so the status
+       alone proves nothing: an access problem and a quiet window look
+       identical from out here until the body is read. */
+    if(data && data.error) return { error:data.error };
+    return data || { error:'The game backend returned an empty response' };
+  }catch(e){
+    return { error:String((e && e.message) || e) };
+  }
+}
+
+/* An error is written into BOTH cards. Putting it only in the table would
+   leave an empty circle above it, and an empty pie reads as "no ad revenue" -
+   a very different statement from "this did not load". */
+function adNetFail(plat, text){
+  destroy(plat + 'AdNetPie');
+  const box = $(plat + 'AdNetBox');
+  if(box) box.innerHTML = '<div class="empty">' + adNetEsc(text) + '</div>';
+  const tbl = $(plat + 'AdNetTable');
+  if(tbl) tbl.innerHTML = '<div class="empty">' + adNetEsc(text) + '</div>';
+}
+
+/* adNetFail may have replaced the canvas with a message, so it is put back
+   before drawing rather than assumed to still be there. */
+function adNetCanvas(plat){
+  const box = $(plat + 'AdNetBox');
+  if(!box) return false;
+  if(!$(plat + 'AdNetPie')) box.innerHTML = '<canvas id="' + plat + 'AdNetPie"></canvas>';
+  return true;
+}
+
+async function renderAdNetworks(plat){
+  const data = await fetchAdNetworks(plat);
+  if(data.error){ adNetFail(plat, data.error); return; }
+
+  const nets = data.networks || [];
+  if(!nets.length){
+    /* The backend explains an empty result - which tab, which date, which
+       platform - so the card can say why instead of just reading zero. */
+    adNetFail(plat, data.networksNote || 'No ad network rows in this range');
+    return;
+  }
+
+  if(adNetCanvas(plat)){
+    const entries = visibleShareEntries(nets.map(n => [n.network, num(n.revenue)]));
+    pie(plat + 'AdNetPie', entries.map(x => x[0]), entries.map(x => x[1]),
+        'Ad Revenue Share', SIDE_PIE);
+  }
+
+  /* fill_rate is handed over as a FRACTION. formatCell multiplies anything
+     whose column name matches /rate/ by 100, so passing the backend's 94.2
+     straight through would print 9420.0% - a wrong number that looks like a
+     formatting quirk rather than a bug. */
+  table(plat + 'AdNetTable', nets.map(n => ({
+    network:     n.network,
+    revenue:     num(n.revenue),
+    impressions: num(n.impressions),
+    ecpm:        n.ecpm     == null ? null : num(n.ecpm),
+    fill_rate:   n.fillRate == null ? null : num(n.fillRate) / 100
+  })), ['network','revenue','impressions','ecpm','fill_rate']);
+}
+
 function installPlatformNetworkSections(){const androidIap=$('androidIap');if(androidIap)androidIap.closest('.kpi')?.remove();['android','ios'].forEach(p=>{const body=document.querySelector(`#${p} .sb`);if(!body||$(`${p}NetworkTable`))return;const title=p==='android'?'Android':'iOS';const section=document.createElement('section');section.className='platform-network mt';section.innerHTML=`<article class="card"><div class="card-head"><h2>${title} Network Overview · 35% Deduction</h2><select id="${p}OverviewChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}NetworkTable" class="tablewrap"></div></article><div class="two mt"><article class="card"><h2>UA Network Share · IAA vs IAP</h2><div id="${p}NetworkShareTable" class="tablewrap share-table"></div></article><article class="card"><h2 id="${p}CurrentWeekTitle">${title} · Revenue Mix</h2><div class="piebox"><canvas id="${p}CurrentWeekPie"></canvas></div></article></div><article class="card mt"><div class="card-head"><h2>DxD Spend & D0 ROAS</h2><select id="${p}DxdChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div class="chartbox dxd-chart"><canvas id="${p}RoasDaily"></canvas></div></article><article class="card mt"><div class="card-head"><h2>Weekly Campaign Performance</h2><select id="${p}CampaignChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}CampaignTable" class="tablewrap"></div></article><article class="card mt"><div class="card-head"><h2 id="${p}CohortTitle">ROAS Cohorts · Latest 6 Available Weeks</h2><select id="${p}CohortChannel" class="chan-filter" title="Filter by channel"><option value="all">All channels</option></select></div><div id="${p}CohortTable" class="tablewrap cohort-table"></div></article>`;body.appendChild(section);$(`${p}OverviewChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].overview=e.target.value;refreshPlatform(p)});$(`${p}DxdChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)});$(`${p}CampaignChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)});$(`${p}CohortChannel`).addEventListener('change',e=>{PLATFORM_FILTER[p].dxd=e.target.value;refreshPlatform(p)})})}
 const PLATFORM_FILTER={android:{overview:'all',dxd:'all',campaignSort:'desc'},ios:{overview:'all',dxd:'all',campaignSort:'desc'}};
 function installCampaignSortControls(){
