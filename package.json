@@ -15,7 +15,8 @@
     "test:fit": "node tools/test-fit.mjs",
     "test:tables": "node tools/test-tables.mjs",
     "test:ranges": "node tools/test-ranges.mjs",
-    "test": "node tools/test-formatters.mjs && node tools/test-markup.mjs && node tools/test-fit.mjs && node tools/test-tables.mjs && node tools/test-ranges.mjs"
+    "test:adnet": "node tools/test-ua-adnetwork.mjs",
+    "test": "node tools/test-formatters.mjs && node tools/test-markup.mjs && node tools/test-fit.mjs && node tools/test-tables.mjs && node tools/test-ranges.mjs && node tools/test-ua-adnetwork.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",
