@@ -51,17 +51,49 @@ function lift(decl) {
 
 let text = null;
 const el = { set textContent(v) { text = v; }, get textContent() { return text; } };
-const api = new Function('EL', `
-  const $ = (id) => (id === 'installsSrcNote' ? EL : null);
-  ${lift('function installsNote(d, cur)')}
-  return { installsNote };
-`)(el);
+
+/* The DOM is stubbed; the file's own helpers are NOT.
+ *
+ * The first version of this test declared `$` in the sandbox and passed while
+ * the shipped code threw a ReferenceError on every render — this file has no
+ * `$`, it has `g`. The test had supplied the very thing that was broken, so
+ * it went green while the whole Growth tab came up blank in the browser.
+ *
+ * The rule that follows: fake only what is genuinely absent — `document` —
+ * and lift everything the file defines for itself out of the file, including
+ * the helpers the function under test calls. A sandbox global that papers
+ * over a missing declaration is not a test, it is a second implementation.
+ *
+ * The match below is strict on purpose. If `g` is renamed or redefined this
+ * throws, rather than quietly reverting to the state that shipped the bug. */
+const gDecl = src.match(/^const g = id => document\.getElementById\(id\);$/m);
+if (!gDecl) throw new Error('the DOM helper `g` is no longer declared as expected');
 
 let bad = 0, n = 0;
 const ok = (label, cond, detail) => {
   n++;
   if (!cond) { bad++; console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ''}`); }
 };
+
+console.log('\n  daily installs — the card subtitle');
+console.log('  ' + '-'.repeat(60));
+
+/* ---- it calls a helper this file actually has -------------------------- */
+
+/* Checked on the SOURCE, before the sandbox is built, so an undefined helper
+   is reported by name instead of crashing this file with the same
+   ReferenceError it is meant to catch. */
+const noteSrc = lift('function installsNote(d, cur)');
+ok('installsNote does not call `$`, which this file does not define',
+  !/\$\(/.test(noteSrc), (noteSrc.match(/.*\$\(.*/) || [])[0]);
+ok('it uses `g`, the helper this file does define', /\bg\(/.test(noteSrc));
+
+const api = new Function('EL', `
+  const document = { getElementById: (id) => (id === 'installsSrcNote' ? EL : null) };
+  ${gDecl[0]}
+  ${noteSrc}
+  return { installsNote };
+`)(el);
 
 const run = (platform, rows) => {
   text = null;
@@ -71,9 +103,6 @@ const run = (platform, rows) => {
 
 const consoleRow  = (hasIos) => ({ installsSource: 'play-console', consoleHasIos: hasIos });
 const byteBrewRow = () => ({ installsSource: 'bytebrew', consoleHasIos: false });
-
-console.log('\n  daily installs — the card subtitle');
-console.log('  ' + '-'.repeat(60));
 
 /* ---- the markup no longer carries the sentence ------------------------ */
 

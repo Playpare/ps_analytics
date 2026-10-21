@@ -1969,7 +1969,10 @@ function starStr(v){
  * "Android + iOS" over an Android-only number is the fault this replaces.
  */
 function installsNote(d, cur){
-  const el = $('installsSrcNote'); if(!el) return;
+  /* g, not $ - this file has no $. Calling one threw a ReferenceError that
+     stopped renderGrowth before it drew anything, and the whole Growth tab
+     came up empty. */
+  const el = g('installsSrcNote'); if(!el) return;
 
   const row    = cur.find(x => x && x.installsSource) || {};
   const source = row.installsSource || (cur.length ? 'play-console' : '');
