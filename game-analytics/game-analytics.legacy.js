@@ -1740,6 +1740,85 @@ function renderAll(){
 // ═════════════════════════════════════════
 // OVERVIEW
 // ═════════════════════════════════════════
+/**
+ * What the Installs card is counting, written from the payload.
+ *
+ * The figure is New Users either way - Play Console's own count on Android,
+ * App Store first-time downloads on iOS - so the subtitle names the store
+ * rather than repeating the metric.
+ */
+function ovInstallsSub(d, cur){
+  const row    = cur.find(x => x && x.installsSource) || {};
+  const source = row.installsSource || '';
+  const hasIos = !!row.consoleHasIos;
+  const plat   = (d && d.platform) || 'all';
+
+  if(plat === 'ios'){
+    return source === 'play-console' ? 'New Users \u00b7 App Store'
+                                     : 'Executive KPI installs \u00b7 iOS';
+  }
+  if(plat === 'android') return 'New Users \u00b7 Play Console';
+  return hasIos ? 'New Users \u00b7 Play Console + App Store'
+                : 'New Users \u00b7 Play Console (Android only)';
+}
+
+
+/**
+ * Where the Active Users figure comes from.
+ *
+ * GA4, carried on the same tab as payers and sales and split by platform
+ * there - which is why ARPPU already reads from it. The card shows that
+ * figure and the whole row divides by it, so the three numbers reconcile.
+ *
+ * The named fallbacks stay because the payload still has them for a day that
+ * tab has not reached. A card that silently swapped feeds is the thing this
+ * names its source to prevent.
+ */
+function ovDauSub(d){
+  const src = (d && d.dauSource) || '';
+  if(src === 'adperf')     return 'active users \u00b7 AdPerformance';
+  if(src === 'useractraw') return 'active users \u00b7 User Activity Raw';
+  return 'active users \u00b7 GA4';
+}
+
+
+/**
+ * A rate over a window: the numerator summed, the denominator summed, then
+ * divided ONCE.
+ *
+ * NOT THE MEAN OF THE DAILY RATES
+ *
+ * Those answer different questions, and agree only when every day is the same
+ * size. Payer conversion was the mean, so a quiet Sunday with 3 payers out of
+ * 200 pulled the headline as hard as a Saturday with 300 out of 200,000: the
+ * mean says 0.83%, the period actually ran at 0.15%. Nobody reading "payer
+ * conversion for the period" means the first one.
+ *
+ * DAYS ARE TAKEN IN PAIRS
+ *
+ * A day whose denominator is missing contributes NEITHER half. Summing the
+ * two columns independently would count that day's revenue against a
+ * population that was never measured, and ARPDAU would read high by exactly
+ * as much as the feed was behind. A number that rises when a tab stops is
+ * worse than no number at all.
+ *
+ * Returns null when nothing is left to divide by. A rate with nothing
+ * underneath it is unknown; 0% is a measurement, and the two must not look
+ * the same.
+ */
+function ovRate(rows, numOf, denOf){
+  let n = 0, d = 0, used = 0;
+  rows.forEach(r => {
+    const den = denOf(r);
+    if(den == null || den === '' || !(+den > 0)) return;
+    n += +numOf(r) || 0;
+    d += +den;
+    used++;
+  });
+  return used && d > 0 ? n / d : null;
+}
+
+
 function renderOverview(){
   const d = curData(); if(!d.daily) return;
   const cur  = getWindow(d.daily);
@@ -1749,11 +1828,27 @@ function renderOverview(){
   const cc   = chartColors();
   const curDates = cur.map(x=>x.date);
 
-  const totalInstalls = sum(cur.map(x=>+x.installs||0));
-  const prevInstalls  = sum(prev.map(x=>+x.installs||0));
+  /* Counted over the days that REPORTED, so a tab that has not reached this
+     range reads as unknown rather than as zero installs.
+
+     The backend goes to some trouble to send null for a date the Console
+     Installs tab has no row for - its own comment calls a zero install bar
+     "the most confidently wrong thing this dashboard can draw". `+x||0` threw
+     that away and turned every unreported day into a real zero, which is how
+     Android installs came to show 0 instead of saying nothing was reported. */
+  const installRows   = cur.filter(x => x.installs != null);
+  const prevInstRows  = prev.filter(x => x.installs != null);
+  const totalInstalls = installRows.length ? sum(installRows.map(x => +x.installs)) : null;
+  const prevInstalls  = prevInstRows.length ? sum(prevInstRows.map(x => +x.installs)) : null;
 
   const dauAvg        = avg(cur.map(x=>+x.dau||0));
   const prevDau       = avg(prev.map(x=>+x.dau||0));
+  /* Averaged over the days that actually reported, not over the window. A
+     day the tab has not reached is not a day of zero users, and dividing by
+     the window length would quietly drag the figure down as the feed falls
+     behind. */
+  const activeAvg     = avgNN(cur.map(x=>x.activeUsers));
+  const activePrevAvg = avgNN(prev.map(x=>x.activeUsers));
   // D1 comes from Executive_KPIs (cohort-weighted, platform-aware) so the value
   // has the same meaning whichever platform is selected.
   const retSum        = d.retSummary || {};
@@ -1768,9 +1863,13 @@ function renderOverview(){
   const ftueRef       = (d.ftue && d.ftue.referenceStep) || {};
   const ftueComplete  = (ftueRef.engagement != null) ? ftueRef.engagement : null;
 
+  /* Both subtitles name their source, and both are written from the payload
+     rather than fixed here. A label that describes data and is typed by hand
+     is correct only until the data moves - which is exactly how the installs
+     card came to read "Android" under an iOS filter. */
   const kpis = [
-    { cls:'cy', lbl:'Installs',      val:fmtKn(totalInstalls),  data:cur.map(x=>x.installs==null?null:+x.installs), dates:curDates, cur:totalInstalls, prev:prevInstalls, sub:'Play Console installs · Android', col:'--cyan',    fmt:fmtKn },
-    { cls:'mg', lbl:'DAU',           val:fmtKn(dauAvg),         data:cur.map(x=>+x.dau||0),      dates:curDates, cur:dauAvg,        prev:prevDau,      sub:'period avg',   col:'--magenta', fmt:fmtKn },
+    { cls:'cy', lbl:'Installs',      val:totalInstalls!=null?fmtKn(totalInstalls):'—',  data:cur.map(x=>x.installs==null?null:+x.installs), dates:curDates, cur:totalInstalls, prev:prevInstalls, sub:totalInstalls!=null?ovInstallsSub(d, cur):'no install rows in range', col:'--cyan',    fmt:fmtKn },
+    { cls:'mg', lbl:'Active Users',  val:fmtKn(activeAvg),      data:cur.map(x=>x.activeUsers==null?null:+x.activeUsers), dates:curDates, cur:activeAvg, prev:activePrevAvg, sub:ovDauSub(d), col:'--magenta', fmt:fmtKn },
     { cls:'vl', lbl:'D1 Retention',  val:d1?fmtPct(d1):'—',     data:cohortsCur.map(x=>+x.d1||0), dates:cohortsCur.map(x=>x.date), cur:d1, prev:prevD1, sub:'cohort-weighted',   col:'--violet',  fmt:fmtPct },
     { cls:'lm', lbl:'D0 Playtime',   val:fmtSec(d0Play),        data:cur.map(x=>+x.d0Playtime||0), dates:curDates, cur:d0Play,     prev:prevD0Play,   sub:'avg new user', col:'--lime',    fmt:fmtSec },
     { cls:'am', lbl:'FTUE Complete', val:ftueComplete?fmtPct(ftueComplete):'—', data:[], dates:[], cur:ftueComplete, prev:null,     sub:(ftueRef.name ? 'reached ' + ftueRef.name : 'final step'), col:'--amber', fmt:fmtPct },
@@ -1795,13 +1894,45 @@ function renderOverview(){
   // ── Row 2: money + engagement depth ──
   const revTot   = sum(cur.map(x=>+x.revenue||0));
   const revPrev  = sum(prev.map(x=>+x.revenue||0));
-  const arpdau   = dauAvg>0 ? revTot/(dauAvg*(cur.length||1)) : 0;
-  const arpdauP  = prevDau>0 ? revPrev/(prevDau*(prev.length||1)) : 0;
-  const payerPct = avg(cur.map(x=>+x.payerRate||0));
-  const payerPrv = avg(prev.map(x=>+x.payerRate||0));
+  /* ONE denominator for all three cards: activeUsers, which is GA4's active
+     user count, carried on the same tab as payers and sales and split by
+     platform there.
+
+     The same population throughout is what makes the row checkable - Active
+     Users x ARPDAU comes back to Revenue, and payers over that same figure is
+     a conversion somebody can verify by hand. Using the Executive KPI DAU for
+     one and the GA4 figure for another would give three cards that each look
+     reasonable and cannot be reconciled with each other. */
+  const activeOf = x => x.activeUsers;
+
+  /* Revenue over active users, summed then divided - not the mean of each
+     day's ARPDAU. Ads and IAP both, because s.revenue is their sum. */
+  const arpdau   = ovRate(cur,  x => x.revenue, activeOf);
+  const arpdauP  = ovRate(prev, x => x.revenue, activeOf);
+
+  /* Payers over the same active users: both come from that tab, so numerator
+     and denominator describe one population rather than two feeds that
+     disagree about who was there. */
+  const payerPct = ovRate(cur,  x => x.payers, activeOf);
+  const payerPrv = ovRate(prev, x => x.payers, activeOf);
+  const payerPctV = payerPct == null ? null : payerPct * 100;
+  const payerPrvV = payerPrv == null ? null : payerPrv * 100;
+
+  /* Sessions per user stays an average across days. It is already a per-user
+     figure on each row, so summing it would be meaningless - there is no
+     total of "sessions per user" to take. */
   const spd      = avgNN(cur.map(x=>x.sessionsPerUser));
   const spdPrev  = avgNN(prev.map(x=>x.sessionsPerUser));
-  const adShare  = revTot>0 ? sum(cur.map(x=>+x.adRevenue||0))/revTot*100 : 0;
+
+  const adTot    = sum(cur.map(x=>+x.adRevenue||0));
+  const iapTot   = sum(cur.map(x=>+x.iapRevenue||0));
+  /* Shares of the revenue that is actually split, not of revTot. If the two
+     columns do not add up to revTot the difference is something neither of
+     them covers, and dividing by revTot would quietly shrink both shares
+     rather than showing that. */
+  const splitTot = adTot + iapTot;
+  const adShare  = splitTot>0 ? adTot/splitTot*100  : null;
+  const iapShare = splitTot>0 ? iapTot/splitTot*100 : null;
 
   /* UA spend, from the same source Growth uses. Two pages showing spend from
      two tabs is the fault just removed from Growth, and adding a second one
@@ -1818,10 +1949,18 @@ function renderOverview(){
 
   const kpis2 = [
     { cls:'lm', lbl:'Revenue',         val:fmtMoney(revTot),        data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:'all revenue, ads + IAP',      col:'--lime' },
-    { cls:'cy', lbl:'ARPDAU',          val:fmtMoney(arpdau, 4),    data:cur.map(x=>+x.arpdau||0),  cur:arpdau, prev:arpdauP, sub:'per active user',col:'--cyan' },
-    { cls:'mg', lbl:'Payer Conv.',     val:payerPct?payerPct.toFixed(3)+'%':'—', data:cur.map(x=>+x.payerRate||0), cur:payerPct, prev:payerPrv, sub:'of DAU', col:'--magenta' },
-    { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'—',   data:cur.map(x=>+x.sessionsPerUser||0), cur:spd, prev:spdPrev, sub:'per active user', col:'--amber' },
-    { cls:'vl', lbl:'Ad Share',        val:adShare?adShare.toFixed(1)+'%':'—', data:[], cur:adShare, prev:null, sub:'rest is IAP', col:'--violet' },
+    { cls:'cy', lbl:'ARPDAU',          val:arpdau!=null?fmtMoney(arpdau, 4):'—', data:cur.map(x=>+x.arpdau||0),  cur:arpdau, prev:arpdauP, sub:'ads + IAP \u00f7 active users', col:'--cyan' },
+    { cls:'mg', lbl:'Payer Conv.',     val:payerPctV!=null?payerPctV.toFixed(3)+'%':'\u2014', data:cur.map(x=>+x.payerRate||0), cur:payerPctV, prev:payerPrvV, sub:'payers \u00f7 active users', col:'--magenta' },
+    { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'\u2014',   data:cur.map(x=>+x.sessionsPerUser||0), cur:spd, prev:spdPrev, sub:'period avg', col:'--amber' },
+    /* One card, both halves. Two cards for two numbers that always add to 100
+       spends the space twice and still makes the reader do the subtraction. */
+    { cls:'vl', lbl:'Ad / IAP Share',
+      val: splitTot>0 ? adShare.toFixed(0)+'% / '+iapShare.toFixed(0)+'%' : '\u2014',
+      data:[], cur:null, prev:null,
+      sub: splitTot>0
+        ? fmtMoney(adTot)+' ads \u00b7 '+fmtMoney(iapTot)+' IAP'
+        : 'no revenue rows in range',
+      col:'--violet' },
     { cls:'co', lbl:'UA Spend',        val:fmtMoney(spendCur),
       data: spendCur!=null ? ovChDaily.map(x=>+x.spend||0) : [],
       dates: spendCur!=null ? ovChDaily.map(x=>x.date) : [],
