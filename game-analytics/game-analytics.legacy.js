@@ -1956,6 +1956,43 @@ function starStr(v){
   return '★'.repeat(Math.max(0,Math.min(5,full))) + '☆'.repeat(Math.max(0,5-full));
 }
 
+/**
+ * Says which source the installs line is drawn from, and for which platform.
+ *
+ * Two facts decide it, both sent by the backend:
+ *
+ *   installsSource   'play-console' or 'bytebrew'
+ *   consoleHasIos    whether the Console Installs tab carries an iOS column
+ *
+ * The second is needed because on Combined the source is play-console either
+ * way: without the iOS column that figure is Android alone, and saying
+ * "Android + iOS" over an Android-only number is the fault this replaces.
+ */
+function installsNote(d, cur){
+  const el = $('installsSrcNote'); if(!el) return;
+
+  const row    = cur.find(x => x && x.installsSource) || {};
+  const source = row.installsSource || (cur.length ? 'play-console' : '');
+  const hasIos = !!row.consoleHasIos;
+  const plat   = (d && d.platform) || 'all';
+
+  if(!source){ el.textContent = '—'; return; }
+
+  // What the line actually covers, as opposed to what was selected.
+  const covers = plat === 'ios'     ? 'iOS'
+               : plat === 'android' ? 'Android'
+               : hasIos             ? 'Android + iOS'
+                                    : 'Android only — the Console Installs tab has no iOS column yet';
+
+  const gap = ' A gap means the tab has no row for that day, not zero installs.';
+
+  el.textContent = source === 'play-console'
+    ? 'Play Console installs · ' + covers + '.' + gap
+    : 'Executive KPI installs · ' + covers
+      + '. Play Console has no iOS column yet, so iOS stays on its old source.'
+      + gap;
+}
+
 function renderGrowth(){
   // Drawn first: the matrix has its own date spine, so it still renders on a
   // game that has no daily rows yet.
@@ -1972,6 +2009,15 @@ function renderGrowth(){
 
   const totalInstalls = sum(cur.map(x=>+x.installs||0));
   const prevInstalls  = sum(prev.map(x=>+x.installs||0));
+
+  // The daily-installs card's subtitle, written from the payload rather than
+  // from the markup.
+  //
+  // It used to be a fixed sentence ending "· Android", which stayed on screen
+  // under the iOS filter and told anyone reading it the wrong thing. A label
+  // that describes data has to come from that data, or it is only correct
+  // until the data moves.
+  installsNote(d, cur);
 
   // Per-day Channel Performance rollup: spend, revenue, and the ad/IAP split.
   // Restricted to the visible window so it lines up with `cur`.
