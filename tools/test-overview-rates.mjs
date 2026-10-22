@@ -194,5 +194,56 @@ ok('sessions per user is still an average, as it should be',
 ok('ad and IAP share are one card',
   /Ad \/ IAP Share/.test(ov));
 
+/* ---- money is net, except ARPPU ---------------------------------------- */
+
+/* THE RULE THIS ENCODES
+   Everywhere revenue is shown it is net of the store cut - 35% on Android, 0
+   on iOS because iOS arrives as proceeds. ARPPU is the single exception: what
+   a payer is worth is what they SPENT, not what survived the cut.
+
+   Checked against the shipped source rather than by running it, because these
+   figures come from a Sheet1 rollup that is not available here. */
+
+ok('the share card reads the Sheet1 rollup, not the gross payload column',
+   /adTot\s*=\s*haveSh[\s\S]{0,80}adTotal/.test(ov)
+   && /iapTot\s*=\s*haveSh[\s\S]{0,80}inappTotal/.test(ov),
+   'it is back on x.adRevenue / x.iapRevenue, which are gross');
+
+ok('and no longer sums the gross IAP column',
+   !/iapTot\s*=\s*sum\(cur\.map\(x=>\+x\.iapRevenue/.test(ov));
+
+ok('Revenue uses the same net totals when Sheet1 has the window',
+   /revTot\s*=\s*haveSh\s*\?\s*adTot \+ iapTot/.test(ov));
+
+/* A silent swap between net and gross would show as a step in the trend that
+   nobody could explain, so the card has to say which it is showing. */
+ok('and says which it is showing when it falls back to gross',
+   /GROSS/.test(ov) && /revSub/.test(ov));
+
+ok('ARPDAU divides that same total, so the row reconciles',
+   /arpdau\s*=\s*activeTot > 0 \? revTot \/ activeTot/.test(ov));
+
+ok('ARPPU is the one gross figure, from sales',
+   /arppu\s*=\s*ovRate\(cur,\s*x => x\.iapSales,\s*x => x\.payers\)/.test(ov));
+ok('and its subtitle says gross, so the exception is visible',
+   /gross sales .{0,12} paying users/.test(ov));
+
+/* ---- the two rows are split by what they measure ----------------------- */
+
+const row1 = ov.slice(ov.indexOf('const kpis = ['), ov.indexOf('const kpis2 = ['));
+const row2 = ov.slice(ov.indexOf('const kpis2 = ['));
+
+for (const lbl of ['Installs', 'Active Users', 'D1 Retention', 'D0 Playtime',
+                   'Sessions / User', 'FTUE Complete']) {
+  ok('row 1 carries ' + lbl, row1.includes("lbl:'" + lbl + "'"));
+}
+for (const lbl of ['Revenue', 'ARPDAU', 'ARPPU', 'Payer Conv.',
+                   'Ad / IAP Share', 'UA Spend']) {
+  ok('row 2 carries ' + lbl, row2.includes("lbl:'" + lbl + "'"));
+}
+/* The move that prompted this: Sessions / User is engagement, not money. */
+ok('Sessions / User is NOT in the monetization row',
+   !row2.includes("lbl:'Sessions / User'"));
+
 console.log(`  ${n - bad}/${n} passed${bad ? `  (${bad} FAILED)` : ''}\n`);
 process.exit(bad ? 1 : 0);
