@@ -1899,24 +1899,37 @@ function renderOverview(){
 
   // ── Row 2: monetization ──
 
-  /* MONEY IS NET OF THE STORE CUT, AND COMES FROM ONE PLACE.
+  /* MONEY COMES FROM THE REVENUE TAB, NET OF THE STORE CUT.
 
-     x.iapRevenue is gross purchase value. Shown beside ad revenue it
-     overstates IAP's share by the whole 35% the store keeps - and the bigger
-     IAP grows, the further out the split goes.
+     It used to read a Sheet1 rollup, which has no rows for most windows - so
+     the card spent its time saying "no rows in range" while the Revenue tab,
+     which the payload already carries, had the numbers all along. Reading
+     what is there beats reading what is tidier.
 
-     The Monetization section already solved this, and its comment states the
-     rule: inappTotal is net of the platform cut - 35% on Android, 0 on iOS,
-     because iOS arrives as proceeds already. Reading the same figures here
-     means Overview and Monetization agree, and no second place has to know
-     what the cut is. One number computed twice is one number that will
-     eventually disagree with itself. */
-  const ovSh     = mxDaysForRange(dateFrom, dateTo) || {};
-  const ovShKeys = Object.keys(ovSh).filter(k => k >= dateFrom && k <= dateTo);
-  const haveSh   = ovShKeys.length > 0;
+     IAP ARRIVES GROSS AND IS CUT HERE
 
-  const adTot    = haveSh ? sum(ovShKeys.map(k => +ovSh[k].adTotal    || 0)) : null;
-  const iapTot   = haveSh ? sum(ovShKeys.map(k => +ovSh[k].inappTotal || 0)) : null;
+     The Revenue tab's IAP Revenue is purchase value, not what reaches us.
+     Shown beside ad revenue it overstates IAP's share by the whole 35% the
+     store keeps, and the bigger IAP grows the further out the split goes.
+
+     iOS is NOT cut: it already arrives as proceeds. That is the same rule
+     the Monetization section states in its own comment, applied to a
+     different source - so the two still agree about what a net figure is.
+
+     The payload is fetched per platform, so the rate is known exactly. On a
+     combined view it would not be - the mix would have to be split first -
+     and rather than guess a blend the card says it is showing gross. */
+  const OV_IAP_CUT = { android: 0.35, ios: 0 };
+  const ovPlat   = (d && d.platform) || '';
+  const ovCut    = OV_IAP_CUT[ovPlat];
+  const ovNettable = ovCut !== undefined;
+
+  const adGross  = sum(cur.map(x => +x.adRevenue  || 0));
+  const iapGross = sum(cur.map(x => +x.iapRevenue || 0));
+  const haveSh   = (adGross + iapGross) > 0;
+
+  const adTot    = haveSh ? adGross : null;
+  const iapTot   = haveSh ? (ovNettable ? iapGross * (1 - ovCut) : iapGross) : null;
 
   /* The two shares are read against their own total, so they sum to 100%
      rather than against a revenue figure from a different source. */
@@ -1929,8 +1942,9 @@ function renderOverview(){
      measurements is how a chart comes to show a step nobody can explain. */
   const revTot   = haveSh ? adTot + iapTot : sum(cur.map(x => +x.revenue || 0));
   const revPrev  = sum(prev.map(x => +x.revenue || 0));
-  const revSub   = haveSh ? 'ads + IAP, net of store cut'
-                          : 'ads + IAP, GROSS - Sheet1 has no rows in range';
+  const revSub   = !haveSh      ? 'ads + IAP \u00b7 no revenue rows in range'
+                 : ovNettable   ? 'ads + IAP, IAP net of store cut'
+                                : 'ads + IAP, IAP GROSS \u00b7 cut varies by platform';
 
   /* ONE denominator for the per-user figures: activeUsers, which is GA4's
      count, carried on the same tab as payers and sales and split by platform
@@ -1996,8 +2010,9 @@ function renderOverview(){
       /* Both halves net, so the split is of money we keep rather than money
          that passed through. */
       sub: splitTot>0
-        ? fmtMoney(adTot)+' ads \u00b7 '+fmtMoney(iapTot)+' IAP, net'
-        : 'Sheet1 has no rows in range',
+        ? fmtMoney(adTot)+' ads \u00b7 '+fmtMoney(iapTot)+' IAP'
+          + (ovNettable ? (ovCut ? ', net of '+(ovCut*100)+'%' : ', proceeds') : ', GROSS')
+        : 'no revenue rows in range',
       col:'--amber' },
     { cls:'co', lbl:'UA Spend',        val:fmtMoney(spendCur),
       data: spendCur!=null ? ovChDaily.map(x=>+x.spend||0) : [],

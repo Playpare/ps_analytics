@@ -204,15 +204,31 @@ ok('ad and IAP share are one card',
    Checked against the shipped source rather than by running it, because these
    figures come from a Sheet1 rollup that is not available here. */
 
-ok('the share card reads the Sheet1 rollup, not the gross payload column',
-   /adTot\s*=\s*haveSh[\s\S]{0,80}adTotal/.test(ov)
-   && /iapTot\s*=\s*haveSh[\s\S]{0,80}inappTotal/.test(ov),
-   'it is back on x.adRevenue / x.iapRevenue, which are gross');
+/* The source moved to the Revenue tab, which the payload already carries -
+   the Sheet1 rollup had no rows for most windows, so the card spent its time
+   saying so while the numbers sat unread. */
+ok('the share reads the Revenue tab columns',
+   /adGross\s*=\s*sum\(cur\.map\(x => \+x\.adRevenue/.test(ov)
+   && /iapGross\s*=\s*sum\(cur\.map\(x => \+x\.iapRevenue/.test(ov));
 
-ok('and no longer sums the gross IAP column',
-   !/iapTot\s*=\s*sum\(cur\.map\(x=>\+x\.iapRevenue/.test(ov));
+ok('and no longer depends on the Sheet1 rollup',
+   !/inappTotal/.test(ov) && !/mxDaysForRange/.test(ov));
 
-ok('Revenue uses the same net totals when Sheet1 has the window',
+/* The cut is the whole point: IAP arrives gross, so the share would be too
+   big by whatever the store keeps. */
+ok('IAP is cut, and by a rate that depends on the platform',
+   /OV_IAP_CUT\s*=\s*\{\s*android:\s*0\.35,\s*ios:\s*0\s*\}/.test(ov),
+   'the rate is not stated per platform');
+ok('iOS is not cut, because it arrives as proceeds',
+   /ios:\s*0\s*\}/.test(ov));
+ok('the cut is applied to IAP and not to ads',
+   /iapGross \* \(1 - ovCut\)/.test(ov) && !/adGross \* \(1 -/.test(ov));
+
+/* A platform with no known rate must not be given a guessed blend. */
+ok('an unknown platform shows gross and says so',
+   /ovNettable\s*=\s*ovCut !== undefined/.test(ov) && /GROSS/.test(ov));
+
+ok('Revenue is the same two totals added, so the row reconciles',
    /revTot\s*=\s*haveSh\s*\?\s*adTot \+ iapTot/.test(ov));
 
 /* A silent swap between net and gross would show as a step in the trend that
