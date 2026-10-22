@@ -1857,6 +1857,11 @@ function renderOverview(){
   const prevD1        = avg(prevR.map(x=>x.d1));
   const d0Play        = avgNN(cur.map(x=>x.d0Playtime));
   const prevD0Play    = avgNN(prev.map(x=>x.d0Playtime));
+  /* Sessions per user belongs with the core metrics, not the money. It is
+     already a per-user figure on each row, so it stays an AVERAGE across days
+     - there is no total of "sessions per user" to sum. */
+  const spd           = avgNN(cur.map(x=>x.sessionsPerUser));
+  const spdPrev       = avgNN(prev.map(x=>x.sessionsPerUser));
   const ftueSteps     = d.ftueSteps || [];
   // Measured at the deepest step every platform reaches, so Android, iOS and
   // Combined are comparable. The old "last step" figure was not.
@@ -1872,7 +1877,8 @@ function renderOverview(){
     { cls:'mg', lbl:'Active Users',  val:fmtKn(activeAvg),      data:cur.map(x=>x.activeUsers==null?null:+x.activeUsers), dates:curDates, cur:activeAvg, prev:activePrevAvg, sub:ovDauSub(d), col:'--magenta', fmt:fmtKn },
     { cls:'vl', lbl:'D1 Retention',  val:d1?fmtPct(d1):'—',     data:cohortsCur.map(x=>+x.d1||0), dates:cohortsCur.map(x=>x.date), cur:d1, prev:prevD1, sub:'cohort-weighted',   col:'--violet',  fmt:fmtPct },
     { cls:'lm', lbl:'D0 Playtime',   val:fmtSec(d0Play),        data:cur.map(x=>+x.d0Playtime||0), dates:curDates, cur:d0Play,     prev:prevD0Play,   sub:'avg new user', col:'--lime',    fmt:fmtSec },
-    { cls:'am', lbl:'FTUE Complete', val:ftueComplete?fmtPct(ftueComplete):'—', data:[], dates:[], cur:ftueComplete, prev:null,     sub:(ftueRef.name ? 'reached ' + ftueRef.name : 'final step'), col:'--amber', fmt:fmtPct },
+    { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'\u2014', data:cur.map(x=>+x.sessionsPerUser||0), dates:curDates, cur:spd, prev:spdPrev, sub:'period avg', col:'--amber', fmt:v=>(+v).toFixed(2) },
+    { cls:'co', lbl:'FTUE Complete', val:ftueComplete?fmtPct(ftueComplete):'\u2014', data:[], dates:[], cur:ftueComplete, prev:null,     sub:(ftueRef.name ? 'reached ' + ftueRef.name : 'final step'), col:'--coral', fmt:fmtPct },
   ];
 
   g('heroKpis').innerHTML = kpis.map((k,i)=>`
@@ -1891,48 +1897,76 @@ function renderOverview(){
     drawSpark('sp'+i, k.data, color, k.fmt, k.dates);
   });
 
-  // ── Row 2: money + engagement depth ──
-  const revTot   = sum(cur.map(x=>+x.revenue||0));
-  const revPrev  = sum(prev.map(x=>+x.revenue||0));
-  /* ONE denominator for all three cards: activeUsers, which is GA4's active
-     user count, carried on the same tab as payers and sales and split by
-     platform there.
+  // ── Row 2: monetization ──
+
+  /* MONEY IS NET OF THE STORE CUT, AND COMES FROM ONE PLACE.
+
+     x.iapRevenue is gross purchase value. Shown beside ad revenue it
+     overstates IAP's share by the whole 35% the store keeps - and the bigger
+     IAP grows, the further out the split goes.
+
+     The Monetization section already solved this, and its comment states the
+     rule: inappTotal is net of the platform cut - 35% on Android, 0 on iOS,
+     because iOS arrives as proceeds already. Reading the same figures here
+     means Overview and Monetization agree, and no second place has to know
+     what the cut is. One number computed twice is one number that will
+     eventually disagree with itself. */
+  const ovSh     = mxDaysForRange(dateFrom, dateTo) || {};
+  const ovShKeys = Object.keys(ovSh).filter(k => k >= dateFrom && k <= dateTo);
+  const haveSh   = ovShKeys.length > 0;
+
+  const adTot    = haveSh ? sum(ovShKeys.map(k => +ovSh[k].adTotal    || 0)) : null;
+  const iapTot   = haveSh ? sum(ovShKeys.map(k => +ovSh[k].inappTotal || 0)) : null;
+
+  /* The two shares are read against their own total, so they sum to 100%
+     rather than against a revenue figure from a different source. */
+  const splitTot = haveSh ? adTot + iapTot : null;
+  const adShare  = splitTot > 0 ? adTot  / splitTot * 100 : null;
+  const iapShare = splitTot > 0 ? iapTot / splitTot * 100 : null;
+
+  /* Net when Sheet1 has this window, and the gross payload figure when it
+     does not - with the card saying which. Swapping silently between two
+     measurements is how a chart comes to show a step nobody can explain. */
+  const revTot   = haveSh ? adTot + iapTot : sum(cur.map(x => +x.revenue || 0));
+  const revPrev  = sum(prev.map(x => +x.revenue || 0));
+  const revSub   = haveSh ? 'ads + IAP, net of store cut'
+                          : 'ads + IAP, GROSS - Sheet1 has no rows in range';
+
+  /* ONE denominator for the per-user figures: activeUsers, which is GA4's
+     count, carried on the same tab as payers and sales and split by platform
+     there.
 
      The same population throughout is what makes the row checkable - Active
      Users x ARPDAU comes back to Revenue, and payers over that same figure is
-     a conversion somebody can verify by hand. Using the Executive KPI DAU for
-     one and the GA4 figure for another would give three cards that each look
-     reasonable and cannot be reconciled with each other. */
-  const activeOf = x => x.activeUsers;
+     a conversion somebody can verify by hand. */
+  const activeOf  = x => x.activeUsers;
+  const activeTot = sum(cur.map(x => +x.activeUsers || 0));
 
-  /* Revenue over active users, summed then divided - not the mean of each
-     day's ARPDAU. Ads and IAP both, because s.revenue is their sum. */
-  const arpdau   = ovRate(cur,  x => x.revenue, activeOf);
+  /* Built from the same net total the Revenue card shows, so the two
+     reconcile. Not the mean of each day's ARPDAU. */
+  const arpdau   = activeTot > 0 ? revTot / activeTot : null;
   const arpdauP  = ovRate(prev, x => x.revenue, activeOf);
 
   /* Payers over the same active users: both come from that tab, so numerator
-     and denominator describe one population rather than two feeds that
-     disagree about who was there. */
+     and denominator describe one population rather than two feeds that need
+     not agree. */
   const payerPct = ovRate(cur,  x => x.payers, activeOf);
   const payerPrv = ovRate(prev, x => x.payers, activeOf);
   const payerPctV = payerPct == null ? null : payerPct * 100;
   const payerPrvV = payerPrv == null ? null : payerPrv * 100;
 
-  /* Sessions per user stays an average across days. It is already a per-user
-     figure on each row, so summing it would be meaningless - there is no
-     total of "sessions per user" to take. */
-  const spd      = avgNN(cur.map(x=>x.sessionsPerUser));
-  const spdPrev  = avgNN(prev.map(x=>x.sessionsPerUser));
+  /* ARPPU IS THE ONE PLACE THAT USES GROSS SALES.
 
-  const adTot    = sum(cur.map(x=>+x.adRevenue||0));
-  const iapTot   = sum(cur.map(x=>+x.iapRevenue||0));
-  /* Shares of the revenue that is actually split, not of revTot. If the two
-     columns do not add up to revTot the difference is something neither of
-     them covers, and dividing by revTot would quietly shrink both shares
-     rather than showing that. */
-  const splitTot = adTot + iapTot;
-  const adShare  = splitTot>0 ? adTot/splitTot*100  : null;
-  const iapShare = splitTot>0 ? iapTot/splitTot*100 : null;
+     What a payer is worth is what they spent, not what reached us after the
+     store took its share. `sales` is the column that carries that;
+     IAP.revenue is blank on every row, which is why the backend prefers
+     sales too.
+
+     Summed then divided, like the rest of the row. Ad revenue is excluded: a
+     payer is defined by purchases, and crediting non-payers' ad views to the
+     people who bought something is a different figure entirely. */
+  const arppu    = ovRate(cur,  x => x.iapSales, x => x.payers);
+  const arppuP   = ovRate(prev, x => x.iapSales, x => x.payers);
 
   /* UA spend, from the same source Growth uses. Two pages showing spend from
      two tabs is the fault just removed from Growth, and adding a second one
@@ -1948,19 +1982,23 @@ function renderOverview(){
   const spendCur  = spendTot > 0 ? spendTot : null;
 
   const kpis2 = [
-    { cls:'lm', lbl:'Revenue',         val:fmtMoney(revTot),        data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:'all revenue, ads + IAP',      col:'--lime' },
-    { cls:'cy', lbl:'ARPDAU',          val:arpdau!=null?fmtMoney(arpdau, 4):'—', data:cur.map(x=>+x.arpdau||0),  cur:arpdau, prev:arpdauP, sub:'ads + IAP \u00f7 active users', col:'--cyan' },
-    { cls:'mg', lbl:'Payer Conv.',     val:payerPctV!=null?payerPctV.toFixed(3)+'%':'\u2014', data:cur.map(x=>+x.payerRate||0), cur:payerPctV, prev:payerPrvV, sub:'payers \u00f7 active users', col:'--magenta' },
-    { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'\u2014',   data:cur.map(x=>+x.sessionsPerUser||0), cur:spd, prev:spdPrev, sub:'period avg', col:'--amber' },
+    { cls:'lm', lbl:'Revenue',    val:fmtMoney(revTot), data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:revSub, col:'--lime' },
+    { cls:'cy', lbl:'ARPDAU',     val:arpdau!=null?fmtMoney(arpdau, 4):'\u2014', data:cur.map(x=>+x.arpdau||0), cur:arpdau, prev:arpdauP, sub:'revenue \u00f7 active users', col:'--cyan' },
+    /* The one gross figure on the page, and the subtitle says so. What a
+       payer is worth is what they spent, not what survived the store cut. */
+    { cls:'vl', lbl:'ARPPU',      val:arppu!=null?fmtMoney(arppu, 2):'\u2014', data:cur.map(x=>+x.arppu||0), cur:arppu, prev:arppuP, sub:'gross sales \u00f7 paying users', col:'--violet' },
+    { cls:'mg', lbl:'Payer Conv.', val:payerPctV!=null?payerPctV.toFixed(3)+'%':'\u2014', data:cur.map(x=>+x.payerRate||0), cur:payerPctV, prev:payerPrvV, sub:'payers \u00f7 active users', col:'--magenta' },
     /* One card, both halves. Two cards for two numbers that always add to 100
        spends the space twice and still makes the reader do the subtraction. */
-    { cls:'vl', lbl:'Ad / IAP Share',
+    { cls:'am', lbl:'Ad / IAP Share',
       val: splitTot>0 ? adShare.toFixed(0)+'% / '+iapShare.toFixed(0)+'%' : '\u2014',
       data:[], cur:null, prev:null,
+      /* Both halves net, so the split is of money we keep rather than money
+         that passed through. */
       sub: splitTot>0
-        ? fmtMoney(adTot)+' ads \u00b7 '+fmtMoney(iapTot)+' IAP'
-        : 'no revenue rows in range',
-      col:'--violet' },
+        ? fmtMoney(adTot)+' ads \u00b7 '+fmtMoney(iapTot)+' IAP, net'
+        : 'Sheet1 has no rows in range',
+      col:'--amber' },
     { cls:'co', lbl:'UA Spend',        val:fmtMoney(spendCur),
       data: spendCur!=null ? ovChDaily.map(x=>+x.spend||0) : [],
       dates: spendCur!=null ? ovChDaily.map(x=>x.date) : [],
