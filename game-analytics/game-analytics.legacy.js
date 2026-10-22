@@ -2852,6 +2852,26 @@ function renderGrowth(){
     markTable('growthNetworkTbl', nets.length, 'networks');
   }
 
+  /* The same table by AD TYPE, from User Activity Raw.
+  
+     AdPerformance was the preferred source for eCPM in the payload and does
+     not exist in either workbook. User Activity Raw carries the same measures
+     AND splits them by ad type, which AdPerformance's one row a day could
+     not - so the breakdown comes from the tab that has it. */
+  const adTypes = (d.monetization&&d.monetization.adTypes)||[];
+  if(g('growthAdTypeTbl')){
+    g('growthAdTypeTbl').innerHTML = adTypes.length ? adTypes.map(t=>
+      '<div class="tbl-row five">'
+      + '<div class="tname">'+t.adType+'</div>'
+      + '<div class="tnum">$'+fmtKn(t.revenue)+'</div>'
+      + '<div class="tnum">'+fmtKn(t.impressions)+'</div>'
+      + '<div class="tnum">'+(t.ecpm!=null?fmtMoney(t.ecpm, 2):'—')+'</div>'
+      + '<div class="tnum">'+(t.viewerRate!=null?t.viewerRate.toFixed(1)+'%':'—')+'</div>'
+      + '</div>').join('')
+      : noData((d.monetization&&d.monetization.adTypesNote) || 'No ad type rows in range');
+    markTable('growthAdTypeTbl', adTypes.length, 'ad types');
+  }
+
   // Whale concentration (weekly)
   const whales = (d.monetization&&d.monetization.whale)||[];
   if(g('cvGrowthWhale')){
