@@ -2247,12 +2247,15 @@ function renderGrowth(){
   const assistedByDay = {};
   mxDayKeys.forEach(k=>{ assistedByDay[k] = +mxDays[k].instTotal||0; });
   const haveAssisted  = mxDayKeys.length > 0;
-  const assistedTotal = haveAssisted ? sum(mxDayKeys.map(k=>assistedByDay[k])) : null;
-  // Clamped at 0: attribution windows can credit an install to a day outside
-  // this range, so assisted can exceed the Executive KPI total on a single day.
-  // A negative organic count is never a true statement.
-  const organicTotal  = (assistedTotal!=null)
-    ? Math.max(0, totalInstalls - assistedTotal) : null;
+  // organicTotal and assistedTotal were removed with the Organic Installs
+  // card. They fed nothing else, and a windowed total nobody displays is
+  // the kind of leftover that gets picked up later as if it still meant
+  // something. The per-day figure below is still needed: the stacked chart
+  // splits organic from paid with it.
+  //
+  // Clamped at 0: attribution windows can credit an install to a day
+  // outside this range, so assisted can exceed the Executive KPI total on a
+  // single day. A negative organic count is never a true statement.
   const organicByDay  = d0 => {
     const t = (cur.find(x=>x.date===d0)||{}).installs;
     if(t==null || !haveAssisted) return null;
@@ -2365,13 +2368,29 @@ function renderGrowth(){
 
 
   const acqKpis = [
-    { cls:'cy', lbl:'Organic Installs',
-      val: organicTotal!=null ? fmtKn(organicTotal) : '—',
-      data: cur.map(x=>organicByDay(x.date)), dates:curDatesG, col:'--cyan',
-      cur: organicTotal, prev: null,
-      sub: organicTotal!=null
-             ? 'total '+fmtKn(totalInstalls)+' − assisted '+fmtKn(assistedTotal)
-             : 'loading Sheet1…' },
+    /* Total Installs, where Organic Installs used to be.
+
+       Organic is a SUBTRACTION — the Executive KPI total less the assisted
+       installs from Sheet1 — so it carries both sources' gaps and shows
+       neither of them. A day whose install count has not arrived makes it
+       null; a day Sheet1 has not reached makes it equal to the total. The
+       card gave no way to tell either of those from a real fall in organic.
+
+       The stacked chart below still splits organic from paid, which is
+       where that split can actually be read: a missing day there looks
+       missing, because the bar beside it is a different height.
+
+       This is new users — Play Console's New Users on Android, first-time
+       downloads on iOS. Not re-installs and not updates. The subtitle says
+       how many days of the window actually reported, so a short total
+       cannot pass for a low one. */
+    { cls:'cy', lbl:'Total Installs',
+      val: fmtKn(totalInstalls),
+      data: cur.map(x=>(x.installs==null ? null : +x.installs||0)),
+      dates: curDatesG, col:'--cyan',
+      cur: totalInstalls, prev: prevInstalls,
+      sub: 'new users · ' + cur.filter(x=>x.installs!=null).length
+             + ' of ' + cur.length + ' day(s) reported' },
     { cls:'co', lbl:'UA Spend', val:fmtMoney(uaSpendTot),
       // The sparkline follows whichever source the headline used, so the
       // shape under the number is the number's own history.
