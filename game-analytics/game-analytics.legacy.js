@@ -2891,24 +2891,21 @@ function renderGrowth(){
     markTable('growthAdTypeTbl', adTypes.length, 'ad types');
   }
 
-  // Whale concentration (weekly)
-  const whales = (d.monetization&&d.monetization.whale)||[];
-  if(g('cvGrowthWhale')){
-    if(whales.length){
-      makeChart('cvGrowthWhale','bar',{
-        labels: whales.map(w=>w.week.slice(5)+' '+w.platform),
-        datasets:[
-          {type:'bar', label:'Whale revenue',data:whales.map(w=>w.whaleRev),backgroundColor:cc.magenta+'cc',borderColor:cc.magenta,borderWidth:1,borderRadius:3},
-          {type:'bar', label:'Other revenue',data:whales.map(w=>w.totalRev-w.whaleRev),backgroundColor:cc.violet+'66',borderColor:cc.violet,borderWidth:1,borderRadius:3},
-          {type:'line',label:'Whale share %',data:whales.map(w=>w.whaleShare),borderColor:cc.amber,backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.3,yAxisID:'y2'},
-        ]
-      }, {
-        plugins:{legend:{display:true,labels:{color:cc.text,font:{family:CHART_FONT,size:10},boxWidth:10}}},
-        scales:{x:Object.assign({stacked:true},xAx),y:Object.assign({stacked:true},yUsd),
-          y2:{position:'right',grid:{display:false},ticks:{color:cc.amber,font:{family:CHART_FONT,size:9},callback:v=>v+'%'}}}
-      });
-    } else { wrapEmpty('cvGrowthWhale','No whale rows in range (weekly grain)'); }
-  }
+  // Whale concentration was removed with its card.
+  //
+  // It read d.monetization.whale, which comes from a tab called Whales, and
+  // growthProbe found that tab does not exist - not in the dashboard's
+  // workbook and not at the source. So the chart could never fill.
+  //
+  // What it showed instead was "No whale rows in range (weekly grain)",
+  // which reads as a quiet fortnight. Somebody widening the range to find
+  // the missing weeks would have found nothing and had no way to learn why.
+  // A card that cannot ever be right is worse than no card: it takes the
+  // space, and it invites the question every time.
+  //
+  // The payload still carries the section, and readTab on a tab that is not
+  // there costs nothing. If Whales is ever built, this is one card and one
+  // chart to restore - the backend half already works.
 
   // First-time payer conversion
   const ftpRows = getWindow((d.monetization&&d.monetization.ftp)||[]);
@@ -2921,7 +2918,23 @@ function renderGrowth(){
         labels: rows.map(r=>r.date.slice(5)),
         datasets:[{label:'First-payer conv %',data:rows.map(r=>r.installs>0?+(r.payers/r.installs*100).toFixed(3):null),borderColor:cc.lime,backgroundColor:cc.lime+'22',fill:true,tension:.35,borderWidth:2,pointRadius:0,spanGaps:true}]
       }, { scales:{x:xAx,y:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>(+v).toFixed(2)+'%'}}} });
-    } else { wrapEmpty('cvGrowthFtp','No first-payer rows in range'); }
+    } else {
+      /* Say WHEN it stopped, not just that there is nothing here.
+
+         "No first-payer rows in range" reads as a quiet fortnight, and it
+         said exactly that for the three months after the FirstPayers tab
+         stopped being written on 2026-08-06. Somebody widening the range to
+         find the missing weeks would have found nothing and learnt nothing.
+
+         freshness carries the newest date in each source, so the chart can
+         name it. If the entry is absent the old wording stands - an unknown
+         date is not worth inventing. */
+      const ftpLatest = (d.freshness && (d.freshness.sources||[])
+        .filter(s=>s.source==='First payers')[0] || {}).latest;
+      wrapEmpty('cvGrowthFtp', ftpLatest
+        ? 'FirstPayers stopped on ' + ftpLatest + ' — nothing written since'
+        : 'No first-payer rows in range');
+    }
   }
 
 }
