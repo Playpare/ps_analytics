@@ -543,6 +543,74 @@ function scopedStability(raw,ios){
  * reported separately as what it is - coverage, not a complaint. If nothing
  * but 'other' exists the card says so plainly rather than inventing a theme.
  */
+/* ------------------------------------------------------------------
+   REVIEWS, READABLE WHERE THEY ARE DISCUSSED
+
+   The Reviews page has the full set with every filter. It is a page away,
+   and somebody looking at "26.60% are 1-star" wants to read a few of those
+   WITHOUT leaving. So each platform's Reviews section carries a short list
+   with one filter - the star - and a button to the full page for anything
+   more.
+
+   It renders from reviews.recent, which is in the core payload already, so
+   this costs no extra request. That list is capped by the backend, so the
+   count is stated rather than implied: "showing 12 of 50 newest" is honest
+   about being a sample; a bare list is not.
+   ------------------------------------------------------------------ */
+const RVQUICK={android:'',ios:''};
+
+function quickReviews(platform,hostId,chipId,rows){
+  const star=RVQUICK[platform];
+  const all=(rows||[]).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  const shown=star?all.filter(r=>Math.round(r.rating||0)===+star):all;
+
+  if($(chipId)){
+    const counts={};
+    all.forEach(r=>{const k=Math.round(r.rating||0);if(k>=1&&k<=5)counts[k]=(counts[k]||0)+1});
+    const chip=(v,label,n)=>'<button type="button" class="btn'+(String(star)===String(v)?' primary':'')+
+      '" data-qr="'+platform+'" data-qr-star="'+v+'">'+label+(n===undefined?'':' ('+n+')')+'</button>';
+    $(chipId).innerHTML=chip('','All',all.length)+
+      [5,4,3,2,1].map(k=>chip(k,k+'\u2605',counts[k]||0)).join('');
+    $(chipId).querySelectorAll('[data-qr]').forEach(b=>b.onclick=()=>{
+      RVQUICK[b.dataset.qr]=b.dataset.qrStar;
+      /* Re-render only this block. A full re-render would rebuild every
+         chart on the page to change one list. */
+      quickReviews(b.dataset.qr,hostId,chipId,rows);
+    });
+  }
+
+  table(hostId,[{label:'Rating',w:'12%'},{label:'Date',w:'12%'},{label:'Review',txt:true}],
+    shown.slice(0,40).map(r=>[
+      {v:'<span class="stars star'+Math.round(r.rating||0)+'">'+STARS(r.rating)+'</span>'},
+      '<span class="rv-number">'+shortDate(r.date)+'</span>',
+      esc(r.textEnglish||r.text||'')]));
+}
+
+/**
+ * Why the rating cards are empty, when they are.
+ *
+ * "no rated day in this period" is true and useless: it does not say whether
+ * the feed is broken, new, or simply quiet, and those need different
+ * responses. On iOS it is usually the second - IOS_Ratings is a storefront
+ * SNAPSHOT written once a day, and Apple's lookup endpoint serves only
+ * today, so it cannot be backfilled. A window that ends before the day
+ * collection started will be empty for ever, however many times it is
+ * refreshed.
+ *
+ * `raw` is the series as delivered, before the window filter; `scoped` is
+ * what survived it. Rows outside the window are the whole tell.
+ */
+function ratingGap(raw,scoped){
+  const all=(raw||[]).filter(x=>x&&x.rating!=null);
+  if(scoped.length)return null;
+  if(!all.length)return{sub:'nothing has been written to the ratings tab yet',
+    note:'the card fills in once the daily job writes its first row'};
+  const first=all[0].date,last=all[all.length-1].date;
+  return{sub:'this feed starts on '+first,
+    note:'a daily snapshot that cannot be backfilled '+'·'+' it holds '+first+
+      (last!==first?' to '+last:'')+', all outside the selected period'};
+}
+
 function topNamedTheme(themes){
   const list=(themes||[]).filter(t=>t&&t.key!=='other');
   const top=list.sort((a,b)=>b.count-a.count)[0]||null;
@@ -562,6 +630,12 @@ function scopedReviews(raw){
   RV.volumeByDate=volume;
   const count=sum(volume.map(x=>x.count)),weighted=sum(volume.map(x=>(x.count||0)*(x.avgRating||0)));
   RV.counts=Object.assign({},RV.counts||{},{withText:count});RV.averageRatingWithText=count?weighted/count:null;
+  /* The embedded lists read these, so they have to follow the date picker
+     like everything else. Left unscoped they showed the newest reviews in
+     the payload whatever window was chosen - a list that quietly disagrees
+     with the cards above it. */
+  RV.recent=(RV.recent||[]).filter(inWindow);
+  RV.topNegative=(RV.topNegative||[]).filter(inWindow);
   if(all.length||RV.allOmitted===false){
     const dist={},labels={};(RV.themes||[]).forEach(t=>labels[t.key]=t.label);
     all.forEach(r=>{const star=Math.round(r.rating||0);if(star)dist[star]=(dist[star]||0)+1});
@@ -734,6 +808,7 @@ function renderAndroid(){
       title:{display:true,text:'Avg rating',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,1)}}});
 
   drawThemes('anThemes','tblAnThemes',themes,negT,posT);
+  quickReviews('android','tblAnQuickRv','anQuickRvChips',RV.recent);
 
   const perDay=R.perDay||[];
   const star5=align(perDay,'star5',D), star4=align(perDay,'star4',D),
@@ -961,13 +1036,19 @@ function renderIos(){
   const ioPeriodRating=mean(ioRatingDays.map(x=>x.rating));
   const ioLatest=R.current&&R.current.rating!=null?R.current:null;
 
+  /* Measured 2026-11-12: these three rendered empty while the star shares
+     below them showed 421 ratings, which reads as a broken card. It is not -
+     IOS_Ratings began collecting that same day and the window ended before
+     it, so the honest card says which emptiness this is. */
+  const ioGap=ratingGap((I.ratings||{}).series,ioRatingDays);
+
   row('ioRatingKpis',[
     kpiSingle({label:'Average Rating',accent:'green',value:n3(ioPeriodRating),
-      sub:ioRatingDays.length?'mean of '+n0(ioRatingDays.length)+' daily averages':'',
-      note:'daily mean across the selected period · one storefront, not a world average'}),
+      sub:ioRatingDays.length?'mean of '+n0(ioRatingDays.length)+' daily averages':(ioGap?ioGap.sub:''),
+      note:ioGap?ioGap.note:'daily mean across the selected period · one storefront, not a world average'}),
     kpiSingle({label:'Latest Daily Rating',accent:'teal',
       value:ioLatest?n3(ioLatest.rating):'—',
-      sub:ioLatest?ioLatest.date:'no rated day in this period',
+      sub:ioLatest?ioLatest.date:(ioGap?ioGap.sub:'no rated day in this period'),
       note:'the newest day the sheet holds'}),
     kpiSingle({label:'Change Across Period',accent:'blue',
       value:R.changePts==null?'—':(R.changePts>0?'+':'')+n3(R.changePts),
@@ -1040,6 +1121,7 @@ function renderIos(){
       title:{display:true,text:'Avg rating',color:cssVar('--t3','#7589a8')},ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>nf(v,1)}}});
 
   drawThemes('ioThemes','tblIoThemes',themes,negT,posT);
+  quickReviews('ios','tblIoQuickRv','ioQuickRvChips',RV.recent);
 
   /* ---------------- CONVERSION ---------------- */
   const cTot=C.totals||{}, rec=C.recent||{}, best=C.bestSource;
