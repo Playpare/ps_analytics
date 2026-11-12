@@ -529,6 +529,27 @@ function scopedStability(raw,ios){
   }
   return S;
 }
+/**
+ * The top complaint that actually NAMES something.
+ *
+ * themeBreakdown_ sorts by count, and 'other' - rendered "Uncategorised" - is
+ * a bucket like any other, so it wins whenever the keyword lists miss more
+ * reviews than any single theme catches. A card headed "Top Complaint:
+ * Uncategorised" tells a reader nothing they can act on; it is the dashboard
+ * admitting a gap in ITS OWN keyword list while looking like a finding about
+ * the game.
+ *
+ * So the named themes are ranked on their own, and the uncategorised count is
+ * reported separately as what it is - coverage, not a complaint. If nothing
+ * but 'other' exists the card says so plainly rather than inventing a theme.
+ */
+function topNamedTheme(themes){
+  const list=(themes||[]).filter(t=>t&&t.key!=='other');
+  const top=list.sort((a,b)=>b.count-a.count)[0]||null;
+  const other=(themes||[]).find(t=>t&&t.key==='other');
+  return {top:top,uncategorised:other?other.count:0};
+}
+
 function scopedRatings(raw){
   const R=Object.assign({},raw||{}),series=(R.series||[]).filter(inWindow),values=series.map(x=>x.rating);
   R.series=series;R.current=series.at(-1)||null;R.previous=series.length>1?series.at(-2):null;
@@ -656,11 +677,10 @@ function renderAndroid(){
     kpiSingle({label:'Change Across Period',accent:'blue',
       value:R.changePts==null?'—':(R.changePts>0?'+':'')+n3(R.changePts),
       sub:ratingDays.length>1?ratingDays[0].date+' → '+ratingDays[ratingDays.length-1].date:'',
-      note:'newest stored value minus the oldest, in stars'}),
-    kpiSingle({label:'Days With Rating Data',accent:'amber',
-      value:n0(ratingDays.length),
-      sub:n0(ratingDays.length)+' of '+D.length+' selected days',
-      note:'a day with no rating leaves a gap rather than a zero'})]);
+      /* How many days actually carried a rating used to be a card of its own.
+         It is a fact about coverage, not about the app, so it belongs beside
+         the figure it qualifies rather than taking a quarter of the row. */
+      note:n0(ratingDays.length)+' of '+D.length+' selected days had a rating'})]);
 
   /* The five star columns arrive as zeroes from whatever writes Ratings_And.
      Five dashes above "0 of 0 ratings" reads as "nobody rated this app",
@@ -692,9 +712,19 @@ function renderAndroid(){
       sub:n0(RV.positiveCount)+' reviews at 4★–5★',note:'higher is better'}),
     kpiSingle({label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
       sub:n0(RV.negativeCount)+' reviews at 1★–2★',note:'lower is better'}),
-    kpiSingle({label:'Top Complaint',accent:'amber',value:negT.length?esc(negT[0].label):'—',
-      sub:negT.length?(n0(negT[0].count)+' of '+n0(RV.negativeCount)+' negative'):'—',
-      note:'most common 1★–2★ theme'})]);
+    (function(){
+      /* 'Uncategorised' is not a complaint - it is this dashboard's own
+         keyword list falling short. Naming it as the top complaint reads as
+         a finding about the game, which it is not. */
+      const t=topNamedTheme(negT);
+      return kpiSingle({label:'Top Complaint',accent:'amber',
+        value:t.top?esc(t.top.label):'—',
+        sub:t.top?(n0(t.top.count)+' of '+n0(RV.negativeCount)+' negative'):
+          (t.uncategorised?'no 1★–2★ review matched a theme':'—'),
+        note:t.uncategorised
+          ? 'most common NAMED theme · '+n0(t.uncategorised)+' uncategorised'
+          : 'most common 1★–2★ theme'});
+    })()]);
 
   mixedX('anReviewVol',D,[
     {type:'bar',label:'Reviews',data:volume,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
@@ -902,23 +932,66 @@ function renderIos(){
       sub:n0(S.series.length)+' of '+D.length+' selected days',
       note:low.date?'lowest daily rate: '+p3(low.crashRate):'no rows in selected period'})]);
 
+  /* ONE chart, not two. The smoothed line answers the same question as the
+     raw one - is this getting worse - and reading an answer off two charts
+     side by side means holding one in your head while you look at the other.
+     On the same axes the comparison is just there.
+
+     `hidden:true` so it starts off: most days nobody needs it, and the Chart.js
+     legend toggles it in one click for the day somebody does. */
   lineX('ioCrash',D,[
     {label:'Crash rate %',data:crashRates,borderColor:COLORS.coral,backgroundColor:'rgba(255,77,109,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
+    {label:'7-day average',data:ma,borderColor:COLORS.amber,backgroundColor:'rgba(255,184,0,.08)',fill:false,tension:.3,pointRadius:2,borderWidth:2,borderDash:[5,4],spanGaps:false,hidden:true},
     refLine('Period average',avgRate,D.length)],
-    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>p3(v)}});
-
-  lineX('ioMa',D,[
-    {label:'7-day average crash rate %',data:ma,borderColor:COLORS.amber,backgroundColor:'rgba(255,184,0,.10)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:false}],
     {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>p3(v)}});
 
   /* ---------------- RATINGS ---------------- */
   const dist0=(RV.distribution||{}), tw=(RV.counts||{}).withText||0;
   const share=k=>tw?(dist0[k]||0)/tw*100:null;
   const ratingColors={5:'green',4:'teal',3:'amber',2:'pink',1:'coral'};
-  row('ioRow3',[5,4,3,2,1].map(star=>kpiSingle({
-    label:star+'★ Share',accent:ratingColors[star],value:pc(share(star),2),
-    sub:n0(dist0[star]||0)+' of '+n0(tw)+' ratings'
-  })));
+
+  /* The same three cards the Android page carries, for the same reason: this
+     section showed the SPLIT of the ratings without ever showing the rating.
+
+     IOS_Ratings holds the App Store storefront average per date, so unlike
+     Android these are a real storefront figure rather than a cross-country
+     mean - but it is still one named storefront, not a world average, and the
+     note says so instead of leaving it to be assumed. */
+  const ioRatingDays=(R.series||[]).filter(x=>x.rating!=null);
+  const ioPeriodRating=mean(ioRatingDays.map(x=>x.rating));
+  const ioLatest=R.current&&R.current.rating!=null?R.current:null;
+
+  row('ioRatingKpis',[
+    kpiSingle({label:'Average Rating',accent:'green',value:n3(ioPeriodRating),
+      sub:ioRatingDays.length?'mean of '+n0(ioRatingDays.length)+' daily averages':'',
+      note:'daily mean across the selected period · one storefront, not a world average'}),
+    kpiSingle({label:'Latest Daily Rating',accent:'teal',
+      value:ioLatest?n3(ioLatest.rating):'—',
+      sub:ioLatest?ioLatest.date:'no rated day in this period',
+      note:'the newest day the sheet holds'}),
+    kpiSingle({label:'Change Across Period',accent:'blue',
+      value:R.changePts==null?'—':(R.changePts>0?'+':'')+n3(R.changePts),
+      sub:ioRatingDays.length>1?ioRatingDays[0].date+' → '+ioRatingDays[ioRatingDays.length-1].date:'',
+      note:n0(ioRatingDays.length)+' of '+D.length+' selected days had a rating'})]);
+
+  /* Unlike Android, these five come from the reviews themselves rather than a
+     pipeline that writes zeroes, so they are drawn whenever any exist. The
+     guard is still here: five dashes over "0 of 0" would claim nobody rated
+     the app, which is a claim about the world and not about the sheet. */
+  const ioStarHost=$('ioRow3');
+  if(tw>0){
+    if(ioStarHost)ioStarHost.className='kpi-row five';
+    row('ioRow3',[5,4,3,2,1].map(star=>kpiSingle({
+      label:star+'★ Share',accent:ratingColors[star],value:pc(share(star),2),
+      sub:n0(dist0[star]||0)+' of '+n0(tw)+' ratings'
+    })));
+  }else{
+    if(ioStarHost)ioStarHost.className='kpi-row one';
+    row('ioRow3',[kpiSingle({label:'Star Breakdown',accent:'amber',value:'—',
+      sub:'no written review in this period',
+      note:'the split is counted from reviews that carry text, and this window '
+        +'has none. The average above comes from IOS_Ratings and is unaffected.'})]);
+  }
 
   const ioReviewRows=RV.all||[],ioStars={1:{},2:{},3:{},4:{},5:{}};
   ioReviewRows.forEach(r=>{
@@ -945,9 +1018,19 @@ function renderIos(){
       sub:n0(RV.positiveCount)+' reviews at 4★–5★',note:'higher is better'}),
     kpiSingle({label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
       sub:n0(RV.negativeCount)+' reviews at 1★–2★',note:'lower is better'}),
-    kpiSingle({label:'Top Complaint',accent:'amber',value:negT.length?esc(negT[0].label):'—',
-      sub:negT.length?(n0(negT[0].count)+' of '+n0(RV.negativeCount)+' negative'):'—',
-      note:'most common 1★–2★ theme'})]);
+    (function(){
+      /* 'Uncategorised' is not a complaint - it is this dashboard's own
+         keyword list falling short. Naming it as the top complaint reads as
+         a finding about the game, which it is not. */
+      const t=topNamedTheme(negT);
+      return kpiSingle({label:'Top Complaint',accent:'amber',
+        value:t.top?esc(t.top.label):'—',
+        sub:t.top?(n0(t.top.count)+' of '+n0(RV.negativeCount)+' negative'):
+          (t.uncategorised?'no 1★–2★ review matched a theme':'—'),
+        note:t.uncategorised
+          ? 'most common NAMED theme · '+n0(t.uncategorised)+' uncategorised'
+          : 'most common 1★–2★ theme'});
+    })()]);
 
   mixedX('ioReviewVol',D,[
     {type:'bar',label:'Reviews',data:volume,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},

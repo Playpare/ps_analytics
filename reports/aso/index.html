@@ -94,7 +94,7 @@
       <!-- ======================= RATINGS ======================= -->
       <section class="sect s-teal">
         <div class="secth"><h3>Ratings</h3><span class="tag">Google Play star ratings</span></div>
-        <div class="kpi-row four" id="anRatingKpis"></div>
+        <div class="kpi-row three" id="anRatingKpis"></div>
         <div class="kpi-row five" id="anRow3"></div>
         <article class="card mt"><h2>Daily Rating Performance<em>daily 1-star through 5-star ratings</em></h2>
           <div class="chartbox tall"><canvas id="anRatingDaily"></canvas></div></article>
@@ -102,7 +102,9 @@
 
       <!-- ======================= REVIEWS ======================= -->
       <section class="sect s-blue">
-        <div class="secth"><h3>Reviews</h3><span class="tag">written reviews · translated to English</span></div>
+        <div class="secth"><h3>Reviews</h3><span class="tag">written reviews · translated to English</span>
+          <button type="button" class="btn" data-review-platform="android"
+            style="margin-left:auto">Read all reviews &rarr;</button></div>
         <div class="kpi-row four" id="anRow4"></div>
         <article class="card mt"><h2>Review Volume &amp; Rating · Daily<em>bars are volume, line is average rating</em></h2>
           <div class="chartbox tall"><canvas id="anReviewVol"></canvas></div></article>
@@ -143,19 +145,14 @@
       <section class="sect s-coral">
         <div class="secth"><h3>Stability</h3><span class="tag">crashes · latest day vs the day before</span></div>
         <div class="kpi-row four" id="ioRow2"></div>
-        <div class="two mt">
-          <article class="card"><h2>Daily Crashes<em>against the period average</em></h2>
-            <div class="chartbox tall"><canvas id="ioCrash"></canvas></div>
-            <div class="legend"><span><i style="background:#ff4d6d"></i>Crashes</span><span><i style="background:#7589a8"></i>Period average</span></div></article>
-          <article class="card"><h2>7-Day Moving Average<em>smoothed, so one bad release day is not a trend</em></h2>
-            <div class="chartbox tall"><canvas id="ioMa"></canvas></div>
-            <div class="legend"><span><i style="background:#ffb800"></i>7-day average</span></div></article>
-        </div>
+        <article class="card mt"><h2>Daily Crash Rate<em>against the period average · click &ldquo;7-day average&rdquo; in the legend to smooth it</em></h2>
+          <div class="chartbox tall"><canvas id="ioCrash"></canvas></div></article>
       </section>
 
       <!-- ======================= RATINGS ======================= -->
       <section class="sect s-teal">
         <div class="secth"><h3>Ratings</h3><span class="tag">App Store star ratings</span></div>
+        <div class="kpi-row three" id="ioRatingKpis"></div>
         <div class="kpi-row five" id="ioRow3"></div>
         <article class="card mt"><h2>Daily Rating Performance<em>daily 1-star through 5-star ratings</em></h2>
           <div class="chartbox tall"><canvas id="ioRatingDaily"></canvas></div></article>
@@ -163,7 +160,9 @@
 
       <!-- ======================= REVIEWS ======================= -->
       <section class="sect s-blue">
-        <div class="secth"><h3>Reviews</h3><span class="tag">written reviews · translated to English</span></div>
+        <div class="secth"><h3>Reviews</h3><span class="tag">written reviews · translated to English</span>
+          <button type="button" class="btn" data-review-platform="ios"
+            style="margin-left:auto">Read all reviews &rarr;</button></div>
         <div class="kpi-row four" id="ioRow4"></div>
         <article class="card mt"><h2>Review Volume &amp; Rating · Daily<em>bars are volume, line is average rating</em></h2>
           <div class="chartbox tall"><canvas id="ioReviewVol"></canvas></div></article>
