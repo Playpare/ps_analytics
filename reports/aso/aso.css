@@ -111,7 +111,8 @@ body.lt .tablewrap::-webkit-scrollbar-thumb:hover{background:rgba(39,54,75,.7)}
     .status,.date-span,.card-sub,.eyebrow,.sf,.mut{color:#c0ccdf!important;font-weight:600!important}
     #refreshBtn,.date-controls select,.date-confirm{font-size:13.5px!important;font-weight:750!important}
     .top>.brand{display:none}
-    .kpi-row.three{grid-template-columns:repeat(3,1fr)}
+    .kpi-row.one{grid-template-columns:1fr}
+.kpi-row.three{grid-template-columns:repeat(3,1fr)}
     .kpi-row.four{grid-template-columns:repeat(4,1fr)}
     .kpi-row.five{grid-template-columns:repeat(5,1fr)}
     .kpi .v.neg{color:var(--coral)}
