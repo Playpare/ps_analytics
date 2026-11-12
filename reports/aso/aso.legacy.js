@@ -80,7 +80,11 @@ const PERF = {
 let A = null;             // android
 let I = null;             // ios
 let ADATES = [], IDATES = [];
-let DATE_FILTER='d7', SINGLE_DATE='', RANGE_START='', RANGE_END='';
+/* 28 days by default.
+   Play Console's own Ratings screen headlines "Average rating (last 28
+   days)", so the dashboard opening on the same span means the two can be
+   read side by side without anybody converting in their head. */
+let DATE_FILTER='d28', SINGLE_DATE='', RANGE_START='', RANGE_END='';
 let LAST_META = { generatedAt: null, warnings: [] };
 let REVIEWS_READY = { android: false, ios: false };
 
@@ -173,7 +177,7 @@ function activeDateRange(){
      Sunday before it rather than jumping early. */
   const dow=dowOf(today);
   const end=addDays(today,-(dow===0?7:dow));
-  const days={today:1,d7:7,d14:14,d30:30,d45:45}[DATE_FILTER]||7;
+  const days={today:1,d7:7,d14:14,d28:28,d30:30,d45:45}[DATE_FILTER]||28;
   return {start:addDays(end,-(days-1)),end:end};
 }
 function rollingWindow(days){
@@ -258,6 +262,7 @@ function initDateFilters(){
     const box=document.createElement('div');box.className='date-controls';box.id=el.id;
     box.innerHTML='<span class="date-span"></span><select class="date" aria-label="Date filter">'+
       '<option value="d7">Last 7 days</option><option value="d14">Last 14 days</option><option value="today">Today</option>'+ 
+      '<option value="d28">Last 28 days</option>'+
       '<option value="d30">Last 30 days</option><option value="d45">Last 45 days</option><option value="single">Single date</option><option value="custom">Custom date</option>'+ 
       '</select><input class="single-date" type="date" aria-label="Date"><input class="range-date range-start" type="date" aria-label="From date">'+
       '<input class="range-date range-end" type="date" aria-label="To date"><button type="button" class="date-confirm">Apply</button>';
@@ -492,10 +497,27 @@ function scopedStability(raw,ios){
   const S=Object.assign({},raw||{}),series=(S.series||[]).filter(inWindow),vals=series.map(x=>ios?x.crashes:x.crashRate),latest=series.at(-1)||null;
   S.series=series;S.latest=latest;S.previous=series.length>1?series.at(-2):null;
   if(ios){
+    /* COUNTS AND THE RATE ARE BOTH SCOPED, and they are different questions.
+       A count moves with how many people played - a quiet Tuesday and a fixed
+       crash look the same in it - so the cards read the rate. The counts stay
+       because they are what the cards held until now, and because the count is
+       the only place a swapped Crashes/Sessions column shows: the stored rate
+       is right either way round. */
     const total=sum(vals),av=mean(vals),sorted=series.slice().sort((a,b)=>(b.crashes||0)-(a.crashes||0));
-    S.totals={crashes:total};S.averages={crashesPerDay:av,crashTrendPct:null};
-    S.peak=sorted[0]||{};S.low=sorted.at(-1)||{};S.daysAboveAverage=av===null?0:vals.filter(v=>v>av*1.25).length;
-    S.ma7=series.map((x,i)=>({date:x.date,ma:mean(vals.slice(Math.max(0,i-6),i+1))}));
+    const rates=series.map(x=>x.crashRate),avR=mean(rates);
+    const sortedR=series.slice().filter(x=>x.crashRate!=null).sort((a,b)=>(b.crashRate||0)-(a.crashRate||0));
+    S.totals={crashes:total,sessions:sum(series.map(x=>x.sessions))};
+    /* The PERIOD rate, not the mean of daily rates. Dividing the two totals
+       weights a busy day more than a quiet one, which is what a period figure
+       should do; the daily mean is kept beside it because that is what the
+       Android cards show and the two platforms have to be comparable. */
+    const totS=sum(series.map(x=>x.sessions));
+    S.averages={crashesPerDay:av,crashTrendPct:null,
+      crashRate:avR,
+      periodCrashRate:(total!=null&&totS)?(total/totS)*100:null};
+    S.peak=sortedR[0]||sorted[0]||{};S.low=sortedR.at(-1)||sorted.at(-1)||{};
+    S.daysAboveAverage=avR===null?0:rates.filter(v=>v!=null&&v>avR*1.25).length;
+    S.ma7=series.map((x,i)=>({date:x.date,ma:mean(rates.slice(Math.max(0,i-6),i+1))}));
   }else{
     const crash=series.map(x=>x.crashRate),anr=series.map(x=>x.anrRate),th=S.thresholds||{crashRatePct:1.09,anrRatePct:.47};
     S.averages={crashRate:mean(crash),anrRate:mean(anr)};
@@ -601,10 +623,63 @@ function renderAndroid(){
   const totalRatings=sum(Object.values(ratingCounts));
   const ratingShare=k=>totalRatings?ratingCounts[k]/totalRatings*100:null;
   const ratingColors={5:'green',4:'teal',3:'amber',2:'pink',1:'coral'};
-  row('anRow3',[5,4,3,2,1].map(star=>kpiSingle({
-    label:star+'★ Share',accent:ratingColors[star],value:pc(ratingShare(star),2),
-    sub:n0(ratingCounts[star])+' of '+n0(totalRatings)+' ratings'
-  })));
+
+  /* THE RATING ITSELF, which this page did not show at all.
+
+     Ratings_And carries a daily average per date; the headline is the mean
+     of those days across the selected window, which on the default 28-day
+     span is the figure Play Console headlines as "Average rating (last 28
+     days)".
+
+     IT IS NOT THE STORE'S DEFAULT RATING, and is not labelled as one.
+     Measured 2026-11-12: the console showed a Default Google Play rating of
+     4.419 while the app-level lifetime stood at 4.4239 and had climbed every
+     day for a month, about 0.00006 a day. Those two series cannot meet -
+     Google weights the displayed rating towards recent ratings - so the card
+     says what it is rather than what somebody might hope it is.
+
+     A MEAN OF DAILY AVERAGES IS NOT THE PERIOD'S TRUE AVERAGE either. The
+     export carries no rating count, so a busy day and a quiet one count the
+     same here. The note says "daily mean" for that reason. */
+  const ratingDays=(R.series||[]).filter(x=>x.rating!=null);
+  const periodRating=mean(ratingDays.map(x=>x.rating));
+  const latestRating=R.current&&R.current.rating!=null?R.current:null;
+
+  row('anRatingKpis',[
+    kpiSingle({label:'Average Rating',accent:'green',value:n3(periodRating),
+      sub:ratingDays.length?'mean of '+n0(ratingDays.length)+' daily averages':'',
+      note:'daily mean across the selected period · not the store’s default rating'}),
+    kpiSingle({label:'Latest Daily Rating',accent:'teal',
+      value:latestRating?n3(latestRating.rating):'—',
+      sub:latestRating?latestRating.date:'no rated day in this period',
+      note:'the newest day the sheet holds'}),
+    kpiSingle({label:'Change Across Period',accent:'blue',
+      value:R.changePts==null?'—':(R.changePts>0?'+':'')+n3(R.changePts),
+      sub:ratingDays.length>1?ratingDays[0].date+' → '+ratingDays[ratingDays.length-1].date:'',
+      note:'newest stored value minus the oldest, in stars'}),
+    kpiSingle({label:'Days With Rating Data',accent:'amber',
+      value:n0(ratingDays.length),
+      sub:n0(ratingDays.length)+' of '+D.length+' selected days',
+      note:'a day with no rating leaves a gap rather than a zero'})]);
+
+  /* The five star columns arrive as zeroes from whatever writes Ratings_And.
+     Five dashes above "0 of 0 ratings" reads as "nobody rated this app",
+     which is a claim. Saying the breakdown is not supplied is the truth, and
+     points at where the fix belongs. */
+  const starHost=$('anRow3');
+  if(totalRatings>0){
+    if(starHost)starHost.className='kpi-row five';
+    row('anRow3',[5,4,3,2,1].map(star=>kpiSingle({
+      label:star+'★ Share',accent:ratingColors[star],value:pc(ratingShare(star),2),
+      sub:n0(ratingCounts[star])+' of '+n0(totalRatings)+' ratings'
+    })));
+  }else{
+    if(starHost)starHost.className='kpi-row one';
+    row('anRow3',[kpiSingle({label:'Star Breakdown',accent:'amber',value:'—',
+      sub:'not supplied for this period',
+      note:'Ratings_And has the five star columns and every one of them is '
+        +'zero, so the split cannot be shown. The average above is unaffected.'})]);
+  }
 
   /* ---------------- REVIEWS ---------------- */
   const cnt=RV.counts||{}, themes=RV.themes||[], negT=RV.negativeThemes||[], posT=RV.positiveThemes||[];
@@ -797,31 +872,44 @@ function renderIos(){
   rangeBar('ioRangeBar',range,'daily granularity · live from Google Sheets');
   banner('ioWarnings',(LAST_META.warnings||[]).filter(w=>/^iOS |IOS_/.test(w.message||'')));
 
-  /* ---------------- STABILITY ---------------- */
-  const crashes=align(S.series,'crashes',D);
+  /* ---------------- STABILITY ----------------
+     The cards show the RATE. A crash count rises with the number of people
+     playing, so it cannot say whether the app got worse; crashes over sessions
+     can, because both come from the same opted-in population on the same day.
+     The rate arrives as a PERCENT from the backend - 0.0427 means 0.0427%.
+
+     NO THRESHOLD BADGE HERE, unlike Android. Its 1.09% and 0.47% are Google
+     Play's bad-behaviour limits and the App Store publishes no equivalent, so
+     a pass/fail against them would be an invented judgement. */
+  const crashRates=align(S.series,'crashRate',D);
   const ma=align(S.ma7,'ma',D);
   const avg=S.averages||{}, peak=S.peak||{}, low=S.low||{}, tot=S.totals||{};
-  const avgPerDay=avg.crashesPerDay;
+  const avgRate=avg.crashRate, periodRate=avg.periodCrashRate;
 
   row('ioRow2',[
-    kpiSingle({label:'Average Crashes per Day',accent:'coral',value:n1(avgPerDay),
-      note:'daily mean across the selected period'}),
-    kpiSingle({label:'Total Crashes',accent:'blue',value:cp(tot.crashes),
-      sub:n0(tot.crashes)+' across '+D.length+' selected days',note:'sum across the selected period'}),
-    kpiSingle({label:'Peak Daily Crashes',accent:'coral',value:n0(peak.crashes),
+    kpiSingle({label:'Average Crash Rate',accent:'coral',value:p3(avgRate),
+      sub:periodRate==null?'':'period rate '+p3(periodRate),
+      note:'daily mean · crashes over sessions, opted-in devices only'}),
+    kpiSingle({label:'Peak Crash Rate',accent:'coral',value:p3(peak.crashRate),
       note:(S.daysAboveAverage||0)+' day(s) more than 25% above average'}),
+    /* The count is kept, and deliberately. It is what these cards held until
+       now, and it is the only figure that shows a Crashes/Sessions column
+       swapped at the source - the stored rate reads the same either way. */
+    kpiSingle({label:'Total Crashes',accent:'blue',value:cp(tot.crashes),
+      sub:tot.sessions?cp(tot.sessions)+' sessions':'',
+      note:'sum across the selected period'}),
     kpiSingle({label:'Days With Crash Data',accent:'amber',value:n0(S.series.length),
       sub:n0(S.series.length)+' of '+D.length+' selected days',
-      note:low.date?'lowest daily count: '+n0(low.crashes):'no rows in selected period'})]);
+      note:low.date?'lowest daily rate: '+p3(low.crashRate):'no rows in selected period'})]);
 
   lineX('ioCrash',D,[
-    {label:'Crashes',data:crashes,borderColor:COLORS.coral,backgroundColor:'rgba(255,77,109,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
-    refLine('Period average',avgPerDay,D.length)],
-    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}});
+    {label:'Crash rate %',data:crashRates,borderColor:COLORS.coral,backgroundColor:'rgba(255,77,109,.10)',fill:true,tension:.25,pointRadius:3,borderWidth:2,spanGaps:false},
+    refLine('Period average',avgRate,D.length)],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>p3(v)}});
 
   lineX('ioMa',D,[
-    {label:'7-day average',data:ma,borderColor:COLORS.amber,backgroundColor:'rgba(255,184,0,.10)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:false}],
-    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>compact(v)}});
+    {label:'7-day average crash rate %',data:ma,borderColor:COLORS.amber,backgroundColor:'rgba(255,184,0,.10)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:false}],
+    {beginAtZero:true,ticks:{color:cssVar('--t2','#a6b8d4'),callback:v=>p3(v)}});
 
   /* ---------------- RATINGS ---------------- */
   const dist0=(RV.distribution||{}), tw=(RV.counts||{}).withText||0;
