@@ -85,6 +85,12 @@ export default defineConfig(({ mode }) => {
           tilldate: at('reports/till-date/index.html'),
           aso: at('reports/aso/index.html'),
           negative: at('reports/negative-spend/index.html'),
+          /* The Executive Dashboard, which used to be its own repository and
+             its own deployment with its own sign-in. It keeps its own Apps
+             Script backend and its own refined table - only the front door
+             moved. */
+          exec: at('reports/exec/index.html'),
+          creative: at('reports/creative/index.html'),
         },
       },
     },
