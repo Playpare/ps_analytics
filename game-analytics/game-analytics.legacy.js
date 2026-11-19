@@ -4712,13 +4712,71 @@ async function saveExecTargets(){
     btn.disabled = false;
   }
 }
-function saveThresh(){
-  Object.keys(thresholds).forEach(k=>{
-    const el = g('th-'+k);
-    if(el) thresholds[k].val = parseFloat(el.value);
-  });
-  renderAll();
-  alert('Thresholds saved!');
+/**
+ * Writes the thresholds to the Thresholds tab, and says so truthfully.
+ *
+ * This used to set them in memory, redraw, and alert('Thresholds saved!').
+ * Nothing was written anywhere. They are READ from the sheet on every load -
+ * applySheetThresholds() - so the next reload quietly put the old numbers
+ * back, and the alert had already said otherwise. A message that claims a
+ * write that did not happen is worse than no message: it sends somebody away
+ * believing the alert strip is now watching a limit it is not.
+ *
+ * The backend has had saveThresholds since before this - routed, writing
+ * key/val rows, clearing the config bundle so the next request serves the new
+ * values. It simply had no caller.
+ *
+ * The role check is the server's. It permits admin and manager and refuses
+ * anyone else by name, and that refusal is shown as it arrives rather than
+ * guessed at here.
+ */
+async function saveThresh(){
+  const btn = g('threshSaveBtn');
+  const msg = g('threshMsg');
+
+  const items = Object.keys(thresholds).map(function(k){
+    const el = g('th-' + k);
+    const v = el ? parseFloat(el.value) : NaN;
+    return isNaN(v) ? null : { key: k, value: v };
+  }).filter(Boolean);
+
+  if(!items.length){ if(msg) msg.textContent = 'Nothing to save.'; return; }
+
+  if(btn) btn.disabled = true;
+  if(msg){ msg.textContent = 'Saving…'; msg.style.color = ''; }
+
+  try {
+    const token = getToken();
+    const params = [
+      'action=saveThresholds',
+      'key=' + encodeURIComponent(SHEET_API_KEY),
+      'thresholds=' + encodeURIComponent(JSON.stringify(items)),
+      token ? 'token=' + encodeURIComponent(token) : '',
+      '_cb=' + Date.now()
+    ].filter(Boolean).join('&');
+
+    const res = await fetch(SHEET_API_URL + '?' + params, { redirect:'follow', cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    if(j.error) throw new Error(j.error);
+
+    /* Only now do the values in memory change. Setting them before the write
+       and leaving them set after a refusal is how a screen comes to show a
+       limit the alert strip is not using. */
+    items.forEach(function(it){ if(thresholds[it.key]) thresholds[it.key].val = it.value; });
+    renderAll();
+    if(msg) msg.textContent = 'Saved to the Thresholds tab.';
+  } catch(err){
+    if(msg){
+      msg.textContent = err.message || String(err);
+      msg.style.color = 'var(--amber,#f5a524)';
+    }
+    /* The inputs keep what was typed, so a refused save can be retried
+       without typing it all again - but the thresholds themselves are
+       untouched, and the strip still uses the saved ones. */
+  } finally {
+    if(btn) btn.disabled = false;
+  }
 }
 
 // ═════════════════════════════════════════

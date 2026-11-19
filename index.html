@@ -529,7 +529,10 @@
       <div class="card" style="max-width:680px">
         <div class="card-hd"><span class="card-title">Alert thresholds <span class="card-sub">drive the alert strip</span></span></div>
         <div class="thresh-grid" id="threshGrid"></div>
-        <div style="margin-top:18px"><button class="btn-primary" onclick="saveThresh()">Save thresholds</button></div>
+        <div style="margin-top:18px;display:flex;align-items:center;gap:14px">
+          <button class="btn-primary" id="threshSaveBtn" onclick="saveThresh()">Save thresholds</button>
+          <span class="thresh-lbl" id="threshMsg"></span>
+        </div>
       </div>
       <div class="notice" style="margin-top:16px;max-width:680px">
         🎮 Games &amp; Google Sheet IDs Apps Script (<span style="color:var(--cyan)">Code.gs</span>) mein manage hongay — Phase 2 mein backend deploy karengay.
