@@ -4822,10 +4822,64 @@ function ensureReportPane(section){
   pane.id = 'tab-' + section.id;
   pane.innerHTML =
     '<iframe class="report-frame" title="' + esc_(section.label) + '"' +
-    ' src="' + reportUrl(section) + '" loading="lazy"></iframe>';
+    ' src="' + reportUrl(section) + '"></iframe>' +
+    '<div class="report-loading" role="status" aria-live="polite">' +
+      '<div class="report-loading-logo" aria-hidden="true"></div>' +
+      '<div class="report-loading-txt">Loading ' + esc_(section.label) + '…</div>' +
+    '</div>';
+
+  /* loading="lazy" is gone from that iframe on purpose. It tells the browser
+     to defer until the frame is near the viewport - and this one is built
+     hidden, so "near the viewport" may not arrive until the pane is shown.
+     The whole point of building the pane on first open is that the download
+     starts NOW. */
+
   const host = document.querySelector('.content');
   if(host) host.appendChild(pane);
+
+  markReportLoaded_(pane);
   return pane;
+}
+
+/**
+ * Takes the loader down once the report's document has painted.
+ *
+ * Three ways out, and the page needs all three:
+ *
+ *   the frame's load event, which is the normal one;
+ *
+ *   a check for a frame that already finished - between building the pane and
+ *   attaching the listener a cached report can be done, and a load event that
+ *   has already fired will not fire again for a late listener;
+ *
+ *   a timeout, because load never fires for a frame that fails to load at
+ *   all. A report that cannot be reached should show whatever it shows -
+ *   its own error, or an empty frame - and not a cube floating forever over
+ *   a page that is never coming. Twenty seconds is past any normal cold
+ *   Apps Script start and well short of giving up on a slow one.
+ */
+function markReportLoaded_(pane){
+  const frame = pane.querySelector('.report-frame');
+  if(!frame){ pane.classList.add('loaded'); return; }
+
+  let done = false;
+  const finish = function(){
+    if(done) return;
+    done = true;
+    pane.classList.add('loaded');
+  };
+
+  frame.addEventListener('load', finish, { once: true });
+
+  /* Same-origin only, and a cross-origin frame throws rather than answering -
+     which is itself fine, because then the load event is the only answer
+     available and it is still coming. */
+  try {
+    const doc = frame.contentDocument;
+    if(doc && doc.readyState === 'complete' && doc.URL !== 'about:blank') finish();
+  } catch (err) { /* cross-origin: wait for load */ }
+
+  setTimeout(finish, 20000);
 }
 
 /** Minimal escape for the one attribute built from a label. */

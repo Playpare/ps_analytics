@@ -813,6 +813,82 @@ table.mx{width:max-content;min-width:100%;border-collapse:separate;border-spacin
   border-radius:var(--r-lg);
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════
+   WHILE A REPORT IS ARRIVING
+   ═══════════════════════════════════════════════════════════════════════
+   A report is a whole document fetched over the network, and until it paints
+   there is nothing in the pane at all. Seven reports, seven chances to look
+   like a dead click.
+
+   The Executive dashboard already had the right answer - a floating, glowing
+   cube - so this is that animation, lifted into the shell and shown over the
+   frame rather than copied into seven pages. One place to change it, and it
+   covers every report including any added later, because it belongs to the
+   pane rather than to the report.
+
+   It sits ON TOP of the iframe instead of replacing it, so the frame loads
+   underneath at full size. A loader that takes the frame's place makes the
+   page reflow the moment it leaves, which is the jump this is meant to
+   prevent. */
+.report-pane{position:relative}
+
+.report-loading{
+  position:absolute;inset:0;z-index:5;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:var(--surface);
+  border-radius:var(--r-lg);
+  /* Fades out, and only then stops taking clicks. visibility is in the
+     transition so the layer is genuinely gone afterwards rather than an
+     invisible sheet over a working report. */
+  opacity:1;visibility:visible;
+  transition:opacity .35s ease, visibility 0s linear .35s;
+}
+.report-pane.loaded .report-loading{
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .35s ease, visibility 0s linear .35s;
+}
+
+.report-loading-logo{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  width:170px;height:140px;
+}
+.report-loading-logo::before{
+  content:'';position:absolute;z-index:1;width:150px;height:150px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,229,195,.22),transparent 70%);
+  animation:psGlow 2.2s ease-in-out infinite;
+}
+/* The cube is drawn by CSS rather than an <img> the script writes, because
+   Vite rewrites url() in a stylesheet to the hashed, fingerprinted asset and
+   leaves a path built in JavaScript exactly as typed. A literal
+   'assets/images/playspare-cube.png' in the script 404s in a build where the
+   file ships as playspare-cube-DHMLc6RX.png - and a broken image inside a
+   loading overlay is a bad first impression of a report that is working. */
+.report-loading-logo::after{
+  content:'';position:relative;z-index:2;width:84px;height:84px;
+  background:url(../assets/images/playspare-cube.png) center/contain no-repeat;
+  animation:psFloat 2.2s ease-in-out infinite;
+  filter:drop-shadow(0 10px 28px rgba(0,229,195,.4));
+}
+.report-loading-txt{
+  font-size:14px;font-weight:500;color:var(--text-dim,#8aa0b8);
+  letter-spacing:.01em;
+}
+
+@keyframes psFloat{
+  0%,100%{transform:translateY(6px) rotate(-5deg) scale(1)}
+  50%{transform:translateY(-12px) rotate(5deg) scale(1.07)}
+}
+@keyframes psGlow{0%,100%{opacity:.45;transform:scale(.85)}50%{opacity:1;transform:scale(1.12)}}
+
+/* Someone who has asked the system not to animate gets a still cube and the
+   same words. The point is to say "this is coming", and that survives
+   without movement. */
+@media (prefers-reduced-motion: reduce){
+  .report-loading-logo::after,
+  .report-loading-logo::before{animation:none}
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    ONE IDENTITY
    ═══════════════════════════════════════════════════════════════════════
