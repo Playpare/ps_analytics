@@ -4530,6 +4530,187 @@ function renderThresholds(){
       <span class="thresh-unit">${t.unit}</span>
     </div>
   `).join('');
+  renderExecTargets();
+}
+
+
+/* ═════════════════════════════════════════
+   EXECUTIVE TARGETS
+   ═════════════════════════════════════════
+   These used to be a tab inside the Executive report, which meant the place
+   you SET a goal was buried inside the place you WATCH it. They live here
+   now, beside the other numbers somebody comes to this page to change.
+
+   The Executive report still reads them - it draws the projection against
+   them - it just no longer offers to edit them. One editor, one place.
+
+   They are stored by the Executive backend, not by this project: the same
+   dashTargets_v1 property the report has always used. Nothing was migrated,
+   so a target set last month is still the target, and this page is a new
+   door onto the same room.
+
+   Who may save is decided there too, by the TargetAdmins tab in that
+   project's spreadsheet. This page does not try to guess the answer and
+   hide the button - a hidden button is not a permission check, and the
+   signed token carries no role to check against anyway. Everyone sees the
+   editor; the server refuses, in words, and those words are shown. */
+
+const EXEC_TARGET_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun',
+                            'Jul','Aug','Sep','Oct','Nov','Dec'];
+let execTargets = null;
+let execTargetsBusy = false;
+
+function execTargetsDefault_(year){
+  const t = { year: year, roiAlert: 1.20, quarter: null, annual: null, months: {}, gameRoi: {} };
+  EXEC_TARGET_MONTHS.forEach(function(_, i){
+    t.months[year + '-' + String(i + 1).padStart(2, '0')] = { profit: 0, roi: 1.20 };
+  });
+  return t;
+}
+
+/** One call for both directions; the Executive backend answers GET only. */
+async function execTargetsApi_(params){
+  const base = API_URLS.exec;
+  if(!base) throw new Error('No Executive endpoint. VITE_API_EXEC is not set in this build.');
+  const token = getToken();
+  if(!token) throw new Error('Not signed in.');
+
+  const qs = new URLSearchParams(Object.assign({ token: token }, params));
+  const res = await fetch(base + '?' + qs, { redirect:'follow', cache:'no-store' });
+  const json = await res.json();
+  if(json && json.error) throw new Error(json.error);
+  return json;
+}
+
+async function renderExecTargets(){
+  const host = g('execTargetsHost');
+  if(!host) return;
+
+  host.innerHTML = '<div class="thresh-lbl" style="padding:12px 0">Loading targets…</div>';
+
+  try {
+    const json = await execTargetsApi_({ action:'getTargets', _cb: Date.now() });
+    let t = json && json.targets;
+    /* The backend sends the whole set as a JSON STRING, not as an object. */
+    if(typeof t === 'string'){ try { t = JSON.parse(t); } catch(e){ t = null; } }
+    execTargets = (t && typeof t === 'object' && t.months) ? t
+                : execTargetsDefault_(new Date().getFullYear());
+  } catch(err){
+    host.innerHTML = '<div class="thresh-lbl" style="padding:12px 0;color:var(--amber,#f5a524)">'
+      + 'Could not read the targets: ' + esc_(err.message || String(err)) + '</div>';
+    return;
+  }
+
+  drawExecTargets_(host);
+}
+
+function drawExecTargets_(host){
+  const year = Number(execTargets.year) || new Date().getFullYear();
+
+  const rows = EXEC_TARGET_MONTHS.map(function(name, i){
+    const key = year + '-' + String(i + 1).padStart(2, '0');
+    const m = (execTargets.months && execTargets.months[key]) || { profit:0, roi:1.2 };
+    return '<div class="thresh-row">'
+      + '<span class="thresh-lbl">' + name + ' ' + year + '</span>'
+      + '<span class="thresh-unit">profit</span>'
+      + '<input class="thresh-input" type="number" step="1000" data-et-profit="' + key + '"'
+      + ' value="' + (Number(m.profit) || 0) + '">'
+      + '<span class="thresh-unit">ROI</span>'
+      + '<input class="thresh-input" type="number" step="0.01" data-et-roi="' + key + '"'
+      + ' value="' + (Number(m.roi) || 0) + '">'
+      + '</div>';
+  }).join('');
+
+  host.innerHTML =
+    '<div class="thresh-grid">'
+      + '<div class="thresh-row">'
+        + '<span class="thresh-lbl">Target year</span>'
+        + '<input class="thresh-input" type="number" step="1" id="etYear" value="' + year + '">'
+      + '</div>'
+      + '<div class="thresh-row">'
+        + '<span class="thresh-lbl">ROI alert below</span>'
+        + '<input class="thresh-input" type="number" step="0.01" id="etRoiAlert"'
+        + ' value="' + (Number(execTargets.roiAlert) || 1.2) + '">'
+      + '</div>'
+      + rows
+    + '</div>'
+    + '<div style="margin-top:18px;display:flex;align-items:center;gap:14px">'
+      + '<button class="btn-primary" id="etSave">Save targets</button>'
+      + '<span class="thresh-lbl" id="etMsg"></span>'
+    + '</div>';
+
+  g('etSave').addEventListener('click', saveExecTargets);
+
+  /* Changing the year rebuilds the twelve rows against that year's keys.
+     Without this the inputs keep writing to last year's months while their
+     labels claim otherwise - the kind of wrong that looks saved. */
+  g('etYear').addEventListener('change', function(){
+    const next = Number(g('etYear').value) || year;
+    if(next === year) return;
+    const fresh = execTargetsDefault_(next);
+    /* Carry the figures across by month number, so changing the year keeps
+       the plan rather than blanking it. */
+    EXEC_TARGET_MONTHS.forEach(function(_, i){
+      const from = year + '-' + String(i + 1).padStart(2, '0');
+      const to   = next + '-' + String(i + 1).padStart(2, '0');
+      if(execTargets.months && execTargets.months[from]) fresh.months[to] = execTargets.months[from];
+    });
+    fresh.roiAlert = execTargets.roiAlert;
+    fresh.gameRoi  = execTargets.gameRoi || {};
+    execTargets = fresh;
+    drawExecTargets_(host);
+  });
+}
+
+async function saveExecTargets(){
+  if(execTargetsBusy) return;
+  const msg = g('etMsg');
+  const btn = g('etSave');
+
+  const year = Number(g('etYear').value) || execTargets.year;
+  const next = {
+    year: year,
+    roiAlert: Number(g('etRoiAlert').value) || 1.2,
+    /* quarter and annual stay whatever they were. They are overrides the
+       report computes from the months when they are null, and silently
+       writing a number here would freeze a total that should keep following
+       the monthly figures. */
+    quarter: execTargets.quarter == null ? null : execTargets.quarter,
+    annual:  execTargets.annual  == null ? null : execTargets.annual,
+    months: {},
+    gameRoi: execTargets.gameRoi || {}
+  };
+
+  document.querySelectorAll('[data-et-profit]').forEach(function(el){
+    const key = el.getAttribute('data-et-profit');
+    next.months[key] = next.months[key] || {};
+    next.months[key].profit = Number(el.value) || 0;
+  });
+  document.querySelectorAll('[data-et-roi]').forEach(function(el){
+    const key = el.getAttribute('data-et-roi');
+    next.months[key] = next.months[key] || {};
+    next.months[key].roi = Number(el.value) || 0;
+  });
+
+  execTargetsBusy = true;
+  btn.disabled = true;
+  msg.textContent = 'Saving…';
+  msg.style.color = '';
+
+  try {
+    await execTargetsApi_({ action:'saveTargets', targets: JSON.stringify(next) });
+    execTargets = next;
+    msg.textContent = 'Saved. The Executive report picks these up on its next load.';
+  } catch(err){
+    /* The server's words, not ours. When it refuses it names the
+       TargetAdmins tab and the address you are signed in as, which is the
+       whole of what somebody needs to get added to it. */
+    msg.textContent = err.message || String(err);
+    msg.style.color = 'var(--amber,#f5a524)';
+  } finally {
+    execTargetsBusy = false;
+    btn.disabled = false;
+  }
 }
 function saveThresh(){
   Object.keys(thresholds).forEach(k=>{

@@ -1,0 +1,108 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   ONE LOADING ANIMATION, FOR EVERY REPORT
+   ═══════════════════════════════════════════════════════════════════════
+   The shell shows a floating, glowing cube while a report's document is on
+   its way. Then the document paints, the cube goes, and the report starts
+   fetching its own data behind its own spinner - a different animation, in
+   the middle of the same wait. One click, two loading screens.
+
+   This gives those spinners the same cube. The shell's overlay hands over to
+   this one and the wait looks like a single thing, which is what it is.
+
+   NOTHING IN ANY REPORT'S MARKUP CHANGES. Six reports grew four different
+   loaders - .loaderbox, .loader-in, #uaLoader .lbox - and rewriting the
+   markup in six files to unify them is six chances to break a loader that
+   works. So this stylesheet takes the boxes as they are: it hides whatever
+   spinner each one has and draws the cube on the box itself. The words each
+   report shows ("Loading Data", and ASO's live #loaderMsg) are left alone -
+   they are the useful half.
+
+   Each report links it from its own <head>. Vite bundles it per page and
+   rewrites the cube's url() to the fingerprinted asset, which a path built
+   in JavaScript would not survive.
+
+   NOT INCLUDED, on purpose: the Executive report, which already draws this
+   cube and is where the design came from, and Creative's progress bar, which
+   counts real chunks arriving. A percentage that moves says more than an
+   animation that loops, so Creative keeps its bar and gains the cube above
+   it rather than instead of it. */
+
+.loader .spinner,
+.loader .spin,
+.loader .pulse,
+.loader .loader-pulse,
+#uaLoader .spin,
+#uaLoader .pulse {
+  display: none !important;
+}
+
+.loader .loaderbox,
+.loader .loader-in,
+#uaLoader .lbox,
+.load-progress-head {
+  position: relative;
+}
+
+/* The glow sits behind, the cube in front. Both are pseudo-elements on the
+   box, so no report needs an element it does not already have. */
+.loader .loaderbox::before,
+.loader .loader-in::before,
+#uaLoader .lbox::before {
+  content: '';
+  display: block;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto -145px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 229, 195, .22), transparent 70%);
+  animation: psGlow 2.2s ease-in-out infinite;
+}
+
+.loader .loaderbox::after,
+.loader .loader-in::after,
+#uaLoader .lbox::after {
+  content: '';
+  display: block;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 18px;
+  background: url(../../assets/images/playspare-cube.png) center/contain no-repeat;
+  animation: psFloat 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 10px 28px rgba(0, 229, 195, .4));
+}
+
+/* Creative keeps its percentage and gets the cube above the bar. */
+.load-progress::before {
+  content: '';
+  display: block;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 20px;
+  background: url(../../assets/images/playspare-cube.png) center/contain no-repeat;
+  animation: psFloat 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 10px 28px rgba(0, 229, 195, .4));
+}
+
+@keyframes psFloat {
+  0%, 100% { transform: translateY(6px) rotate(-5deg) scale(1); }
+  50%      { transform: translateY(-12px) rotate(5deg) scale(1.07); }
+}
+
+@keyframes psGlow {
+  0%, 100% { opacity: .45; transform: scale(.85); }
+  50%      { opacity: 1;   transform: scale(1.12); }
+}
+
+/* A still cube and the same words. The point is "this is coming", and that
+   survives without movement. */
+@media (prefers-reduced-motion: reduce) {
+  .loader .loaderbox::before,
+  .loader .loaderbox::after,
+  .loader .loader-in::before,
+  .loader .loader-in::after,
+  #uaLoader .lbox::before,
+  #uaLoader .lbox::after,
+  .load-progress::before {
+    animation: none;
+  }
+}

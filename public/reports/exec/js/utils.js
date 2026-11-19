@@ -26,21 +26,13 @@ const staticDom = {
   tabPanels: [],
   tabButtons: [],
   presetButtons: [],
-  qPills: [],
-  ltvTypeButtons: [],
-  ltvPlatButtons: [],
-  ltvDateButtons: [],
-  ltvRangeButtons: []
+  qPills: []
 };
 function cacheStaticDom() {
   staticDom.tabPanels = Array.from(document.querySelectorAll('.tabPanel'));
   staticDom.tabButtons = Array.from(document.querySelectorAll('.tabBtn'));
   staticDom.presetButtons = Array.from(document.querySelectorAll('.presetBtn'));
   staticDom.qPills = Array.from(document.querySelectorAll('.qPill'));
-  staticDom.ltvTypeButtons = Array.from(document.querySelectorAll('#ltvTypeToggle button'));
-  staticDom.ltvPlatButtons = Array.from(document.querySelectorAll('#ltvPlatToggle button'));
-  staticDom.ltvDateButtons = Array.from(document.querySelectorAll('#ltvDateToggle button'));
-  staticDom.ltvRangeButtons = Array.from(document.querySelectorAll('.ltvDayToggle button'));
 }
 function cachedList(name, selector) {
   return staticDom[name]?.length ? staticDom[name] : Array.from(document.querySelectorAll(selector));
