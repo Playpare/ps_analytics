@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playspare Pulse · Creative</title>
+<!-- The Playspare cube. Stated in the markup, because a rel=icon is only
+     honoured at parse time - assigning one from script later leaves the tab
+     showing the browser's globe placeholder, which is what every Playspare
+     page used to do. -->
+<link rel="icon" type="image/png" href="assets/images/playspare-cube.png">
+
+<!-- The page loads Chart.js from cdnjs and renders images, video and YouTube
+     embeds from URLs that come out of the sheets, so the origins each resource
+     type may come from are pinned here.
+
+     'unsafe-inline' is required for script-src only because the config block
+     below is inline; dropping it means moving that block to its own .js file
+     AND removing the inline onerror="…" handlers - a separate change.
+
+     TWO CHANGES FROM THE STANDALONE VERSION, both because this page is now a
+     section of Playspare Pulse rather than a site of its own:
+
+     frame-ancestors 'self', WAS 'none'. This is the one that mattered. 'none'
+     tells the browser to refuse to render the page inside any frame at all -
+     so the Pulse shell, which loads every report in an iframe, got a blank
+     panel and a console refusal, with nothing wrong in the page itself.
+     'self' allows the shell and still refuses every other site.
+
+     accounts.google.com and apis.google.com are gone from script-src,
+     style-src, frame-src and connect-src. Google Sign-In was this page's own
+     front door; sign-in is Pulse's auth deployment now, and an origin left in
+     a policy for a feature that no longer exists is permission granted for
+     nothing. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src https://fonts.gstatic.com data:;
+  img-src 'self' data: blob: https:;
+  media-src 'self' blob: https:;
+  frame-src https://www.youtube.com https://www.youtube-nocookie.com;
+  connect-src 'self' https://script.google.com https://script.googleusercontent.com;
+  base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self';">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+        integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- THE GOOGLE SIGN-IN IS GONE, and so is the password form that was kept
+     commented out beside it for rollback.
+
+     What stood here: a login card with a Google Identity Services button, a
+     @gamedistrict.co domain check, an Authentication-sheet allowlist, and an
+     opaque session token this project minted for itself and kept in a
+     Sessions tab. That was a THIRD front door into Playspare's analytics -
+     Pulse had one, the Executive Dashboard had one, and this had one, each
+     with its own user list aging on its own.
+
+     Rollback is not a reason to keep the markup: it is in this repository's
+     history, and in creative-dash's, which is where a rollback would come
+     from anyway. Commented-out login code in a live page is just a login
+     waiting for somebody to re-enable half of it.
+
+     What replaces it is not another login box but an explanation. Inside the
+     Pulse shell this never appears - the shell renders no section until
+     somebody is signed in. It appears when this page is opened on its own,
+     and then the honest thing to say is that this is not where you sign in. -->
+<div class="login-backdrop" id="loginBackdrop">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="sb-logo"><img src="assets/images/playspare-cube.png" alt="" width="24" height="24"></div>
+      <div>
+        <div class="login-title">Creative Analytics</div>
+        <div class="login-sub">Part of Playspare Pulse</div>
+      </div>
+    </div>
+    <div class="login-form">
+      <div class="login-error" id="loginError"></div>
+      <div class="login-note">
+        Open this from <b>Playspare Pulse</b>. Sign-in happens there now, and
+        this section reads the session it created.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="app-shell auth-locked" id="appShell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 8v8l7-4-7-4z"/></svg></div>
+      <div>
+        <div class="sb-title">Creative Analytics</div>
+        <div class="sb-sub" id="sbGame">Loading…</div>
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-group">Assets</div>
+      <div class="sb-item on" data-fmt="all" role="button" tabindex="0"><span class="sbi-l"><svg class="icn" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>All Assets</span><span class="cnt" id="nav-count-all">0</span></div>
+      <div class="sb-item" data-fmt="Video" role="button" tabindex="0"><span class="sbi-l"><svg class="icn" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Videos</span><span class="cnt" id="nav-count-Video">0</span></div>
+      <div class="sb-item" data-fmt="Playable" role="button" tabindex="0"><span class="sbi-l"><svg class="icn" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 12h6M12 9v6"/></svg>Playables</span><span class="cnt" id="nav-count-Playable">0</span></div>
+      <div class="sb-item" data-fmt="Image" role="button" tabindex="0"><span class="sbi-l"><svg class="icn" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Images</span><span class="cnt" id="nav-count-Image">0</span></div>
+      <div class="sb-item" data-page="valia" role="button" tabindex="0"><span class="sbi-l"><svg class="icn" viewBox="0 0 24 24"><path d="M20.6 13.4L12 22l-9-9V4a1 1 0 0 1 1-1h8l8.6 8.6a1 1 0 0 1 0 1.4z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>VALIA</span><span class="cnt" id="nav-count-valia">0</span></div>
+
+      <div class="sb-group">Creative Labels</div>
+    </nav>
+  </aside>
+
+  <div class="main-area">
+    <div class="main-topbar">
+      <button class="hamburger" id="hamburgerBtn"><svg class="icn-lg" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <input id="search" class="inp" placeholder="Search creatives, campaigns…" />
+      <div class="page-title-wrap">
+        <h1 class="page-title">Creative Performance</h1>
+        <div class="page-sub" id="pageSub">Loading dashboard…</div>
+      </div>
+      <div class="main-actions">
+        <select id="network" class="inp">
+          <option value="all">All networks</option>
+          <option value="AppLovin">AppLovin</option>
+          <option value="Google Ads">Google Ads</option>
+        </select>
+        <select id="sort" class="inp">
+          <option value="spend">Sort by Spend</option>
+          <option value="installs">Sort by Installs</option>
+          <option value="ipm">Sort by IPM</option>
+          <option value="cpi-asc">Sort by CPI (low→high)</option>
+          <option value="ctr">Sort by CTR</option>
+        </select>
+        <!-- Every rolling preset is INCLUSIVE OF THE LATEST DAY: "Last N days"
+             means [today - (N-1) .. today], so today's partial figures are
+             always in view and the spans never disagree with each other.
+
+             The numeric value IS the span — rangeForPreset() reads it with
+             parseInt, so adding another window here needs no JS change.
+
+             A page load fetches ONE window — the last CONFIG.EXTENDED_DAYS
+             (62) — and every preset here fits inside it, so switching between
+             them costs NO request. That is the reason the widest option is 60
+             and not 90: 60 <= 62.
+
+             DO NOT ADD A PRESET WIDER THAN CONFIG.EXTENDED_DAYS. It would go
+             to the server on every use (uncached, since the warmer only keeps
+             the 45- and 62-day windows warm), and worse, a fresh-but-narrower
+             cached dataset would paint UNDER its heading and under-report every
+             total with no error shown. Raise EXTENDED_DAYS first if you need a
+             wider preset — and remember what that costs: the old 90-day window
+             was 2.71 MB, i.e. 18 seconds on a slow connection, on every load.
+
+             Custom range is the one way past the window, and it is explicit:
+             it always asks the server. Rows go back KEEP_DAYS (200, in
+             archiveOldRows in code.gs); anything older has been moved to the
+             archive spreadsheet named in ARCHIVE_SPREADSHEET_ID and is no
+             longer in the tab this reads. -->
+        <select id="dateRange" class="inp">
+          <option value="90">Last 90 days</option>
+          <option value="60">Last 60 days</option>
+          <option value="45" selected>Last 45 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="14">Last 14 days</option>
+          <option value="7">Last 7 days</option>
+          <option value="single">Single date</option>
+          <option value="custom">Custom range</option>
+        </select>
+        <span id="singleDateWrap" class="date-group hidden">
+          <input type="date" id="singleDate" class="inp" required />
+          <button type="button" id="singleDateConfirm" class="btn btn-acc">Confirm</button>
+        </span>
+        <span id="customDates" class="date-group hidden">
+          <input type="date" id="customStart" class="inp" />
+          <span style="color:var(--mut);font-size:10px">→</span>
+          <input type="date" id="customEnd" class="inp" />
+        </span>
+        <button class="btn btn-acc" id="reloadBtn" title="Re-read the sheets now. Use this if the morning sync ran late."><svg class="icn" id="reloadIcn" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>Reload</button>
+        <span class="user-chip" id="userChip" style="display:none"><span class="role-tag" id="userChipRole"></span></span>
+        <button class="btn btn-xs" id="logoutBtn" style="display:none">Sign out</button>
+      </div>
+    </div>
+
+    <main class="page-content">
+      <div class="load-progress" id="loadProgress" role="progressbar" aria-label="Dashboard loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="load-progress-head">
+          <span class="load-progress-label" id="loadProgressLabel">Loading dashboard</span>
+          <span class="load-progress-value num" id="loadProgressValue">0%</span>
+        </div>
+        <div class="load-progress-track"><div class="load-progress-fill" id="loadProgressFill"></div></div>
+      </div>
+      <!-- role="status" so a load failure or "no rows matched" is announced,
+           not just coloured. -->
+      <div id="banners" role="status" aria-live="polite"></div>
+      <div class="krow" id="kpis"></div>
+      <div class="g2">
+        <div class="cc"><div class="cc-t">Format Distribution</div><div class="cc-s">Creative count by format, not spend share</div><div class="cc-canvas-wrap"><canvas id="chart-format"></canvas></div></div>
+        <div class="cc"><div class="cc-t">Leaderboard</div><div class="cc-s">Top assets by attributed spend</div><div class="cc-canvas-wrap"><canvas id="chart-top10"></canvas></div></div>
+      </div>
+      <div class="tabs" id="tabs">
+        <div class="tab on" data-fmt="all" role="button" tabindex="0">All<span class="cnt" id="count-all">0</span></div>
+        <div class="tab" data-fmt="Video" role="button" tabindex="0"><span class="dot"></span>Videos<span class="cnt" id="count-Video">0</span></div>
+        <div class="tab" data-fmt="Playable" role="button" tabindex="0"><span class="dot"></span>Playables<span class="cnt" id="count-Playable">0</span></div>
+        <div class="tab" data-fmt="Image" role="button" tabindex="0"><span class="dot"></span>Images<span class="cnt" id="count-Image">0</span></div>
+      </div>
+
+      <div id="valiaPage" style="display:none">
+        <div class="valia-head">
+          <div class="valia-stats" id="valiaStats"></div>
+          <div class="valia-tools">
+            <input id="valiaSearch" class="inp" placeholder="Search labels, video ID…" />
+            <select id="valiaFilter" class="inp">
+              <option value="all">All videos</option>
+              <option value="labelled">Labelled only</option>
+              <option value="partial">Partially labelled</option>
+              <option value="none">Awaiting labels</option>
+            </select>
+            <button class="btn btn-acc" id="valiaRefresh"><svg class="icn" id="valiaRefreshIcn" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>Reload</button>
+          </div>
+        </div>
+        <div id="valiaBanners" role="status" aria-live="polite"></div>
+        <div id="valiaContent"></div>
+      </div>
+      <div id="content">
+        <div class="skeleton-grid" id="skeleton"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="valiaModalBackdrop" class="vmodal-backdrop">
+  <div class="vmodal" role="dialog" aria-modal="true" aria-label="VALIA video labels">
+    <div class="vmodal-left">
+      <div class="vmodal-player" id="valiaPlayer"></div>
+      <div class="vmodal-meta">
+        <a class="vm-url" id="valiaModalUrl" href="#" target="_blank" rel="noopener"></a>
+        <button class="btn" id="valiaModalYt"><svg class="icn" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>Open on YouTube</button>
+      </div>
+    </div>
+    <div class="vmodal-right" id="valiaModalInfo"></div>
+  </div>
+</div>
+
+<div id="modal-backdrop" class="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-preview" id="modal-preview"><button class="modal-close" id="modal-close">✕</button></div>
+    <div class="modal-info" id="modal-info"></div>
+  </div>
+</div>
+
+<!-- THE ADMIN MODAL WAS HERE ("Manage access"). It edited an Authentication
+     sheet that is no longer the list anybody signs in against - Playspare
+     Pulse's User Management, under Config, owns that now and reads DashUsers.
+
+     The long warning this markup carried is worth keeping as a note, because
+     the hazard it describes still exists for anything placed BELOW the script
+     block: startDashboard() awaits loadDashboardAuth(), which resolves
+     immediately when a token is already present, so the continuation runs at
+     the end-of-script microtask checkpoint - before the parser has reached
+     anything further down the page. bindFilters() then called
+     addEventListener on null, threw, and took out every binding after it plus
+     the refresh() that loads the data. The page read "Page error" with no
+     creatives, and a fresh tab worked, because with no token the sign-in wait
+     gave the parser time to finish. on() is defensive now, but new markup
+     still belongs above the script, not below it. -->
+
+<script>
+const CONFIG = {
+  /* The endpoint arrives on the URL, as ?api=, and is no longer written here.
+
+     The Pulse shell is what knows which backend a section belongs to: it
+     builds this iframe's URL in reportUrl() and appends ?api=, reading the
+     value from a VITE_API_* build variable that is not in the repository. A
+     page carrying its own literal would be a second place to edit on every
+     redeployment, and the two would eventually disagree with the stale one
+     still answering.
+
+     The literal that was here is in creative-dash's commit history for good,
+     so that deployment wants replacing with a fresh /exec rather than being
+     carried across. */
+  API_URL: new URLSearchParams(location.search).get('api') || '',
+
+  /* GOOGLE_CLIENT_ID is gone with the sign-in it belonged to. It was public
+     by design and harmless to publish - but it is also the configuration for
+     a login this page no longer performs, and config for a removed feature
+     reads to the next person as a feature that is merely broken. */
+  ASSET_VERSION: '20260930-170604',
+  SHEET: 'applovin_data',
+  GOOGLE_SHEET: 'google_ads_data',
+  // Versioned separately from the UI. v25 invalidates older 62/160-day
+  // IndexedDB entries so the browser reloads the new 90-day snapshot.
+  CACHE_KEY: 'creativeDashCache_v25_90d_snapshot',
+
+  // Days shown when the dashboard opens (the "Default" preset), and the size
+  // of the fast first-stage load. Matches CONFIG.MAX_RESPONSE_DAYS in code.gs.
+  DEFAULT_VIEW_DAYS: 45,
+
+  // The window a page load actually fetches — ONE request, not two. Every date
+  // filter inside it is answered locally with ZERO requests; anything wider
+  // goes to the server through fetchRange().
+  //
+  // The daily durable snapshot contains 90 days, so every predefined rolling
+  // preset is calculated locally from one payload.
+  // MUST equal CONFIG.CACHE_WINDOW_DAYS in code.gs.
+  EXTENDED_DAYS: 90,
+  // The API reads the pre-aggregated applovin_data and google_ads_data tabs,
+  // so a slow response almost always means a network/deployment problem.
+  // Keep this modest and retry once instead of one long hung wait.
+  //
+  // This was 360000 (6 minutes). With FETCH_RETRIES that meant a broken
+  // deployment showed a spinner for TWELVE minutes before saying anything —
+  // 360s — RESTORED TO THE VALUE THAT WORKED FOR A MONTH.
+  //
+  // index_old.html shipped 360000 and ran without transport errors for a
+  // month. Lowering it was MY regression, made on the theory that a shorter
+  // budget would surface failures sooner. It did the opposite.
+  //
+  // Aborting a fetch does NOT stop the Apps Script execution — the server
+  // keeps working regardless. So a short budget does not save time, it spends
+  // it: the abort fires on a request that was going to succeed, a retry goes
+  // out, and now two executions compete for a runtime that serves one at a
+  // time per user. Every value I tried (90s, then 120s, then 300s) was a guess
+  // against a number that had already been established empirically.
+  //
+  // Waiting is genuinely faster here. The answer usually arrives on its own.
+  FETCH_TIMEOUT_MS: 360000,
+
+  // NOTE: there is deliberately no outer retry count. Retrying happens in one
+  // place only — inside requestSheets — with a backoff long enough to let a
+  // previous Apps Script execution drain first. An outer retry layer on top of
+  // that once put six competing executions into the per-user queue.
+
+  // "Sync Now" is NOT a read. doPost runs the whole AppLovin pull inline before
+  // it returns any data, so that single request legitimately takes minutes.
+  // Timing it out at FETCH_TIMEOUT_MS aborted a sync that was working fine, and
+  // the retry then re-issued it while the first was still running server-side —
+  // which the script lock rejects.
+  //
+  // 7 minutes is deliberately past Apps Script's own 6-minute execution ceiling:
+  // if the server is going to give up, let IT be the one that says so.
+  SYNC_TIMEOUT_MS: 420000,
+  AUTO_REFRESH_MS: 24 * 60 * 60 * 1000,
+};
+
+/* VALIA reads a THIRD Apps Script deployment: the web app bound to the VALIA
+   sheet, which is neither this project's backend nor the one Pulse signs
+   people in against. It is read-only and carries no token, so nothing about
+   the sign-in change touches it.
+
+   Its URL arrives on the query string the same way API_URL does, from
+   VITE_API_VALIA, rather than being a literal here. The literal that used to
+   sit in this spot is in creative-dash's public commit history for good. */
+const VALIA_CONFIG = {
+  API_URL: new URLSearchParams(location.search).get('valiaApi') || '',
+  FETCH_TIMEOUT_MS: 360000,
+};
+</script>
+<script src="app.js"></script>
+</body>
+</html>

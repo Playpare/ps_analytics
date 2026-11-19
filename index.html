@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Analytics</title>
+<title>Playspare Pulse</title>
+<!-- THE PLAYSPARE CUBE, which is what the browser tab was missing.
+     This document carried no favicon of any kind, so every tab showed the
+     browser's own globe placeholder - not a wrong icon, an absent one. A
+     rel=icon is only honoured when it is in the markup at parse time, so it
+     is stated here and never assigned by script. -->
+<link rel="icon" type="image/png" href="assets/images/playspare-cube.png">
+<link rel="apple-touch-icon" href="assets/images/playspare-cube.png">
 
 
 
@@ -284,6 +291,30 @@
         <div class="card">
           <div class="card-hd"><span class="card-title">First-time payer conversion <span class="card-sub">share of installs that become payers</span></span></div>
           <div class="cv-wrap tall"><canvas id="cvGrowthFtp"></canvas></div>
+        </div>
+      </div>
+
+      <!-- United States.
+
+           Money from the stores' own sales reports, people from GA4, because
+           neither store will give a buyer count by country. The two are
+           separated on screen for the same reason they are separated in the
+           backend: on 29 Oct 2026 the GA4 US buyer figures were reported as
+           wrong, and the revenue beside them does not depend on any of it.
+
+           One axis per chart. Revenue and buyers are different scales and a
+           second y-axis would let any pair of lines be drawn as agreeing. -->
+      <div class="section-label mon">United States <span class="section-sub">store revenue · GA4 buyers</span></div>
+      <div id="growthUsNote"></div>
+      <div class="kpi-grid g4" id="growthUsKpis"></div>
+      <div class="row row-2b">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">US revenue <span class="card-sub">what buyers paid, before the store's cut</span></span></div>
+          <div class="cv-wrap tall"><canvas id="cvGrowthUsRev"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">US buyers <span class="card-sub">distinct people per day, from GA4</span></span></div>
+          <div class="cv-wrap tall"><canvas id="cvGrowthUsBuyers"></canvas></div>
         </div>
       </div>
 

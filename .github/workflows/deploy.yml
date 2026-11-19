@@ -51,11 +51,15 @@ jobs:
           VITE_API_ASO: ${{ secrets.VITE_API_ASO }}
           VITE_API_NEGATIVE: ${{ secrets.VITE_API_NEGATIVE }}
           VITE_API_GAME: ${{ secrets.VITE_API_GAME }}
+          VITE_API_EXEC: ${{ secrets.VITE_API_EXEC }}
+          VITE_API_CREATIVE: ${{ secrets.VITE_API_CREATIVE }}
+          VITE_API_VALIA: ${{ secrets.VITE_API_VALIA }}
           VITE_API_GAME_KEY: ${{ secrets.VITE_API_GAME_KEY }}
         run: |
           missing=""
           for v in VITE_API_AUTH VITE_API_UA VITE_API_WEEKLY VITE_API_TILLDATE \
-                   VITE_API_ASO VITE_API_NEGATIVE VITE_API_GAME VITE_API_GAME_KEY; do
+                   VITE_API_ASO VITE_API_NEGATIVE VITE_API_GAME VITE_API_EXEC \
+                   VITE_API_CREATIVE VITE_API_VALIA VITE_API_GAME_KEY; do
             eval "val=\${$v}"
             if [ -z "$val" ]; then missing="$missing $v"; fi
           done
@@ -64,7 +68,7 @@ jobs:
             echo "Add them under Settings > Secrets and variables > Actions."
             exit 1
           fi
-          echo "all 8 build variables are set"
+          echo "all 11 build variables are set"
 
       - name: Build
         env:
@@ -79,6 +83,9 @@ jobs:
           VITE_API_ASO: ${{ secrets.VITE_API_ASO }}
           VITE_API_NEGATIVE: ${{ secrets.VITE_API_NEGATIVE }}
           VITE_API_GAME: ${{ secrets.VITE_API_GAME }}
+          VITE_API_EXEC: ${{ secrets.VITE_API_EXEC }}
+          VITE_API_CREATIVE: ${{ secrets.VITE_API_CREATIVE }}
+          VITE_API_VALIA: ${{ secrets.VITE_API_VALIA }}
           # Not a URL, so the endpoint check below does not cover it: the shared
           # key game-analytics puts on every request. Kept out of the repo for
           # the same reason the URLs are, and not a security control — see the

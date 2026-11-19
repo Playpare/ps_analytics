@@ -27,6 +27,30 @@ export const API_URLS = {
   aso: import.meta.env.VITE_API_ASO,
   negative: import.meta.env.VITE_API_NEGATIVE,
   game: import.meta.env.VITE_API_GAME,
+  /* The Executive Dashboard's own deployment. It stays its own backend: it
+     reads a separate, already-refined table rather than the raw block
+     game-dashboard aggregates, so pointing it at the game backend would mean
+     rebuilding that refinement on this side for nothing.
+
+     Its endpoint was a literal in a PUBLIC repository (execDash). Moving it
+     here keeps the NEXT one out of a repository, but it does not unpublish
+     this one - that URL is in that repository's commit history for good, so
+     the script wants redeploying to a fresh /exec rather than carrying the
+     old one across. */
+  exec: import.meta.env.VITE_API_EXEC,
+
+  /* Creative Analytics: its own backend too. The compact-v2 wire format, the
+     90-day durable snapshot and the chunked payload cache all stay as they
+     are - only its sign-in moved. Same warning as exec: this endpoint was a
+     literal in a public repository, so deploy a fresh /exec rather than
+     carrying the old one over. */
+  creative: import.meta.env.VITE_API_CREATIVE,
+
+  /* The VALIA page inside the Creative report reads its own deployment -
+     the web app bound to the VALIA sheet. A third endpoint for one section,
+     but the alternative is a literal in a public repo, which is what the old
+     creative-dash did. Travels to the report as ?valiaApi=. */
+  valia: import.meta.env.VITE_API_VALIA,
 };
 
 /**

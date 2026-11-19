@@ -103,6 +103,21 @@ const NAV_ICONS = {
  */
 const SECTION_META = {
   overview:   { group:'Dashboard',      label:'Overview',        order:10,  scope:'game' },
+
+  /* THE EXECUTIVE DASHBOARD, above Growth because that is the order the
+     question gets asked in: how is the portfolio doing, then how is this one
+     game doing. It was a separate repository with a separate deployment and
+     its own sign-in until this change. It keeps its own Apps Script backend
+     and its own refined table - only the front door moved.
+
+     scope:'portfolio', not 'game'. It never shows a single game: the
+     leaderboard and the profit split are cuts ACROSS games, so the game
+     dropdown would be a control that sat there doing nothing. Not 'all'
+     either - that scope promises 'all time', and this report has its own date
+     presets inside it. */
+  exec:       { group:'Executive',      label:'Executive',       order:15,  scope:'portfolio',
+                report:'exec',           api:'exec' },
+
   growth:     { group:'Growth',         label:'Growth',          order:20,  scope:'game' },
   retention:  { group:'Player Metrics', label:'Retention',       order:30,  scope:'game' },
   playtime:   { group:'Player Metrics', label:'Engagement',      order:40,  scope:'game' },
@@ -135,6 +150,17 @@ const SECTION_META = {
   aso:          { group:'Store',      label:'ASO',            order:240, scope:'aso',
                   report:'aso',            api:'aso' },
 
+  /* Creative Analytics, with the reports rather than in a group of its own -
+     it answers the same kind of question they do: which creative, which
+     network, which week. It was a separate repository with its own Google
+     Sign-In; only the sign-in moved, and its data layer is untouched.
+
+     The VALIA page that shipped inside it is deliberately NOT here. It read a
+     third workbook through a third /exec of its own, and folding it in would
+     have meant carrying both into Pulse for a page nobody asked to see. */
+  creative:     { group:'Creative',   label:'Creative',       order:250, scope:'ua',
+                  report:'creative',       api:'creative' },
+
   feedback:   { group:'Config',         label:'Feedback',        order:300, scope:'game' },
   thresholds: { group:'Config',         label:'Thresholds',      order:310, scope:'game' },
   users:      { group:'Config',         label:'User Management', order:320, scope:'game' },
@@ -155,7 +181,13 @@ const SCOPES = {
   game: { game: null,          range: null },
   ua:   { game: 'all games',   range: 'set inside the report' },
   all:  { game: 'all games',   range: 'all time' },
-  aso:  { game: 'all games',   range: 'set inside the report' }
+  aso:  { game: 'all games',   range: 'set inside the report' },
+  /* Executive. Reads the same as 'ua' today, and is its own entry rather than
+     a reuse of it because the two will not stay the same: 'ua' describes the
+     UA reports' own range control, and this describes the Executive date
+     presets. Sharing the key would make a later change to one of them
+     silently change the other. */
+  portfolio: { game: 'all games', range: 'set inside the report' }
 };
 
 /**
@@ -189,6 +221,11 @@ function reportUrl(section) {
   if (api) url += '&api=' + encodeURIComponent(api);
   if (section.api === 'ua' && API_URLS.negative) {
     url += '&negativeApi=' + encodeURIComponent(API_URLS.negative);
+  }
+  /* Creative's VALIA page talks to a different deployment from the rest of
+     that report, so it needs its own endpoint on the same URL. */
+  if (section.api === 'creative' && API_URLS.valia) {
+    url += '&valiaApi=' + encodeURIComponent(API_URLS.valia);
   }
   /* The key travels with the URL because this project's route() checks it
      before anything else; the session token does not, because UA reads the
@@ -226,7 +263,7 @@ const DEFAULT_ENABLED_SECTIONS = [
 ];
 
 /**
- * The five report pages. Appended to whatever the section list turns out to
+ * The seven report pages. Appended to whatever the section list turns out to
  * be, never listed inside it.
  *
  * They were in DEFAULT_ENABLED_SECTIONS at first, which looked right and was
@@ -241,7 +278,7 @@ const DEFAULT_ENABLED_SECTIONS = [
  * of the dashboard. Appending them, the way ADMIN_ONLY_SECTIONS already was,
  * is what makes that true in the code and not only in a comment.
  */
-const REPORT_SECTIONS = ['negative', 'uareport', 'monetization', 'tilldate', 'aso'];
+const REPORT_SECTIONS = ['exec', 'negative', 'uareport', 'monetization', 'tilldate', 'aso', 'creative'];
 // Users section is always available but only shown to admins (filtered in getEnabledSections)
 const ADMIN_ONLY_SECTIONS = ['users'];
 
@@ -608,6 +645,13 @@ function normalizeSheetData(raw){
     monetization:raw.monetization|| { networks:[], ltv:[], whale:[], ftp:[] },
     engagement:  raw.engagement  || { adCohort:null, placements:[], cohortDayKeys:[] },
     conversions: raw.conversions || [],
+    /* Passed through, not defaulted to an empty object.
+
+       null here means "the backend sent no US section", which renderGrowth
+       tells apart from "the section is there and has no rows" - a missing
+       workbook id and a quiet fortnight are different errands and an empty
+       object would make them look the same. */
+    us:          raw.us          || null,
     liveops:     raw.liveops     || [],
     benchmark:   raw.benchmark   || [],
     feedback:    raw.feedback    || [],
@@ -929,6 +973,7 @@ function emptyDataShell(){
     monetization:{networks:[],ltv:[],whale:[],ftp:[]},
     engagement:{adCohort:null,placements:[],cohortDayKeys:[]},
     conversions:[], liveops:[], benchmark:[], feedback:[], missing:{}, freshness:null,
+    us:null,
     retentionRaw:{}, retCohorts:[], retSummary:{}, retByPlatform:{},
     retDays:['d1','d2','d3','d4','d5','d6','d7','d14'], curveAvailable:false,
     platform:'android', platformNotes:{}
@@ -2924,6 +2969,111 @@ function renderGrowth(){
     } else { wrapEmpty('cvGrowthFtp','No first-payer rows in range'); }
   }
 
+  /* -- United States -----------------------------------------------------
+
+     payload.us, built by UsMarket.gs. One platform at a time, matching the
+     rest of this tab: Android reads Sales_By_Country, iOS reads the App Store
+     territory report, and neither sees the other.
+
+     THE CAVEAT IS RENDERED, NOT ASSUMED. buyersVerified is false while the
+     GA4 US buyer figures are unreconciled, and the two cards that divide by
+     them say so on screen. A number shown without its doubt is a number
+     somebody will act on.
+
+     One axis per chart. Revenue and buyers are different scales, and a second
+     y-axis would let any pair of series be drawn as agreeing. */
+  const us = d.us || null;
+
+  if(g('growthUsNote')){
+    let noteHtml = '';
+    if(us && !us.buyersVerified){
+      /* Our own backend string, but stripped of angle brackets anyway: it is
+         rendered as HTML and nothing else on this tab is. */
+      const why = String(us.buyersNote || '').replace(/[<>]/g, '');
+      noteHtml = '<div class="notice" style="padding:10px 14px;margin-bottom:10px;'
+        + 'border-left:3px solid var(--amber);font-size:11px;color:var(--text3)">'
+        + '<b style="color:var(--text2)">Buyers are not reconciled.</b> ' + why
+        + '</div>';
+    }
+    ((us && us.notes) || []).forEach(function(n){
+      noteHtml += '<div class="notice" style="padding:8px 14px;margin-bottom:10px;'
+        + 'font-size:11px;color:var(--text3)">' + String(n).replace(/[<>]/g, '') + '</div>';
+    });
+    g('growthUsNote').innerHTML = noteHtml;
+  }
+
+  const usRows  = (us && us.rows) || [];
+  const usTot   = (us && us.totals) || {};
+  const usDates = usRows.map(function(r){ return r.date; });
+  const usOk    = !!(us && us.buyersVerified);
+  /* Appended to the two cards that divide by buyers, so the doubt travels
+     with the figure instead of only sitting in the banner above. */
+  const usSub   = function(t){ return usOk ? t : t + ' \u00b7 unverified'; };
+
+  const usKpis = [
+    { cls:'lm', lbl:'US Revenue', val:fmtMoney(usTot.revenueUsd||0),
+      sub:'gross \u00b7 ' + ((us && us.sources && us.sources.all) || 'no source'),
+      data: usRows.map(function(r){ return +r.revenueUsd||0; }),
+      dates: usDates, col:'--lime' },
+    { cls:'vl', lbl:'US Purchases', val:fmtKn(usTot.purchases||0),
+      sub:'net of refunds',
+      data: usRows.map(function(r){ return +r.purchases||0; }),
+      dates: usDates, col:'--violet' },
+    { cls:'mg', lbl:'US ARPPU',
+      val: usTot.arppu!=null ? fmtMoney(usTot.arppu, 2) : '\u2014',
+      sub: usSub('total sales \u00f7 total buyers'),
+      data: usRows.map(function(r){
+        return (r.buyers>0) ? (+r.revenueUsd||0)/r.buyers : null; }),
+      dates: usDates, col:'--magenta' },
+    { cls:'am', lbl:'US Buyer Rate',
+      val: usTot.buyerRate!=null ? (usTot.buyerRate*100).toFixed(3)+'%' : '\u2014',
+      sub: usSub('buyers \u00f7 active users'),
+      data: usRows.map(function(r){
+        return (r.activeUsers>0 && r.buyers!=null) ? r.buyers/r.activeUsers*100 : null; }),
+      dates: usDates, col:'--amber' }
+  ];
+  paintKpis('growthUsKpis', usKpis, 'gke');
+
+  if(g('cvGrowthUsRev')){
+    if(usRows.some(function(r){ return r.revenueUsd > 0; })){
+      makeChart('cvGrowthUsRev','bar',{
+        labels: usRows.map(function(r){ return r.date.slice(5); }),
+        datasets:[{ label:'US revenue',
+          data: usRows.map(function(r){ return +r.revenueUsd||0; }),
+          backgroundColor: cc.lime+'cc', borderColor: cc.lime, borderWidth:0,
+          borderRadius:4, borderSkipped:'bottom' }]
+      }, { scales:{ x:xAx, y:{ grid:{color:cc.grid}, ticks:{ color:cc.text,
+          font:{family:CHART_FONT,size:9},
+          callback:function(v){ return fmtMoney(v); } } } } });
+    } else {
+      /* No tab at all is somebody's errand; no rows in range is a date
+         question. The backend's note says which, and it is already on screen
+         above, so this only has to avoid claiming the wrong one. */
+      wrapEmpty('cvGrowthUsRev', us ? 'No US revenue rows in this range'
+                                    : 'The payload carries no US section');
+    }
+  }
+
+  if(g('cvGrowthUsBuyers')){
+    const usBuy = usRows.filter(function(r){ return r.buyers != null; });
+    if(usBuy.length){
+      makeChart('cvGrowthUsBuyers','line',{
+        labels: usBuy.map(function(r){ return r.date.slice(5); }),
+        datasets:[
+          { label:'Buyers', data: usBuy.map(function(r){ return +r.buyers||0; }),
+            borderColor: cc.cyan, backgroundColor: cc.cyan+'22', fill:true,
+            tension:.35, borderWidth:2, pointRadius:0, spanGaps:true },
+          { label:'First-time buyers',
+            data: usBuy.map(function(r){ return +r.newBuyers||0; }),
+            borderColor: cc.magenta, backgroundColor:'transparent',
+            tension:.35, borderWidth:2, pointRadius:0, spanGaps:true }
+        ]
+      }, { scales:{ x:xAx, y:yKn } });
+    } else {
+      wrapEmpty('cvGrowthUsBuyers', 'No GA4_Daily_US rows in this range');
+    }
+  }
+
 }
 
 // ═════════════════════════════════════════
@@ -4652,7 +4802,7 @@ function applyScope(scope){
  * Builds a report section's pane the first time it is opened.
  *
  * The iframe src is set here rather than in markup, so a report is downloaded
- * when somebody asks for it and not before - five reports eagerly loaded would
+ * when somebody asks for it and not before - seven reports eagerly loaded would
  * cost more than the whole dashboard. The token is already in sessionStorage
  * by the time this runs, and the report reads it there, which is the entire
  * reason the sign-in work came first.
