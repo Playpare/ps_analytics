@@ -1,0 +1,91 @@
+/* ---------------------------------------------------------------------------
+ * donut.css — share charts as a clean donut: the ring on the left (as big as
+ * the card allows), the legend on the right as a tidy list of
+ * "name ........ [share%]", the chip in the slice colour with dark text
+ * (DESIGN.md §6.4 "legend value chip"). No page colours are changed.
+ * ------------------------------------------------------------------------- */
+
+html body .pie-row.donut-row {
+  display: flex !important; flex-direction: row !important; align-items: center !important; gap: 28px;
+}
+html body .pie-row.donut-row > .piebox {
+  flex: 0 0 auto !important; width: min(48%, 380px) !important;
+  height: 360px !important; min-height: 360px !important;
+}
+html body .pie-row.donut-row > .pie-legend.dl {
+  flex: 1 1 0 !important; min-width: 0 !important;
+  display: grid !important; align-content: center;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)) !important;
+  gap: 8px 22px !important; padding: 0 !important;
+  max-height: 360px; overflow-y: auto; scrollbar-width: thin;
+}
+/* a wide card (Ad Revenue Share by network) gets a bigger ring */
+html body .card:only-child .pie-row.donut-row > .piebox,
+html body .pie-row.donut-row:has(> .pie-legend.dl .dl-item:nth-child(9)) > .piebox {
+  width: min(40%, 420px) !important; height: 400px !important; min-height: 400px !important;
+}
+html body .pie-row.donut-row:has(> .pie-legend.dl .dl-item:nth-child(9)) > .pie-legend.dl { max-height: 400px }
+
+/* id-level weight (:not(#_)) so a report's own legend styles (Monetization's
+   .legend2 spans, for one) cannot shrink or thin these */
+html body .dl .dl-item:not(#_) {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  padding: 6px 4px; border-bottom: 1px solid var(--border, var(--bor, rgba(255, 255, 255, .08)));
+}
+html body .dl .dl-lb:not(#_) {
+  color: var(--t1, var(--text, #edf2ff)) !important;
+  font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html body .dl .dl-chip:not(#_) {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 52px; height: 24px; padding: 0 9px; border-radius: 7px;
+  color: #000 !important; font-size: 13.5px !important; font-weight: 700 !important; letter-spacing: 0 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* narrow screens: stack again */
+@media (max-width: 900px) {
+  html body .pie-row.donut-row { flex-direction: column !important }
+  html body .pie-row.donut-row > .piebox { width: 100% !important }
+}
+
+/* A donut card that sits beside a taller card (e.g. Revenue Mix next to the
+   IAA vs IAP bars) is stretched by the row: let the donut take the card's
+   spare height and sit in the middle of it instead of hugging the top. */
+html body .card:has(> .pie-row.donut-row) { display: flex; flex-direction: column }
+html body .card > .pie-row.donut-row { flex: 1 1 auto; align-items: center !important }
+
+/* short legends (four items or fewer) are one column, so names are never cut */
+html body .pie-row.donut-row > .pie-legend.dl:not(:has(.dl-item:nth-child(5))) {
+  grid-template-columns: minmax(0, 340px) !important; justify-content: start;
+}
+
+/* ---- legends that live in their own container (Monetization) ----
+   .dl-list : the products / networks card beside a donut, and the placement
+              legend - same "name [share%]" rows as the UA Report
+   .dl-split: the two small Ad vs IAP lists under the platform split rings */
+html body .dl.dl-list {
+  display: grid !important; grid-template-rows: none !important; grid-auto-flow: row !important;
+  grid-auto-columns: auto !important; overflow: visible !important;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)) !important;
+  gap: 6px 22px !important; align-content: start; width: 100%;
+}
+html body .dl.dl-list:not(:has(.dl-item:nth-child(7))) { grid-template-columns: minmax(0, 1fr) !important }
+html body .dl.dl-split {
+  display: flex !important; flex-direction: column; gap: 2px !important; min-width: 190px;
+}
+html body .dl.dl-split .dl-head {
+  font-size: 12px !important; font-weight: 600 !important; letter-spacing: .1em !important;
+  text-transform: uppercase; color: var(--t2, #c9d2e1); margin-bottom: 4px;
+}
+/* the platform split rings were 140px - give them room for the total */
+html body .chart-box:has(> #iosSplit), html body .chart-box:has(> #andSplit) { height: 200px !important }
+html body div:has(> div > .chart-box > #iosSplit) { height: auto !important }
+/* rewarded placement ring a touch bigger */
+html body .chart-box:has(> #iosPlacePie), html body .chart-box:has(> #andPlacePie) { height: 260px !important; width: 260px !important }
+
+/* IAP product share + ad network share donuts (Monetization): a bigger ring */
+html body .chart-box:has(> #iosIapPie), html body .chart-box:has(> #andIapPie),
+html body .chart-box:has(> #iosNetPie), html body .chart-box:has(> #andNetPie) { min-height: 340px !important }
+

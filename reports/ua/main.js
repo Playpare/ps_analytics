@@ -10,9 +10,14 @@
 
 import '../../src/shared/styles/motion.css';
 import './ua.css';
+/* dashboard-wide fonts, sizes and chart scale - colours untouched */
+import '../../src/shared/styles/report-type.css';
 
 import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';
+import '../../src/shared/chart-type.js';
+import '../../src/shared/donut.js';
+import '../../src/shared/date-popup.js';
 import '../../src/shared/snapshot.js';
 
 import './ua.legacy.js';

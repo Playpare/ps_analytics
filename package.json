@@ -13,10 +13,11 @@
     "test:fmt": "node tools/test-formatters.mjs",
     "test:markup": "node tools/test-markup.mjs",
     "test:fit": "node tools/test-fit.mjs",
+    "test:us": "node tools/test-us-section.mjs",
     "test:tables": "node tools/test-tables.mjs",
     "test:ranges": "node tools/test-ranges.mjs",
     "test:adnet": "node tools/test-ua-adnetwork.mjs",
-    "test": "node tools/test-formatters.mjs && node tools/test-markup.mjs && node tools/test-fit.mjs && node tools/test-tables.mjs && node tools/test-ranges.mjs && node tools/test-ua-adnetwork.mjs && node tools/test-installs-note.mjs && node tools/test-overview-rates.mjs && node tools/test-no-undefined-helpers.mjs"
+    "test": "node tools/test-formatters.mjs && node tools/test-markup.mjs && node tools/test-fit.mjs && node tools/test-tables.mjs && node tools/test-ranges.mjs && node tools/test-ua-adnetwork.mjs && node tools/test-installs-note.mjs && node tools/test-overview-rates.mjs && node tools/test-no-undefined-helpers.mjs && node tools/test-us-section.mjs && node tools/check-growth-names.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

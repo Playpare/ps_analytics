@@ -802,16 +802,20 @@ table.mx{width:max-content;min-width:100%;border-collapse:separate;border-spacin
    .content is given a definite height by flex:1, so height:100% below it
    resolves against real space rather than collapsing to nothing. */
 .content:has(> .report-pane.on){
-  display:flex;flex-direction:column;min-height:0;padding-bottom:24px;
+  display:flex;flex-direction:column;min-height:0;padding:0;
 }
 
 .tab-pane.report-pane.on{display:flex;padding:0;gap:0;flex:1;min-height:0}
+/* Reports run edge to edge: no gutter between the sidebar/topbar and the
+   report, no rounded frame. The report paints its own black ground, so the
+   frame matches it rather than showing a lighter surface at the seams. */
 .report-frame{
   display:block;width:100%;border:0;
   flex:1;min-height:520px;
-  background:var(--surface);
-  border-radius:var(--r-lg);
+  background:#08090d;
+  border-radius:0;
 }
+[data-theme=light] .report-frame{background:#f0f2f9}
 
 /* ═══════════════════════════════════════════════════════════════════════
    ONE IDENTITY
@@ -901,3 +905,128 @@ body:not([data-scope="game"]) #freshBanner { display: none; }
    line repeats on the fresh-data banner; the name is on the sidebar footer. */
 @media (max-width:1250px){ .topbar .sync-info{display:none} }
 @media (max-width:1050px){ .topbar .uname{display:none} }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TOP BAR on the report identity (matches the Negative Spend page):
+   one font, medium weights, pill controls on the card surface, brighter
+   secondary text.
+   ═══════════════════════════════════════════════════════════════════════ */
+.topbar{
+  background:rgba(11,12,15,.96);border-bottom:1px solid rgba(255,255,255,.08);
+  height:60px;gap:12px;
+  font-family:"Segoe UI","Segoe UI Variable",system-ui,Arial,sans-serif;
+}
+[data-theme=light] .topbar{background:rgba(255,255,255,.96);border-bottom-color:#d4d8ed}
+
+/* Report shell: keep the identity row as black as the report canvas. */
+html:not([data-theme="light"]) .topbar{background:#000;backdrop-filter:none}
+.topbar *{font-family:"Segoe UI","Segoe UI Variable",system-ui,Arial,sans-serif !important}
+.topbar-title{font-size:20px;font-weight:700;letter-spacing:-.01em;color:#e8ebfa}
+[data-theme=light] .topbar-title{color:#14172a}
+.topbar .range-lbl{font-size:12px;font-weight:600;letter-spacing:.12em;color:#e6eaf7}
+[data-theme=light] .topbar .range-lbl{color:#353a5c}
+.topbar .icon-btn{
+  width:38px;height:38px;border-radius:10px;background:#0b0c0f;
+  border:1px solid rgba(255,255,255,.08);color:#e6eaf7;
+}
+.topbar .icon-btn:hover{border-color:#4d9fff;color:#e8ebfa;background:rgba(255,255,255,.035)}
+[data-theme=light] .topbar .icon-btn{background:#fff;border-color:#d4d8ed;color:#353a5c}
+.topbar .scope-chip{
+  height:38px;padding:0 18px;border-radius:999px;
+  background:#1c1f2e;border:1px dashed rgba(255,255,255,.16);
+  color:#e6eaf7;font-size:15px;font-weight:500;letter-spacing:0;
+}
+[data-theme=light] .topbar .scope-chip{background:#e8ebf5;border-color:#c3c8de;color:#353a5c}
+.topbar .game-select{
+  height:38px;border-radius:999px;font-size:15px;font-weight:500;
+  background-color:#0b0c0f;border:1px solid rgba(255,255,255,.08);color:#e8ebfa;padding:0 34px 0 18px;
+}
+.topbar .game-select:hover,.topbar .game-select:focus{border-color:#4d9fff}
+[data-theme=light] .topbar .game-select{background-color:#fff;border-color:#d4d8ed;color:#14172a}
+.topbar .range-select{height:38px;border-radius:999px;font-size:15px;font-weight:600;padding:0 34px 0 18px}
+.topbar .sync-info{font-size:13px;font-weight:500;color:#e6eaf7}
+[data-theme=light] .topbar .sync-info{color:#353a5c}
+.topbar .sync-dot{background:#18c97a;box-shadow:0 0 8px #18c97a}
+.topbar .uname{font-size:15px;font-weight:600;color:#e8ebfa}
+[data-theme=light] .topbar .uname{color:#14172a}
+.topbar .icon-btn.btn-sync{
+  width:auto;
+  height:38px;padding:0 16px;border-radius:999px;gap:8px;
+  font-size:14px;font-weight:600;letter-spacing:.04em;
+  color:#18c97a;background:rgba(24,201,122,.12);border:1px solid rgba(24,201,122,.30);
+}
+.topbar .btn-sync:hover{color:#39dc91;border-color:#39dc91;background:rgba(24,201,122,.18)}
+[data-theme=light] .topbar .btn-sync{color:#0aaa62;background:rgba(10,170,98,.10);border-color:rgba(10,170,98,.35)}
+
+/* On a report (any scope other than "game") the report carries its own
+   platform, date and freshness controls, so the hub's range chip, game chip
+   and sync line are removed from the top bar rather than shown as stand-ins. */
+body:not([data-scope="game"]) .topbar .topbar-range,
+body:not([data-scope="game"]) .topbar #gameChip,
+body:not([data-scope="game"]) .topbar .sync-info { display: none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SIDEBAR - redesigned: bordered nav tiles, readable section labels, the
+   collapse button under the logo, and the signed-in user in the footer.
+   ═══════════════════════════════════════════════════════════════════════ */
+.sidebar{background:#0b0c0f}
+[data-theme=light] .sidebar{background:#ffffff}
+
+/* logo block + collapse button */
+.sb-top{padding:20px 16px 10px;border-bottom:0;display:flex;flex-direction:column;gap:14px}
+.sb-mark{min-width:42px;height:42px;border-radius:11px;box-shadow:0 0 18px rgba(0,229,195,.25)}
+.sb-game{font-size:16px !important;font-weight:700 !important;line-height:1.25}
+.sb-sub{font-size:13px !important;font-weight:500 !important;color:var(--text2) !important;letter-spacing:0 !important}
+.sb-collapse{align-self:flex-end;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;cursor:pointer;
+  background:#151820;border:1px solid rgba(255,255,255,.12);color:var(--text2);transition:color .15s,border-color .15s}
+.sb-collapse:hover{color:var(--text);border-color:#4d9fff}
+[data-theme=light] .sb-collapse{background:#f2f4fa;border-color:#d4d8ed}
+body.sb-collapsed .sb-collapse svg{transform:rotate(180deg)}
+/* the old topbar toggle is replaced by the one in the sidebar */
+.topbar #sbToggle{display:none !important}
+
+/* section labels: readable, not tiny mono caps */
+.sb-nav{padding:6px 12px 12px}
+.sb-section{font-size:13px !important;font-weight:700 !important;letter-spacing:.06em !important;
+  color:var(--text2) !important;padding:20px 6px 10px !important;text-transform:uppercase}
+
+/* every item is its own rounded, bordered tile */
+.nav-item{gap:12px;padding:11px 13px !important;margin-bottom:8px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);
+  color:var(--text) !important;font-size:15px !important;font-weight:600 !important;line-height:1.3}
+.nav-item svg{width:17px;height:17px;opacity:1 !important;color:var(--text2)}
+.nav-item:hover{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.045)}
+.nav-item.active{background:linear-gradient(90deg,rgba(77,159,255,.16),rgba(77,159,255,.05)) !important;
+  border-color:rgba(77,159,255,.5);color:#ffffff !important;box-shadow:inset 3px 0 0 #4d9fff}
+.nav-item.active svg{color:#4d9fff}
+.nav-item.active::before{display:none !important}
+[data-theme=light] .nav-item{border-color:#dfe3f0;background:#fafbfe}
+[data-theme=light] .nav-item:hover{border-color:#c3c8de;background:#f2f4fa}
+[data-theme=light] .nav-item.active{background:linear-gradient(90deg,rgba(64,80,232,.12),rgba(64,80,232,.03)) !important;
+  border-color:rgba(64,80,232,.45);color:#14172a !important;box-shadow:inset 3px 0 0 #4050e8}
+[data-theme=light] .nav-item.active svg{color:#4050e8}
+
+/* footer: user · theme · sign out */
+.sb-footer{display:flex;align-items:center;gap:8px;padding:14px 12px !important;border-top:1px solid rgba(255,255,255,.08)}
+.sb-user{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px}
+.sb-av{width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;font-size:15px;font-weight:700}
+.sb-who{min-width:0}
+.sb-uname{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-role{font-size:12.5px;font-weight:500;color:var(--text2)}
+.sb-footer .theme-btn{width:38px !important;height:38px;flex:none;padding:0 !important;justify-content:center;border-radius:10px}
+.sb-footer .theme-btn span{display:none}
+.sb-footer .sb-signout{color:#f05252 !important;border-color:rgba(240,82,82,.45) !important;background:rgba(240,82,82,.06) !important}
+.sb-footer .sb-signout:hover{background:rgba(240,82,82,.14) !important;border-color:#f05252 !important}
+
+/* ---- collapsed rail ---- */
+body.sb-collapsed .sb-top{padding:18px 0 8px !important;align-items:center}
+body.sb-collapsed .sb-collapse{align-self:center}
+body.sb-collapsed .sb-nav{padding:6px 10px !important}
+/* group labels hide, but their gap stays so groups still read as groups */
+body.sb-collapsed .sb-section{display:block !important;font-size:0 !important;padding:0 !important;height:22px}
+body.sb-collapsed .nav-item{justify-content:center;padding:11px 0 !important}
+body.sb-collapsed .sb-footer{flex-direction:column;padding:12px 8px !important}
+body.sb-collapsed .sb-who{display:none}
+body.sb-collapsed .sb-user{flex:none}

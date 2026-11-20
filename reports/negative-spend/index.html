@@ -11,9 +11,6 @@
 
 
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Quicksand:wght@500;600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap">
   <!--THEME_BOOT-->
 </head>
 <body>
@@ -30,7 +27,7 @@
       <button type="button" data-platform="all">All platforms</button>
     </span>
   </span>
-  <button id="mapBtn" class="btn" type="button">&#9998; Campaign settings</button>
+  <button id="mapBtn" class="btn" type="button" hidden>&#9998; Campaign settings</button>
   <div class="date" data-date-range>Live Sheet Data</div>
   <span id="status" class="status" hidden>Loading…</span>
 </header>
@@ -38,7 +35,6 @@
 <!-- ===================== NEGATIVE SPEND — ONE PAGE ===================== -->
 <main id="page" class="view active"><section class="slide">
   <div class="sb">
-    <div class="eyebrow" id="pageEyebrow">Cohort payback against cash · every card follows the platform and window</div>
     <div class="h1" id="pageTitle">Negative Spend</div>
 
     <!-- ===================================================================
@@ -54,29 +50,10 @@
     <div id="glanceHead"></div>
     <div id="glanceActs" class="acts"></div>
 
-    <!-- Cohort payback against break-even, with a projection. This is the one
-         thing the removed sections carried that nothing else did: cash can read
-         positive while the cohorts you just bought are still under water. -->
-    <section id="beCard" class="card mt" hidden>
-      <div class="chead">
-        <div>
-          <h2>Payback</h2>
-          <div class="note" id="beNote">—</div>
-        </div>
-        <div class="spacer"></div>
-        <div class="be-now"><span id="beNow">—</span><em id="beNowSub">—</em></div>
-      </div>
-      <div class="g-ladder" id="beLadder"></div>
-      <div class="be-plot" id="bePlot">
-        <svg id="beSvg" aria-hidden="true"></svg>
-      </div>
-      <div class="be-foot" id="beFoot"></div>
-    </section>
     <section id="perfCard" class="card mt" hidden>
       <div class="chead">
         <div>
           <h2>Performance</h2>
-          <div class="note">Click a network to open its campaigns. Click any row for its trend.</div>
         </div>
         <div class="spacer"></div>
         <div class="ctrls">
@@ -94,13 +71,19 @@
           <h3 id="pdTitle">—</h3>
           <span class="m" id="pdMeta"></span>
           <div class="spacer"></div>
-          <span class="m" id="pdRef"></span>
-          <div class="seg cmode" id="perfMode" role="group" aria-label="What the chart shows">
-            <button type="button" data-m="roas" aria-pressed="false">ROAS vs target</button>
-            <button type="button" data-m="budget" aria-pressed="false">Spend vs budget</button>
-            <button type="button" data-m="money" aria-pressed="false">Cost vs revenue</button>
+          <div class="pd-ctrls">
+            <div class="seg" id="pdMode" role="group" aria-label="What the trend shows">
+              <button type="button" data-c="money" aria-pressed="true">Cost · Revenue · Gross</button>
+              <button type="button" data-c="roas" aria-pressed="false">ROAS</button>
+            </div>
+            <div class="seg seg-sm" id="pdKind" role="group" aria-label="Which revenue the ROAS uses" hidden>
+              <button type="button" data-k="all" aria-pressed="true">All</button>
+              <button type="button" data-k="iap" aria-pressed="false">IAP</button>
+              <button type="button" data-k="ad" aria-pressed="false">Ad</button>
+            </div>
           </div>
         </div>
+        <div class="keys pd-legend" id="pdRef"></div>
         <div class="plot" id="pdPlot">
           <svg id="pdSvg" viewBox="0 0 900 210" aria-hidden="true"></svg>
           <div class="tip" id="pdTip"></div>
@@ -119,12 +102,14 @@
          page printed two different answers to "what should I cut" without
          saying which was which.
 
-         The one thing they carried that nothing else did - cohort payback
-         against break-even - is now the break-even card above, with a
-         projection the ladder never had. -->
+         The Payback (break-even) card that replaced the ladder has also been
+         removed, as have the Back per $1 and Needs columns of the table. -->
 
   </div>
-  <div class="sf"><span>UA · Negative Spend <b style="color:var(--teal)">· build B9 — rows measured on the settings running now, with their effective date</b></span><span>Playspare · Game District</span></div>
+  <div class="sf">
+    <span class="sf-left"><b class="sf-name">UA · Negative Spend</b></span>
+    <span class="sf-brand">Playspare · Game District</span>
+  </div>
 </section></main>
 
 <div id="mapModal" class="modal" hidden>

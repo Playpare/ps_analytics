@@ -300,3 +300,22 @@ body.lt{--bg:#eef1f7;--card:#ffffff;--card2:#f5f7fc;
       background-size:220% 100%;animation:sh 1.3s ease-in-out infinite}
     @keyframes sh{to{background-position:-220% 0}}
     @media (prefers-reduced-motion: reduce){.skel{animation:none}.spin{animation-duration:2.4s}}
+
+/* Navigation and date rows match the pure-black report canvas. */
+body:not(.lt) .top,body:not(.lt) .sh{background:#000;backdrop-filter:none}
+
+/* Navigation lives inside the active sticky date row, without floating. */
+.sh>.tabs{margin-right:auto;align-items:center}
+.sh>.tabs button{font-family:'Trebuchet MS',Arial,sans-serif;font-size:12.5px;font-weight:650}
+
+/* Give the four overview comparison cards a little more vertical room. */
+#ovRow1 .kpi{min-height:156px}
+
+/* Enlarge the two overview comparison charts without changing their layout. */
+#overview .two.ov-differ{gap:18px}
+#overview .two.ov-differ .card{padding:24px 26px}
+#overview .two.ov-differ .card h2{font-size:22px;margin-bottom:16px}
+#overview .two.ov-differ .chartbox.tall{height:520px}
+
+/* The overview's first section follows the title without a divider. */
+#overview #ovWarnings + .h2s{border-top:0;padding-top:0}

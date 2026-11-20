@@ -7,9 +7,6 @@
 
 
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Quicksand:wght@500;600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap">
   <!-- Reads mss3d_theme and stamps data-theme before the first paint. It has
        to be inline and render-blocking: a module script is deferred, so a theme
        applied from JS lands one frame late and anyone on light sees a flash of
@@ -45,19 +42,26 @@
 <aside class="sidebar">
   <div class="sb-top">
     <div class="sb-logo">
-      <div class="sb-mark" id="sbMark">MCDS</div>
+      <div class="sb-mark" id="sbMark">PP</div>
       <div class="sb-text">
-        <div class="sb-game" id="sbGameName">My Supermarket Simulator</div>
+        <div class="sb-game" id="sbGameName">PlaySpare Pulse</div>
         <div class="sb-sub">Analytics</div>
       </div>
     </div>
+    <!-- collapse / expand lives in the sidebar itself now (it used to sit at
+         the left of the topbar) -->
+    <button class="sb-collapse" type="button" onclick="toggleSidebar()" title="Collapse sidebar" aria-label="Toggle sidebar">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>
+    </button>
   </div>
 
   <!-- Sidebar nav is built dynamically by buildNav() based on per-game config -->
   <div class="sb-nav" id="sbNav"></div>
 
   <div class="sb-footer">
-    <button class="theme-btn" onclick="toggleTheme()">
+    <!-- the signed-in user (filled from the session, see fillSidebarUser) -->
+    <div class="sb-user" id="sbUser" title=""><div class="sb-av" id="sbAvatar">&middot;</div><div class="sb-who"><div class="sb-uname" id="sbUserName"></div><div class="sb-role" id="sbUserRole"></div></div></div>
+    <button class="theme-btn sb-theme" onclick="toggleTheme()" title="Switch light / dark">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="3.2"/><line x1="8" y1="1" x2="8" y2="2.5"/><line x1="8" y1="13.5" x2="8" y2="15"/><line x1="1" y1="8" x2="2.5" y2="8"/><line x1="13.5" y1="8" x2="15" y2="8"/><line x1="3" y1="3" x2="4.1" y2="4.1"/><line x1="11.9" y1="11.9" x2="13" y2="13"/><line x1="13" y1="3" x2="11.9" y2="4.1"/><line x1="4.1" y1="11.9" x2="3" y2="13"/></svg>
       <span id="themeLbl">Light mode</span>
     </button>
@@ -81,7 +85,7 @@
     <div class="topbar-title" id="topTitle">Overview</div>
     <div class="topbar-range">
       <label class="range-lbl" for="rangePreset">Range</label>
-      <select class="range-select" id="rangePreset" onchange="onPresetChange()">
+      <select class="range-select" id="rangePreset" data-popup="accent" onchange="onPresetChange()">
         <option value="14">Last 2 weeks</option>
         <option value="28">Last 4 weeks</option>
         <option value="42">Last 6 weeks</option>
@@ -96,7 +100,7 @@
            filtering what they see. applyScope() decides which. -->
       <span class="scope-chip" id="rangeChip" style="display:none"></span>
     </div>
-    <select class="game-select" id="gameSelect" onchange="onGameChange(this.value)"></select>
+    <select class="game-select" id="gameSelect" data-popup onchange="onGameChange(this.value)"></select>
     <span class="scope-chip wide" id="gameChip" style="display:none"></span>
     <div class="sync-info"><span class="sync-dot"></span><span id="syncInfo">Demo data</span></div>
     <span class="uname" id="unameEl"></span>
@@ -175,7 +179,8 @@
            (SECTION_META.liveops.hidden), so a card that sends you there would
            send you nowhere. Both come back together. -->
 
-      <div class="row row-3">
+      <!-- two halves: this row held three cards until Live Ops was hidden -->
+      <div class="row row-2b">
         <div class="card clickable ov-section-card" data-section="stability" onclick="goToTab('stability')">
           <div class="card-hd"><span class="card-title">Stability <span class="card-sub">Crash & ANR</span></span><span class="card-cta">Details →</span></div>
           <div class="stat-grid" id="ovStab"></div>
@@ -189,7 +194,7 @@
 
     <!-- ── GROWTH ── -->
     <div class="tab-pane" id="tab-growth">
-      <div class="section-label">Acquisition <span class="section-sub">installs · cost · channel mix</span></div>
+      <div class="section-label">Acquisition</div>
       <div class="kpi-grid g3" id="growthAcqKpis"></div>
       <div class="kpi-grid g3" id="growthAcqKpis2"></div>
       <div class="card">
@@ -249,7 +254,7 @@
           <span class="mx-flag" id="mxFlag">awaiting data mapping</span>
           <span class="mx-spacer"></span>
           <button class="mx-btn" id="mxSheetBtn" onclick="mxToggleSheetColours()">Sheet colours</button>
-          <select class="range-select sm mx-grain-select" id="mxGrain" aria-label="Matrix column period" onchange="mxSetGrain(this.value)">
+          <select class="range-select sm mx-grain-select" id="mxGrain" data-popup="accent" aria-label="Matrix column period" onchange="mxSetGrain(this.value)">
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
@@ -262,7 +267,7 @@
         <div class="mx-meta" style="margin-top:8px">Scroll sideways for older columns, or hold <b>Shift</b> and use the wheel. Row labels and the header stay pinned.</div>
       </div>
 
-      <div class="section-label mon">Monetization <span class="section-sub">revenue · ARPDAU · ARPPU · LTV</span></div>
+      <div class="section-label mon">Monetization</div>
       <div class="kpi-grid g4" id="growthMonKpis"></div>
       <div class="kpi-grid g4" id="growthMonKpis2"></div>
       <div class="row row-2b">
@@ -278,12 +283,32 @@
 
       <div class="row row-2b">
         <div class="card">
-          <div class="card-hd"><span class="card-title">Whale concentration <span class="card-sub">how much revenue comes from top payers</span></span><span class="grain-badge">weekly</span></div>
-          <div class="cv-wrap tall"><canvas id="cvGrowthWhale"></canvas></div>
-        </div>
-        <div class="card">
           <div class="card-hd"><span class="card-title">First-time payer conversion <span class="card-sub">share of installs that become payers</span></span></div>
           <div class="cv-wrap tall"><canvas id="cvGrowthFtp"></canvas></div>
+        </div>
+      </div>
+
+      <!-- United States.
+
+           Money from the stores' own sales reports, people from GA4, because
+           neither store will give a buyer count by country. The two are
+           separated on screen for the same reason they are separated in the
+           backend: on 29 Oct 2026 the GA4 US buyer figures were reported as
+           wrong, and the revenue beside them does not depend on any of it.
+
+           One axis per chart. Revenue and buyers are different scales and a
+           second y-axis would let any pair of lines be drawn as agreeing. -->
+      <div class="section-label mon">United States <span class="section-sub">store revenue · GA4 buyers</span></div>
+      <div id="growthUsNote"></div>
+      <div class="kpi-grid g4" id="growthUsKpis"></div>
+      <div class="row row-2b">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">US revenue <span class="card-sub">what buyers paid, before the store's cut</span></span></div>
+          <div class="cv-wrap tall"><canvas id="cvGrowthUsRev"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">US buyers <span class="card-sub">distinct people per day, from GA4</span></span></div>
+          <div class="cv-wrap tall"><canvas id="cvGrowthUsBuyers"></canvas></div>
         </div>
       </div>
 
@@ -438,7 +463,7 @@
     <div class="tab-pane" id="tab-events">
       <div class="prog-bar">
         <label class="range-lbl" for="progRange">Progression window</label>
-        <select class="range-select" id="progRange" onchange="onProgRangeChange()">
+        <select class="range-select" id="progRange" data-popup="accent" onchange="onProgRangeChange()">
           <option value="7">Last week</option>
           <option value="14">Last 2 weeks</option>
           <option value="28">Last 4 weeks</option>

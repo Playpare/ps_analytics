@@ -139,6 +139,26 @@ await page.goto(`${BASE}/reports/negative-spend/?api=${encodeURIComponent('https
   { waitUntil: 'load' });
 await page.waitForTimeout(2500);
 
+/* The date filter is a styled popup over the hidden native select; picking
+   an item must still drive the report's own date logic. */
+await page.click('.dd-btn');
+await page.click('.dd-it[data-v=w2]');
+await page.waitForTimeout(700);
+const ddLabel = await page.textContent('.dd-lbl');
+await page.click('.dd-btn');
+await page.click('.dd-it[data-v=w13]');
+await page.waitForTimeout(700);
+
+/* Switching platform must re-render. It used to throw in the removed
+   campaign/margin filters and leave the page stuck on Android. */
+const platTitles = [];
+for (const p of ['ios', 'all', 'android']) {
+  await page.click('#platformFilterBtn');
+  await page.click(`#platformDropMenu [data-platform=${p}]`);
+  await page.waitForTimeout(600);
+  platTitles.push(await page.textContent('#pageTitle'));
+}
+
 /* --------------------------------- checks -------------------------------- */
 const fail = [];
 const ok = (cond, label, detail) => { if (!cond) fail.push(label + (detail ? ' — ' + detail : '')); };
@@ -188,12 +208,12 @@ const seen = await page.evaluate(() => {
     netRows: rows.filter((r) => r.dataset.k?.startsWith('n:')).map((r) => ({
       name: r.querySelector('.g-nm span:last-child')?.textContent.trim().split('\n')[0],
       spend: r.children[2].textContent.trim(),
-      chip: r.querySelector('.g-chip')?.textContent.trim() || '',
-      budgetPct: r.querySelector('.g-spend .lb')?.textContent.trim() || '',
     })),
     rowCount: rows.length,
     chartOn: document.querySelector('#perfDetail')?.classList.contains('on'),
-    chartMode: document.querySelector('#perfMode button[aria-pressed=true]')?.textContent.trim(),
+    chartMode: [...document.querySelectorAll('#pdRef .key')].map((k) => k.textContent.trim()).join(' / '),
+    modeButtons: document.querySelectorAll('#perfMode').length,
+    lines: [...document.querySelectorAll('#pdSvg path')].map((p) => p.getAttribute('stroke')),
     svgPaths: document.querySelectorAll('#pdSvg path').length,
   };
 });
@@ -214,11 +234,25 @@ const styles = await page.evaluate(() => {
 });
 
 ok(crashes.length === 0, 'no uncaught errors', crashes.join(' | '));
-ok(/spent/.test(seen.head), 'headline rendered', seen.head);
+ok(ddLabel === 'Last 2 weeks', 'date popup changes the range', ddLabel);
+ok(platTitles.join('|') === 'Negative Spend · iOS|Negative Spend · All platforms|Negative Spend · Android',
+  'platform switch re-renders', platTitles.join(' | '));
+ok(!seen.head, 'headline removed', seen.head);
+ok(seen.tiles.map((t) => t.title).join('|') === 'Total spend|Total revenue|Total gross profit',
+  'three totals cards', JSON.stringify(seen.tiles.map((t) => t.title)));
+ok(await page.evaluate(() => getComputedStyle(document.getElementById('mapBtn')).display === 'none'),
+  'campaign settings button hidden');
+{
+  const order = await page.evaluate(() => window.__glanceModel().networks.map((n) => n.cost));
+  ok(order.every((v, i) => !i || order[i - 1] >= v), 'networks sorted by spend, high to low', order.join(' > '));
+}
 ok(seen.tiles.length === 3, 'three decision tiles', JSON.stringify(seen.tiles.map((t) => t.title)));
 ok(seen.netRows.length === 2, 'both networks in the table', JSON.stringify(seen.netRows.map((r) => r.name)));
 ok(seen.chartOn, 'detail chart opened');
 ok(seen.svgPaths > 0, 'detail chart drew something', 'paths=' + seen.svgPaths);
+ok(seen.modeButtons === 0, 'chart mode buttons removed');
+ok(['var(--g-cost)', 'var(--g-rev)', 'var(--g-gp)'].every((c) => seen.lines.includes(c)),
+  'chart draws cost, revenue and gross profit', seen.lines.join(', '));
 
 /* THE invariant: the tiles, the network rows and the campaign rows are all
    the same money. If those three ever disagree the summary has grown its own
@@ -241,20 +275,77 @@ ok(Math.abs(totals.cash - totals.netCash) < 0.5,
   'network cash equals the campaign cash',
   `networks ${totals.netCash} vs campaigns ${totals.cash}`);
 
-/* No row may claim it is fine while showing more than 100% of its budget. */
-seen.netRows.forEach((r) => {
-  const m = /^(\d+)%/.exec(r.budgetPct);
-  if (m && Number(m[1]) > 100)
-    ok(/over budget/i.test(r.chip), 'over-budget row says so', `${r.name}: ${r.budgetPct} -> "${r.chip}"`);
-});
+/* The table is Spend / Revenue / Gross Profit only: no budget captions, no
+   Back per $1, no Needs chips, and no Payback card above it. */
+const tableShape = await page.evaluate(() => ({
+  heads: [...document.querySelectorAll('#perfTable thead th')].map((th) => th.firstChild?.textContent.trim()),
+  chips: document.querySelectorAll('#perfTable .g-chip, #perfTable .g-bul').length,
+  captions: document.querySelectorAll('#perfTable .g-spend .lb, #perfTable .g-spend .nocap').length,
+  payback: !!document.getElementById('beCard'),
+}));
+ok(tableShape.heads.join('|') === '#|Network / campaign|Trend|Spend|Revenue|Gross Profit',
+  'performance columns', tableShape.heads.join(' | '));
+ok(tableShape.chips === 0, 'no Back per $1 / Needs cells', 'found ' + tableShape.chips);
+ok(tableShape.captions === 0, 'no budget captions under spend', 'found ' + tableShape.captions);
+ok(!tableShape.payback, 'payback card removed');
 
-/* Every verdict the fixture was built to produce should be reachable. */
-const chips = await page.evaluate(() => {
-  document.querySelectorAll('#perfTable tr.grow').forEach((r) => { if (r.dataset.k?.startsWith('n:')) r.click(); });
-  return [...document.querySelectorAll('#perfTable .g-chip')].map((c) => c.textContent.trim());
-});
-['cut', 'passing', 'under target', 'over budget', 'no budget cap'].forEach((v) =>
-  ok(chips.includes(v), `verdict "${v}" appears`, 'saw: ' + [...new Set(chips)].join(', ')));
+/* A campaign opens its trend directly beneath its own row; a second click
+   hands the chart back to the network. Below-$0 gross profit is marked. */
+{
+  await page.click('#perfTable tr.grow[data-k^="n:Google"]');
+  await page.waitForTimeout(300);
+  if (!(await page.$('#perfTable tr.grow.camp'))) await page.click('#perfTable tr.grow[data-k^="n:Google"]');
+  await page.click('#perfTable tr.grow.camp >> nth=0');
+  await page.waitForTimeout(500);
+  const inRow = await page.evaluate(() => ({
+    ok: !!document.querySelector('#perfTable tr.cdrow #perfDetail.inrow.on') &&
+        document.querySelector('#perfTable tr.cdrow').previousElementSibling.classList.contains('camp'),
+    neg: !!document.querySelector('#pdRef .negnote'),
+  }));
+  ok(inRow.ok, 'campaign trend opens under its row');
+  ok(inRow.neg, 'below-$0 gross profit is flagged');
+  /* Clicking a campaign further down keeps that row where it was on screen,
+     so its trend opens beneath it rather than appearing to land above it. */
+  await page.setViewportSize({ width: 1400, height: 700 });
+  await page.click('#perfTable tr.grow.camp >> nth=0');          // a chart open ABOVE the next one
+  await page.waitForTimeout(400);
+  const second = page.locator('#perfTable tr.grow.camp >> nth=1');
+  await second.scrollIntoViewIfNeeded();
+  const y1 = (await second.boundingBox()).y;
+  await second.click();
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => {
+    const on = document.querySelector('#perfTable tr.grow.camp.on');
+    return { y: on.getBoundingClientRect().top, below: on.nextElementSibling?.classList.contains('cdrow') };
+  });
+  ok(after.below && Math.abs(after.y - y1) < 3, 'clicked campaign stays put with its trend below',
+    `row moved ${Math.round(after.y - y1)}px, chart below: ${after.below}`);
+  await page.setViewportSize({ width: 1400, height: 1400 });
+  await page.click('#perfTable tr.grow.camp.on');
+  await page.waitForTimeout(300);
+  ok(await page.evaluate(() => document.getElementById('perfDetail').parentElement.id === 'perfCard'),
+    'second click returns the chart to the network');
+}
+
+/* ROAS view: d0/d7/d28 lines, the All/IAP/Ad switch, and the maths
+   (cohort revenue ÷ spend) checked against the model for the first day. */
+{
+  await page.click('#pdMode button[data-c=roas]');
+  await page.waitForTimeout(300);
+  const r = await page.evaluate(() => ({
+    kind: !document.getElementById('pdKind').hidden,
+    lines: [...document.querySelectorAll('#pdSvg path')].map((p) => p.getAttribute('stroke')),
+  }));
+  ok(r.kind, 'ROAS shows the All / IAP / Ad switch');
+  ok(['var(--teal)', 'var(--amb)', 'var(--pur)'].every((c) => r.lines.includes(c)), 'ROAS draws d0, d7, d28', r.lines.join(', '));
+  await page.click('#pdKind button[data-k=iap]');
+  await page.waitForTimeout(200);
+  ok(/IAP ROAS d0/.test(await page.textContent('#pdRef')), 'IAP ROAS legend');
+  await page.click('#pdKind button[data-k=all]');
+  await page.click('#pdMode button[data-c=money]');
+  await page.waitForTimeout(200);
+  ok(await page.evaluate(() => document.getElementById('pdKind').hidden), 'ROAS switch hides with the money view');
+}
 
 /* ---------------------------------------------------------------------------
  * An empty payload must not take the page down.
@@ -304,13 +395,25 @@ await page.evaluate(() => window.scrollTo(0, 0));
 await page.waitForTimeout(400);
 await page.screenshot({ path: resolve(ROOT, 'design/glance-live.png'), fullPage: false });
 
+/* And the light theme, which shares every token name with dark. */
+await page.evaluate(() => { localStorage.setItem('mss3d_theme', 'light'); });
+await page.reload({ waitUntil: 'load' });
+await page.waitForTimeout(2500);
+await page.evaluate(() => {
+  const r = [...document.querySelectorAll('#perfTable tr.grow')].find((t) => t.dataset.k?.startsWith('n:'));
+  if (r) r.click();
+});
+await page.waitForTimeout(400);
+await page.screenshot({ path: resolve(ROOT, 'design/glance-live-light.png'), fullPage: false });
+await page.evaluate(() => { localStorage.removeItem('mss3d_theme'); });
+
 await browser.close();
 server.kill();
 
 console.log('\n' + '='.repeat(74));
 console.log('headline :', seen.head);
 seen.tiles.forEach((t) => console.log(`tile     : ${t.title} = ${t.amt}`));
-seen.netRows.forEach((r) => console.log(`network  : ${r.name} | ${r.spend.replace(/\s+/g, ' ')} | ${r.chip}`));
+seen.netRows.forEach((r) => console.log(`network  : ${r.name} | ${r.spend.replace(/\s+/g, ' ')}`));
 console.log('chart    :', seen.chartMode, '·', seen.svgPaths, 'paths');
 console.log('totals   : campaigns', totals.campaigns, '= networks', totals.networks);
 console.log('verdicts :', JSON.stringify(totals.verdicts));
