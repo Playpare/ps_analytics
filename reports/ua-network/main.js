@@ -8,6 +8,8 @@
 
 import './ua-network.css';
 import '../../src/shared/styles/report-type.css';
+/* This page's own sizes, after the shared type scale. See the file. */
+import './design.css';
 
 import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';

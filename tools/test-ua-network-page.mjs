@@ -227,6 +227,68 @@ const noAuth = await page2.evaluate(() => ({
 ok('opened with no endpoint, the page says so rather than sitting blank',
   noAuth.hidden === false && /API URL|signed in/.test(noAuth.text), noAuth);
 
+/* ---- the stale-backend path --------------------------------------------
+   This is the screenshot: spend, installs and CPI fill in, and every cohort
+   card is blank. Three different causes look identical on screen, and the
+   page has to name the right one. A backend that has never heard of the
+   column sends no key; one that has nothing to report sends null. */
+const page3 = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page3.addInitScript(() => {
+  try { sessionStorage.setItem('mss3d_token', 'test-token'); } catch (e) { /* ignore */ }
+});
+await page3.route('**/stub*', (route) => route.fulfill({
+  status: 200, contentType: 'application/json',
+  body: JSON.stringify({ ua: { channelSrc: 'perf', channelDaily: [],
+    /* exactly what the deployed script sends today: the old columns only */
+    channels: [{ channel: 'Meta', installs: 60000, spend: 120000, cost: 120000,
+                 revenue: 40000, adRevenue: 12000, iapRevenue: 28000,
+                 d1: 40, d7: 17, d30: 7, roasD0: 8, roasD7: 42, roasD28: 88 }] } })
+}));
+await page3.goto('http://127.0.0.1:' + port + '/reports/ua-network/index.html?api=' + api
+  + '&key=test-key', { waitUntil: 'load' });
+await page3.waitForFunction(
+  () => document.querySelectorAll('#kpis .kpi').length > 0, null, { timeout: 15000 }
+).catch(() => {});
+
+const stale = await page3.evaluate(() => ({
+  warnShown: !document.getElementById('srcWarn').hidden,
+  warnText: document.getElementById('srcWarn').textContent,
+  spend: document.querySelector('#kpis .kpi .v').textContent.trim()
+}));
+ok('a backend without the cohort columns is named as the cause',
+  stale.warnShown && /has not been redeployed/.test(stale.warnText), stale);
+ok('and the notice says which figures are unaffected',
+  /Spend, installs and CPI are unaffected/.test(stale.warnText));
+ok('those figures do still render', /\$/.test(stale.spend), stale.spend);
+
+/* A deployed backend reporting null must NOT be blamed on deployment - that
+   is an immature cohort, and telling somebody to redeploy would waste their
+   afternoon. */
+const page4 = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page4.addInitScript(() => {
+  try { sessionStorage.setItem('mss3d_token', 'test-token'); } catch (e) { /* ignore */ }
+});
+await page4.route('**/stub*', (route) => route.fulfill({
+  status: 200, contentType: 'application/json',
+  body: JSON.stringify({ ua: { channelSrc: 'perf', channelDaily: [],
+    channels: [{ channel: 'Meta', installs: 60000, spend: 120000, cost: 120000,
+                 revenue: 40000, adRevenue: 12000, iapRevenue: 28000,
+                 d1: 40, d7: 17, d30: 7, roasD0: 8, roasD7: 42, roasD28: 88,
+                 payersD7: null, purchD7: null, cohortIapD7: null }] } })
+}));
+await page4.goto('http://127.0.0.1:' + port + '/reports/ua-network/index.html?api=' + api
+  + '&key=test-key', { waitUntil: 'load' });
+await page4.waitForFunction(
+  () => document.querySelectorAll('#kpis .kpi').length > 0, null, { timeout: 15000 }
+).catch(() => {});
+const immature = await page4.evaluate(() => ({
+  warnShown: !document.getElementById('srcWarn').hidden,
+  empties: [...document.querySelectorAll('.empty')].map((e) => e.textContent.trim())
+}));
+ok('nulls are not blamed on deployment', immature.warnShown === false);
+ok('the cards say the cohort has not matured instead',
+  immature.empties.some((t) => /matured/.test(t)), immature.empties);
+
 await browser.close();
 server.close();
 
