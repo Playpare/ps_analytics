@@ -1,0 +1,206 @@
+/**
+ * UA Network Performance.
+ *
+ * Every colour is a token defined on :root for the dark theme and redefined
+ * under [data-theme="light"], because the shell sets that attribute before
+ * first paint and a colour stated once only works in one theme. The six --n
+ * slots are the categorical ramp: validated for separation against this
+ * card surface, and assigned to networks in a fixed order rather than
+ * cycled, so a network keeps its colour when the list is filtered.
+ */
+
+:root {
+  --bg: #000;
+  --card: #0b0c0f;
+  --card2: #070809;
+  --border: rgba(255, 255, 255, .08);
+  --borderB: rgba(255, 255, 255, .14);
+  --t1: #edf2ff;
+  --t2: #7a8fad;
+  --t3: #3d5070;
+  --teal: #00e5c3;
+  --blue: #4d9fff;
+  --amber: #ffb800;
+  --coral: #ff4d6d;
+  --green: #00c47a;
+  --coralD: rgba(255, 77, 109, .14);
+  --amberD: rgba(255, 184, 0, .14);
+  --greenD: rgba(0, 196, 122, .14);
+  --grid: rgba(255, 255, 255, .06);
+  --n1: #3987e5;
+  --n2: #d95926;
+  --n3: #199e70;
+  --n4: #c98500;
+  --n5: #d55181;
+  --n6: #0ca30c;
+  --r: 14px;
+  --rs: 8px;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #eef1f7;
+  --card: #fff;
+  --card2: #f5f7fc;
+  --border: rgba(13, 27, 46, .08);
+  --borderB: rgba(13, 27, 46, .16);
+  --t1: #0d1b2e;
+  --t2: #56657f;
+  --t3: #94a3ba;
+  --teal: #00b39a;
+  --grid: rgba(13, 27, 46, .07);
+  --n1: #2a78d6;
+  --n2: #eb6834;
+  --n3: #1baf7a;
+  --n4: #eda100;
+  --n5: #e87ba4;
+  --n6: #008300;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--t1);
+  font: 14px/1.45 "Segoe UI", "Segoe UI Variable", system-ui, Arial, sans-serif;
+}
+
+/* ── top bar ───────────────────────────────────────────────────────── */
+.top {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  padding: 10px 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.brand { font-size: 13px; color: var(--teal); letter-spacing: .3px }
+.brand b { color: var(--t1) }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.flabel {
+  font-size: 10.5px; color: var(--t3);
+  text-transform: uppercase; letter-spacing: .6px;
+}
+.seg {
+  display: inline-flex; background: var(--card);
+  border: 1px solid var(--border); border-radius: var(--rs); padding: 3px;
+}
+.seg button {
+  background: none; border: 0; color: var(--t2);
+  font: inherit; font-size: 12.5px; padding: 5px 11px;
+  border-radius: 6px; cursor: pointer;
+}
+.seg button.on {
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  color: #00110d; font-weight: 600;
+}
+select, .btn {
+  background: var(--card); color: var(--t1);
+  border: 1px solid var(--border); border-radius: var(--rs);
+  padding: 7px 11px; font: inherit; font-size: 12.5px;
+}
+.btn { cursor: pointer }
+.btn:hover, select:hover { border-color: var(--blue) }
+
+/* ── layout ────────────────────────────────────────────────────────── */
+.wrap { max-width: 1360px; margin: 0 auto; padding-block: 18px 44px; padding-inline: 20px }
+.phead { margin-bottom: 14px }
+.phead h1 { font-size: 21px; font-weight: 600; margin: 0; text-wrap: balance }
+.sub { color: var(--t2); font-size: 12.5px; margin-top: 3px }
+
+section { margin-top: 14px }
+.two { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)) }
+.two.wide-left { grid-template-columns: 2fr minmax(0, 1fr) }
+@media (max-width: 900px) { .two, .two.wide-left { grid-template-columns: 1fr } }
+
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px; min-width: 0;
+}
+.card h2 { margin: 0; font-size: 14.5px; font-weight: 600 }
+.q { color: var(--t2); font-size: 12px; margin: 3px 0 12px; max-width: 62ch }
+.note { color: var(--t2); font-size: 12px; margin: 10px 0 0 }
+.note b { color: var(--t1) }
+
+.chartbox { position: relative; height: 270px }
+.empty {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; padding: 0 24px; text-align: center;
+  color: var(--t2); font-size: 12.5px;
+}
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  font-size: 12px; color: var(--t2); margin-bottom: 8px;
+}
+.legend i {
+  display: inline-block; width: 10px; height: 10px;
+  border-radius: 3px; margin-right: 5px; vertical-align: -1px;
+}
+
+/* ── KPI tiles ─────────────────────────────────────────────────────── */
+.kpis {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.kpi {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+}
+.kpi .l { font-size: 11.5px; color: var(--t2) }
+.kpi .v { font-size: 22px; font-weight: 600; margin: 4px 0 2px; font-variant-numeric: tabular-nums }
+.kpi .s { font-size: 11px; color: var(--t3); margin-top: 3px }
+.d { font-size: 12px; font-variant-numeric: tabular-nums }
+.up { color: var(--green) }
+.down { color: var(--coral) }
+.flat { color: var(--t2) }
+
+/* ── findings ──────────────────────────────────────────────────────── */
+.findings { display: flex; flex-direction: column; gap: 8px }
+.finding {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px; font-size: 13px;
+}
+.finding .ic {
+  flex: 0 0 auto; font-weight: 700; border-radius: 6px;
+  padding: 1px 7px; font-size: 10.5px; letter-spacing: .3px;
+  white-space: nowrap;
+}
+.finding.bad .ic { background: var(--coralD); color: var(--coral) }
+.finding.warn .ic { background: var(--amberD); color: var(--amber) }
+.finding.good .ic { background: var(--greenD); color: var(--green) }
+.finding.quiet .ic { background: var(--border); color: var(--t2) }
+.finding small { display: block; color: var(--t2); font-size: 12px; margin-top: 3px }
+.finding small b { color: var(--t1) }
+
+/* ── notices ───────────────────────────────────────────────────────── */
+.warn, .fatal {
+  border-radius: 10px; padding: 11px 14px; font-size: 12.5px;
+  margin-bottom: 14px; border: 1px solid;
+}
+.warn { background: var(--amberD); border-color: rgba(255, 184, 0, .3); color: var(--t1) }
+.fatal { background: var(--coralD); border-color: rgba(255, 77, 109, .3); color: var(--t1) }
+
+/* ── table ─────────────────────────────────────────────────────────── */
+.tablewrap { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px }
+th, td {
+  padding: 8px 10px; text-align: right;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+th {
+  color: var(--t2); font-weight: 500; font-size: 11.5px;
+  position: sticky; top: 0; background: var(--card);
+}
+th.l, td.l { text-align: left; font-variant-numeric: normal }
+td.bad { background: var(--coralD) }
+.dot {
+  display: inline-block; width: 9px; height: 9px;
+  border-radius: 3px; margin-right: 7px;
+}
+
+.foot { margin-top: 24px; color: var(--t3); font-size: 11.5px; max-width: 80ch }
