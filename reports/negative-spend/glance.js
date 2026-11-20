@@ -28,6 +28,7 @@
  */
 
 import './glance.css';
+import { enhanceDate } from '../../src/shared/date-popup.js';
 
 const B = () => window.__nsBridge;
 const $ = (id) => document.getElementById(id);
@@ -35,16 +36,6 @@ const $ = (id) => document.getElementById(id);
 /* ---------------------------------------------------------------------------
  * Vocabulary — the report's own verdict strings, not a parallel set.
  * ------------------------------------------------------------------------- */
-const CHIP = {
-  'FAIL - cut':          ['c-bad',  'minus', 'cut'],
-  'OVER BUDGET':         ['c-bad',  'warn',  'over budget'],
-  'UNDER TARGET':        ['c-warn', 'warn',  'under target'],
-  'NO BUDGET - set one': ['c-warn', 'warn',  'no budget cap'],
-  'NO GOAL - map it':    ['c-none', 'info',  'no goal mapped'],
-  'INSUFFICIENT DATA':   ['c-none', 'info',  'too young to judge'],
-  'PENDING':             ['c-none', 'info',  'pending'],
-  'PASS':                ['c-good', 'check', 'passing'],
-};
 const ICON = {
   warn: '<path d="M8 1.6 1.4 13.2h13.2L8 1.6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.2v3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.2" r=".95" fill="currentColor"/>',
   minus: '<circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.5"/><path d="M5.4 8h5.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
@@ -53,11 +44,6 @@ const ICON = {
   up:    '<path d="M2.2 10.6 6 6.6l2.7 2.5 4.9-5.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.4 3.5h3.4v3.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 const svgIcon = (k, cls) => `<svg class="${cls}" viewBox="0 0 16 16" fill="none" aria-hidden="true">${ICON[k]}</svg>`;
-const chip = (verdict) => {
-  const c = CHIP[verdict];
-  if (!c) return '';
-  return `<span class="g-chip ${c[0]}">${svgIcon(c[1], 'g-ic')}${c[2]}</span>`;
-};
 
 /* Verdicts that mean "nothing to decide" and are left out of the table. */
 const INERT = { 'not active': 1, 'NO SPEND': 1 };
@@ -66,7 +52,8 @@ const INERT = { 'not active': 1, 'NO SPEND': 1 };
  * State
  * ------------------------------------------------------------------------- */
 let GRAIN = 'weekly';
-let MODE = null;                 // null = follow the row's own judge mode
+let CHART = 'money';             // 'money' = cost · revenue · gross, 'roas'
+let ROASK = 'all';               // which revenue the ROAS lines use: all | iap | ad
 let SELECTED = null;
 const OPEN = new Set();
 let MODEL = null;                // last built model, for redraws without a full render
@@ -82,7 +69,7 @@ function build(W) {
   const nets = new Map();
   rows.forEach((c) => {
     const s = series.byKey.get(c.campaign + '||' + c.channel) || { cost: [], rev: [] };
-    c._cost = s.cost; c._rev = s.rev;
+    c._cost = s.cost; c._rev = s.rev; c._s = s;
     let n = nets.get(c.channel);
     if (!n) {
       n = { name: c.channel, campaigns: [], cost: 0, allRev: 0,
@@ -118,11 +105,15 @@ function build(W) {
     n.uncapped = n.campaigns.filter((c) => c.budget == null).length;
     n._cost = sumSeries(n.campaigns.map((c) => c._cost));
     n._rev = sumSeries(n.campaigns.map((c) => c._rev));
+    n._s = {};
+    COHORT_KEYS.forEach((k) => { n._s[k] = sumSeries(n.campaigns.map((c) => (c._s && c._s[k]) || [])); });
     return n;
   }).sort((a, b2) => b2.cost - a.cost);
 
   return { W, rows, networks, days: series.days };
 }
+
+const COHORT_KEYS = ['cost', 'ad0', 'iap0', 'c7', 'ad7', 'iap7', 'c28', 'ad28', 'iap28'];
 
 function sumSeries(list) {
   const n = Math.max(0, ...list.map((a) => a.length));
@@ -137,103 +128,44 @@ function sumSeries(list) {
 const money = (v) => B().money(v);
 const esc = (s) => B().esc(s);
 const kmoney = (v) => (v < 0 ? '−' : '') +
-  '$' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'k' : Math.round(Math.abs(v)));
+  '$' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : Math.round(Math.abs(v)));
 
 /* ---------------------------------------------------------------------------
  * Headline + the three decisions
  * ------------------------------------------------------------------------- */
 function renderHead(m) {
+  /* The headline sentence and its fact chips were removed; the page opens on
+     three totals instead. They sum the same rows the table shows, so the
+     cards and the table can never disagree. */
+  $('glanceHead').innerHTML = '';
+
   const spend = m.rows.reduce((s, c) => s + c.cost, 0);
-  const cash = m.rows.reduce((s, c) => s + c.cashGap, 0);
+  const rev = m.rows.reduce((s, c) => s + c.allRev, 0);
+  const gp = rev - spend;
   const w = m.W;
   const span = w.from && w.to ? `${B().shortDate(w.from)} – ${B().shortDate(w.to)}` : '';
+  const roas = spend > 0 ? rev / spend : null;
+  const margin = rev > 0 ? gp / rev : null;
+  const camps = m.rows.length, nets = m.networks.length;
 
-  /* Two facts the old KPI row carried that nothing above replaces. They are a
-     line rather than tiles because neither is a decision: a losing day is an
-     outcome, and unusable install data is a caveat on everything else. The
-     three tiles are reserved for things somebody can act on. */
-  const neg = (w.daily || []).filter((d) => d.status === 'NEGATIVE');
-  const worst = (w.daily || []).slice().sort((a, b2) => a.gp - b2.gp)[0];
-  const fake = Object.values(w.channels || {}).filter((c) => c.fake);
-  const asides = [];
-  if (neg.length) {
-    asides.push(`<b>${neg.length} of ${w.daily.length}</b> days lost money` +
-      (worst && worst.gp < 0 ? `, worst ${money(worst.gp)} on ${esc(B().dmy(worst.iso))}` : ''));
-  }
-  if (fake.length) {
-    asides.push(`install counts are unusable on <b>${fake.map((c) => esc(c.name)).join(', ')}</b>` +
-      ` — anything per-install is unreliable there`);
-  }
-
-  $('glanceHead').innerHTML =
-    `<div class="gh">${money(spend)} spent. ` +
-    (cash < 0
-      ? `<span class="lost">${money(Math.abs(cash))} did not come back.</span>`
-      : `<span>${money(cash)} came back on top.</span>`) + `</div>` +
-    `<div class="gs">Three things need a decision${span ? ' across ' + esc(span) : ''}. ` +
-    `The table below is the same money, broken down as far as you want to take it.` +
-    (asides.length ? `<br><span class="aside">${asides.join(' · ')}</span>` : '') + `</div>`;
-
-  const pick = (v) => m.rows.filter((c) => c.verdict === v);
-  const sum = (l) => l.reduce((s, c) => s + c.cost, 0);
-  const tally = (l) => [...new Set(l.map((c) => c.channel))]
-    .map((n) => `<b>${esc(n)}</b> ×${l.filter((c) => c.channel === n).length}`).join(' · ');
-
-  /* 1 — spend nothing is holding back */
-  const over = pick('OVER BUDGET'), nocap = pick('NO BUDGET - set one');
-  const loose = over.concat(nocap);
-  const overBy = over.reduce((s, c) => s + (c.overBy || 0), 0);
-  const t1 = loose.length
-    ? { amt: money(sum(loose)), quiet: false,
-        why: (over.length ? `${over.length} campaign${over.length > 1 ? 's are' : ' is'} <b>over budget</b> by ${money(overBy)}. ` : '') +
-             (nocap.length ? `${nocap.length} ${over.length ? 'other ' : ''}campaign${nocap.length > 1 ? 's have' : ' has'} no cap set.` : ''),
-        who: `<b>${Math.round(sum(loose) / (spend || 1) * 100)}%</b> of everything spent · ${tally(loose)}`,
-        fix: loose[0].channel }
-    : { amt: 'Nothing', quiet: true, why: 'Every campaign is inside a budget.', who: '', fix: null };
-
-  /* 2 — cut. Under target is a different decision (watch it, or move the bid)
-     and folding it in is how a "cut" figure stops meaning cut. It gets its own
-     line rather than being added in. */
-  const cut = pick('FAIL - cut'), under = pick('UNDER TARGET');
-  const t2 = {
-    amt: cut.length ? money(sum(cut)) : 'Nothing', quiet: !cut.length,
-    why: cut.length
-      ? `${cut.length} campaign${cut.length > 1 ? 's are' : ' is'} below <b>${Math.round(B().data.assumptions.atRiskPace * 100)}%</b> of target ROAS on mature cohorts.`
-      : 'No campaign is below the cut threshold.',
-    who: (cut.length ? tally(cut) : '') +
-         (under.length ? `${cut.length ? '<br>' : ''}${under.length} more under target — ${money(sum(under))}` : ''),
-    fix: null,
-  };
-
-  /* 3 — scale */
-  const pass = pick('PASS').filter((c) => c.roas != null && c.target != null);
-  const room = pass.filter((c) => c.budget == null || c.cappedCost < c.budget * 0.9);
-  const t3 = room.length
-    ? { amt: money(sum(room)), quiet: false,
-        why: `${room.length} campaign${room.length > 1 ? 's are' : ' is'} beating target at <b>${(room.reduce((s, c) => s + c.roas / c.target, 0) / room.length).toFixed(2)}×</b> with budget headroom.`,
-        who: room.slice(0, 3).map((c) => `<b>${esc(c.channel)}</b> — ${esc(shortName(c.campaign))}`).join('<br>'),
-        fix: null }
-    : { amt: 'Nothing yet', quiet: true,
-        why: 'No campaign is beating its target with room to spend more.',
-        who: pass.length ? `${pass.length} passing, but already at budget.` : '', fix: null };
-
-  const card = (cls, icon, title, t) =>
+  const card = (cls, title, amt, sub) =>
     `<article class="act ${cls}">
-       <div class="hd">${svgIcon(icon, 'g-ic')}${title}</div>
-       <div class="amt${t.quiet ? ' quiet' : ''}">${t.amt}</div>
-       <div class="g-why">${t.why}</div>
-       ${t.who ? `<div class="who">${t.who}</div>` : ''}
-       ${t.fix ? `<button type="button" class="fix" data-fix="${esc(t.fix)}">Set budgets →</button>` : ''}
+       <div class="hd">${title}</div>
+       <div class="amt">${amt}</div>
+       <div class="g-why">${sub}</div>
      </article>`;
 
   $('glanceActs').innerHTML =
-    card('a1', 'warn', 'No budget cap', t1) +
-    card('a2', 'minus', 'Cut', t2) +
-    card('a3', 'up', 'Scale', t3);
-
-  $('glanceActs').querySelectorAll('[data-fix]').forEach((btn) => {
-    btn.onclick = () => B().openSettings(btn.dataset.fix);
-  });
+    card('k-spend', 'Total spend', money(spend),
+      `${camps} campaign${camps === 1 ? '' : 's'} across ${nets} network${nets === 1 ? '' : 's'}` +
+      (span ? `<span class="sub2">${esc(span)}</span>` : '')) +
+    card('k-rev', 'Total revenue', money(rev),
+      (roas != null ? `<b>${roas.toFixed(2)}x</b> back per $1 spent` : 'Nothing spent yet') +
+      `<span class="sub2">IAP + ad revenue</span>`) +
+    card(gp < 0 ? 'k-gp neg' : 'k-gp', 'Total gross profit',
+      `<span class="gp-sign">${gp < 0 ? '▼' : '▲'}</span>${money(gp)}`,
+      (margin != null ? `<b>${(margin * 100).toFixed(1)}%</b> of revenue` : '—') +
+      `<span class="sub2">revenue − spend</span>`);
 }
 
 const shortName = (s) => String(s).replace(/^PS_AND_Supermarket_Simulator_/, '')
@@ -261,7 +193,7 @@ function spark(cost, rev, days) {
   const c = bucketise(cost, days).map((b2) => b2.v);
   const r = bucketise(rev, days).map((b2) => b2.v);
   if (c.length < 2) return '';
-  const w = 88, h = 24, max = Math.max(...c, ...r, 1);
+  const w = 112, h = 30, max = Math.max(...c, ...r, 1);
   const path = (a) => a.map((v, i) =>
     (i ? 'L' : 'M') + (i / (a.length - 1) * w).toFixed(1) + ' ' + (h - v / max * (h - 3) - 1.5).toFixed(1)).join(' ');
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true" style="display:block">
@@ -272,59 +204,30 @@ function spark(cost, rev, days) {
 /* ---------------------------------------------------------------------------
  * Cells
  * ------------------------------------------------------------------------- */
-function spendCell(o, isNet) {
-  const n = money(o.cost);
-  let budget = null, uncapped = 0, total = 1;
-  if (isNet) { total = o.campaigns.length; uncapped = o.uncapped; budget = o.budget; }
-  else { budget = o.budget; uncapped = budget == null ? 1 : 0; }
-
-  if (budget == null) {
-    const label = !isNet || total === 1 ? 'no cap set'
-      : uncapped === total ? `none of the ${total} has a cap`
-      : `${uncapped} of ${total} have no cap`;
-    return `<div class="g-spend"><b>${n}</b><span class="nocap">${label}</span></div>`;
-  }
-  /* Measured against capped spend, not raw spend: money that ran before the
-     cap existed cannot have breached it, and blendSettings already separates
-     the two. */
-  const used = isNet ? o.campaigns.reduce((s, c) => s + (c.cappedCost || 0), 0) : (o.cappedCost || 0);
-  const pct = used / budget;
-  const cls = pct > 1 ? 's-over' : pct > 0.9 ? 's-near' : 's-ok';
-  /* A window this wide usually contains more than one budget, so the figure is
-     a blend weighted by the spend that ran under each. Marked, because an
-     unmarked blend reads as a single standing number. */
-  const blended = !isNet && o.settings && o.settings.budgetChanged;
-  return `<div class="g-spend ${cls}"><b>${n}</b>
-    <span class="bar"><span class="lb">${Math.round(pct * 100)}% of ${money(budget)}` +
-    (blended ? `<span class="g-blend" title="The budget changed inside this window. This is the blend, weighted by the spend that ran under each.">*</span>` : '') +
-    `</span><span class="t"><span class="f" style="width:${Math.min(pct, 1) * 100}%"></span></span></span></div>`;
-}
-
-function bullet(o) {
-  if (o.budgetOnly) return '<span class="g-dash">budget-only</span>';
-  if (o.roas == null || o.target == null) return '<span class="g-dash">—</span>';
-  const pct = o.roas / o.target;
-  const pace = B().data.assumptions.atRiskPace;
-  const cls = pct >= 1 ? 'gb-good' : pct >= pace ? 'gb-warn' : 'gb-bad';
-  const blended = o.settings && o.settings.targetChanged;
-  return `<div class="g-bul ${cls}"><span class="g-v">${o.roas.toFixed(2)} / ${o.target.toFixed(2)}` +
-    (blended ? `<span class="g-blend" title="The target changed inside this window; this is the blend.">*</span>` : '') +
-    `</span><span class="t"><span class="f" style="width:${(Math.min(pct / 1.4, 1) * 100).toFixed(1)}%"></span><span class="mk"></span></span></div>`;
+/* Spend only. The budget caption (percent used, "no cap" notes) was removed
+   from this column on purpose. */
+function spendCell(o) {
+  return `<div class="g-spend"><b>${money(o.cost)}</b></div>`;
 }
 
 /* ---------------------------------------------------------------------------
  * Table
  * ------------------------------------------------------------------------- */
 function renderTable(m) {
+  /* The detail chart may be sitting inside the table (under a campaign row).
+     Park it back at the bottom of the card before the table is rebuilt, or
+     the rebuild would destroy it. */
+  const detail = $('perfDetail');
+  detail.classList.remove('inrow');
+  $('perfCard').appendChild(detail);
+
   const head = `<table><thead><tr>
     <th class="n" style="width:34px">#</th>
     <th style="width:24%">Network / campaign</th>
     <th style="width:11%">Trend<em>cost vs revenue</em></th>
-    <th class="n" style="width:15%">Spend<em>against budget</em></th>
+    <th class="n" style="width:15%">Spend</th>
     <th class="n">Revenue<em>came back</em></th>
-    <th class="n">Cash<em>revenue − spend</em></th>
-    <th class="n" style="width:16%">Back per $1<em>against target</em></th>
-    <th>Needs</th></tr></thead><tbody>`;
+    <th class="n">Gross Profit<em>revenue − spend</em></th></tr></thead><tbody>`;
 
   let html = head;
   m.networks.forEach((net, ni) => {
@@ -334,11 +237,9 @@ function renderTable(m) {
       <td><div class="g-nm${open ? ' open' : ''}"><span class="tw">▶</span><span>${esc(net.name)}
         <small>${net.campaigns.length} campaign${net.campaigns.length > 1 ? 's' : ''}${net.goal ? ' · goal ' + esc(net.goal) : ''}</small></span></div></td>
       <td>${spark(net._cost, net._rev, m.days)}</td>
-      <td class="n">${spendCell(net, true)}</td>
+      <td class="n">${spendCell(net)}</td>
       <td class="n">${money(net.allRev)}</td>
-      <td class="n ${net.cashGap < 0 ? 'g-neg' : 'pos'}">${money(net.cashGap)}</td>
-      <td class="n">${bullet(net)}</td>
-      <td>${chip(net.verdict)}</td></tr>`;
+      <td class="n ${net.cashGap < 0 ? 'g-neg' : 'pos'}">${money(net.cashGap)}</td></tr>`;
 
     if (open) net.campaigns.slice().sort((a, b2) => b2.cost - a.cost).forEach((c, ci) => {
       html += `<tr class="grow camp${SELECTED === 'c:' + c.campaign + '||' + c.channel ? ' on' : ''}"
@@ -346,11 +247,13 @@ function renderTable(m) {
         <td class="n g-rank">${ni + 1}.${ci + 1}</td>
         <td><div class="g-nm"><span>${esc(shortName(c.campaign))}<small>goal ${esc(c.goal)}</small></span></div></td>
         <td>${spark(c._cost, c._rev, m.days)}</td>
-        <td class="n">${spendCell(c, false)}</td>
+        <td class="n">${spendCell(c)}</td>
         <td class="n">${money(c.allRev)}</td>
-        <td class="n ${c.cashGap < 0 ? 'g-neg' : 'pos'}">${money(c.cashGap)}</td>
-        <td class="n">${bullet(c)}</td>
-        <td>${chip(c.verdict)}</td></tr>`;
+        <td class="n ${c.cashGap < 0 ? 'g-neg' : 'pos'}">${money(c.cashGap)}</td></tr>`;
+      /* A selected campaign gets its trend in a row directly beneath it. */
+      if (SELECTED === 'c:' + c.campaign + '||' + c.channel) {
+        html += `<tr class="cdrow"><td colspan="6"><div class="cdslot"></div></td></tr>`;
+      }
     });
   });
   html += '</tbody></table>';
@@ -362,31 +265,32 @@ function renderTable(m) {
     `<span class="key" style="--k:var(--g-cost)"><i></i>Cost</span>
      <span class="key" style="--k:var(--g-rev)"><i></i>Revenue</span>`;
 
+  const slot = $('perfTable').querySelector('.cdslot');
+  if (slot) { detail.classList.add('inrow'); slot.appendChild(detail); }
+
   $('perfTable').querySelectorAll('tr.grow').forEach((tr) => {
     tr.onclick = () => {
-      const k = tr.dataset.k;
+      const clicked = tr.dataset.k, before = tr.getBoundingClientRect().top;
+      let k = tr.dataset.k;
       if (k.startsWith('n:')) {
         const name = k.slice(2);
         OPEN.has(name) ? OPEN.delete(name) : OPEN.add(name);
+      } else if (k === SELECTED) {
+        /* Clicking the open campaign again closes its trend and hands the
+           chart back to its network at the bottom of the card. */
+        k = 'n:' + k.slice(2).split('||')[1];
       }
       SELECTED = k;
       renderTable(m); drawDetail(m);
+      const again = [...$('perfTable').querySelectorAll('tr.grow')].find((r) => r.dataset.k === clicked);
+      if (again) window.scrollBy(0, again.getBoundingClientRect().top - before);
     };
   });
 }
 
 /* ---------------------------------------------------------------------------
- * Detail chart — three readings of the same row
- *
- * Cost against revenue is not the default, deliberately. Both of its lines are
- * driven by how much was spent, so spending more widens the gap whether or not
- * anything got worse: the chart reads scale as if it were efficiency. ROAS
- * against target is scale-free and answers the test the row is graded on;
- * spend against budget answers it for the rows graded on budget. Which one
- * opens follows the row's own judgeMode.
+ * Detail chart — cost, revenue and gross profit (revenue − cost) per bucket
  * ------------------------------------------------------------------------- */
-const GOAL_DAYS = { D0: 0, D7: 7, D28: 28, D30: 30 };
-
 function selected(m) {
   if (!SELECTED) return null;
   if (SELECTED.startsWith('n:')) {
@@ -398,43 +302,14 @@ function selected(m) {
   return o ? { o, title: shortName(o.campaign), isNet: false } : null;
 }
 
-function modeFor(sel) {
-  if (MODE) return MODE;
-  if (sel.o.budgetOnly) return 'budget';
-  return sel.o.target != null ? 'roas' : 'money';
-}
-
-/**
- * Per-bucket ROAS on cohorts old enough to have reached the goal window.
- * Trailing buckets carry no value at all, and that is the point: a line drawn
- * through them would show a collapse to zero that is missing data, not lost
- * money — the same mistake a two-week window makes when it reports $0.00.
- */
-function roasBuckets(o, goalDays, days) {
-  const today = B().todayISO();
-  const cost = bucketise(o._cost, days), rev = bucketise(o._rev, days);
-  return cost.map((b2, i) => {
-    const mature = B().isoShift(b2.to, goalDays) <= today;
-    return { v: mature && b2.v > 0 ? rev[i].v / b2.v : null, label: b2.label,
-             mc: mature ? b2.v : 0, mr: mature ? rev[i].v : 0 };
-  });
-}
-
 function drawDetail(m) {
   const sel = selected(m), box = $('perfDetail');
   if (!sel) { box.classList.remove('on'); return; }
   box.classList.add('on');
 
-  const mode = modeFor(sel);
-  $('perfMode').querySelectorAll('button').forEach((b2) =>
-    b2.setAttribute('aria-pressed', String(b2.dataset.m === mode)));
-
-  /* The viewBox is set to the plot's real pixel width, and the SVG no longer
-     carries preserveAspectRatio="none". With that attribute a 900-unit box was
-     stretched to whatever width the card happened to be, scaling X and Y by
-     different amounts - which stretches the text and the axis labels along with
-     the marks. One unit is one pixel now, so type is type. */
-  const H = 210, PL = 58, PR = 14, PT = 12, PB = 26;
+  /* The viewBox is set to the plot's real pixel width, so one unit is one
+     pixel and the text is never stretched. */
+  const H = 300, PL = 72, PR = 18, PT = 16, PB = 32;
   const W = Math.max(560, Math.round($('pdPlot').clientWidth || 900));
   $('pdSvg').setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   const iw = W - PL - PR, ih = H - PT - PB;
@@ -442,97 +317,144 @@ function drawDetail(m) {
   const n = cost.length;
   if (!n) { box.classList.remove('on'); return; }
   const x = (i) => PL + (n === 1 ? iw / 2 : i / (n - 1) * iw);
+  const unit =GRAIN === 'daily' ? 'days' : GRAIN === 'weekly' ? 'weeks' : 'months';
 
-  let body = '', yFmt = kmoney, max = 1, yOf = (v) => v, note = '', pts = [];
+  /* Round axis steps (1, 2, 2.5, 5 × 10^n) so ticks read as numbers a person
+     would say, and 0 always lands on a gridline. */
+  const axis = (rawLo, rawHi) => {
+    const rough = (rawHi - rawLo) / 4 || 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+    const step = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((v) => v >= rough) || 10 * mag;
+    return { lo: Math.floor(rawLo / step) * step, hi: Math.ceil(rawHi / step) * step, step };
+  };
+  /* A line that skips missing points instead of dropping them to zero. */
+  const lnGap = (vals, yOf) => {
+    let d = '', pen = false;
+    vals.forEach((v, i) => {
+      if (v == null) { pen = false; return; }
+      d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + yOf(v).toFixed(1) + ' ';
+      pen = true;
+    });
+    return d.trim();
+  };
+  const stroke = (d, c, w = 2.5, extra = '') =>
+    d ? `<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>` : '';
 
-  if (mode === 'roas') {
-    const goal = (sel.o.goal || '').split(' / ')[0];
-    const gd = GOAL_DAYS[goal] != null ? GOAL_DAYS[goal] : 7;
-    const target = sel.o.target;
-    const b2 = roasBuckets(sel.o, gd, m.days);
-    const vals = b2.filter((k) => k.v != null).map((k) => k.v);
-    max = Math.max(...vals, target || 0, 0.1) * 1.25;
-    yOf = (v) => PT + ih - v / max * ih;
-    yFmt = (v) => v.toFixed(2);
+  let body = '', pts = [], ax, yOf, fmt, legend = '';
 
-    let last = -1; b2.forEach((k, i) => { if (k.v != null) last = i; });
-    if (last < n - 1) {
-      const x0 = x(Math.max(last, 0));
-      body += `<rect x="${x0.toFixed(1)}" y="${PT}" width="${(W - PR - x0).toFixed(1)}" height="${ih}" fill="var(--g-none)" opacity=".14"/>
-        <line x1="${x0.toFixed(1)}" x2="${x0.toFixed(1)}" y1="${PT}" y2="${PT + ih}" stroke="var(--t3)" stroke-width="1" stroke-dasharray="3 3"/>
-        <text x="${(x0 + 9).toFixed(1)}" y="${PT + 14}" font-size="10.5" fill="var(--t3)">not old enough to judge yet</text>`;
-    }
-    if (target != null) {
-      body += `<line x1="${PL}" x2="${W - PR}" y1="${yOf(target).toFixed(1)}" y2="${yOf(target).toFixed(1)}" stroke="var(--t2)" stroke-width="1.5" stroke-dasharray="5 4"/>
-        <text x="${PL + 7}" y="${(yOf(target) - 6).toFixed(1)}" font-size="10.5" fill="var(--t2)">target ${target.toFixed(2)}</text>`;
-    }
-    const line = [];
-    b2.forEach((k, i) => { if (k.v != null) line.push([x(i), yOf(k.v), k.v]); });
-    if (line.length > 1) {
-      const allUnder = target != null && line.every((q) => q[2] < target);
-      body += `<path d="${line.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ')}"
-        fill="none" stroke="${allUnder ? 'var(--g-bad)' : 'var(--g-rev)'}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-    }
-    note = `${goal || 'cohort'} cohorts, dashed line is the target`;
-    pts = b2.map((k, i) => ({ x: x(i), y: k.v == null ? null : yOf(k.v), label: k.label,
-      rows: [['Back per $1', k.v == null ? 'not judged yet' : k.v.toFixed(2)],
-             ['Graded spend', k.mc > 0 ? money(k.mc) : '—'],
-             ['Target', target != null ? target.toFixed(2) : '—']] }));
+  if (CHART === 'roas') {
+    /* ROAS dN = cohort revenue at day N ÷ spend, both summed over the bucket.
+       All = sheet cols L/M/N (IAP + ad), IAP = O/P/Q, Ad = R/S/T, spend = G.
+       d7/d28 only count days whose cohort has reached that age, so recent
+       buckets read as "not mature yet" rather than as a collapse to zero. */
+    const S = sel.o._s || {};
+    const bk = (k) => bucketise(S[k] || [], m.days).map((q) => q.v);
+    const pick = (ad, iap) => (ROASK === 'ad' ? ad : ROASK === 'iap' ? iap : ad.map((v, i) => v + iap[i]));
+    const c0 = bk('cost'), c7 = bk('c7'), c28 = bk('c28');
+    const r0 = pick(bk('ad0'), bk('iap0'));
+    const r7 = pick(bk('ad7'), bk('iap7'));
+    const r28 = pick(bk('ad28'), bk('iap28'));
+    const ratio = (r, c) => r.map((v, i) => (c[i] > 0 ? v / c[i] : null));
+    const L = [
+      { key: 'd0',  col: 'var(--teal)', vals: ratio(r0, c0) },
+      { key: 'd7',  col: 'var(--amb)',  vals: ratio(r7, c7) },
+      { key: 'd28', col: 'var(--pur)',  vals: ratio(r28, c28) },
+    ];
+    const vals = L.flatMap((l) => l.vals).filter((v) => v != null);
+    ax = axis(0, Math.max(1.1, ...vals));
+    fmt = (v) => (ax.step >= 1 ? v.toFixed(0) : ax.step >= 0.5 ? v.toFixed(1) : v.toFixed(2)) + 'x';
+    yOf = (v) => PT + ih - (v - ax.lo) / ((ax.hi - ax.lo) || 1) * ih;
 
-  } else if (mode === 'budget') {
-    const bud = sel.isNet ? sel.o.budget : sel.o.budget;
-    let run = 0; const cum = cost.map((k) => (run += k.v));
-    max = Math.max(...cum, bud || 0) * 1.08;
-    yOf = (v) => PT + ih - v / max * ih;
-    const p = cum.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + yOf(v).toFixed(1)).join(' ');
-    body += `<path d="${p} L ${x(n - 1).toFixed(1)} ${PT + ih} L ${x(0).toFixed(1)} ${PT + ih} Z" fill="var(--g-cost)" opacity=".14"/>
-      <path d="${p}" fill="none" stroke="var(--g-cost)" stroke-width="2.5" stroke-linejoin="round"/>`;
-    if (bud != null) {
-      const isOver = cum[n - 1] > bud;
-      body += `<line x1="${PL}" x2="${W - PR}" y1="${yOf(bud).toFixed(1)}" y2="${yOf(bud).toFixed(1)}"
-        stroke="${isOver ? 'var(--g-bad)' : 'var(--g-warn)'}" stroke-width="1.5" stroke-dasharray="5 4"/>
-        <text x="${PL + 7}" y="${(yOf(bud) - 6).toFixed(1)}" font-size="10.5" fill="${isOver ? 'var(--g-bad)' : 'var(--g-warn)'}">budget ${money(bud)}</text>`;
-      note = isOver ? `over budget by ${money(cum[n - 1] - bud)}`
-                    : `${Math.round(cum[n - 1] / bud * 100)}% of budget used`;
-    } else note = 'no cap set, so there is nothing to pace against';
-    pts = cum.map((v, i) => ({ x: x(i), y: yOf(v), label: cost[i].label,
-      rows: [['Spent so far', money(v)], ['This period', money(cost[i].v)],
-             ['Budget', bud != null ? money(bud) : 'none set']] }));
+    /* 1.00x is break-even: every dollar spent came back. */
+    body += `<line x1="${PL}" x2="${W - PR}" y1="${yOf(1).toFixed(1)}" y2="${yOf(1).toFixed(1)}" stroke="var(--target)" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="${(W - PR - 4).toFixed(1)}" y="${(yOf(1) - 7).toFixed(1)}" text-anchor="end" font-size="13" font-weight="500" fill="var(--target)">1.00x break-even</text>`;
+    L.forEach((l) => {
+      body += stroke(lnGap(l.vals, yOf), l.col);
+      /* a lone point between gaps still gets a mark */
+      l.vals.forEach((v, i) => {
+        if (v != null && l.vals[i - 1] == null && l.vals[i + 1] == null) {
+          body += `<circle cx="${x(i).toFixed(1)}" cy="${yOf(v).toFixed(1)}" r="3.5" fill="${l.col}"/>`;
+        }
+      });
+    });
 
+    const word = ROASK === 'ad' ? 'Ad ROAS' : ROASK === 'iap' ? 'IAP ROAS' : 'ROAS';
+    const show = (v) => (v == null ? '<span class="tip-na">not mature yet</span>' : v.toFixed(2) + 'x');
+    pts = cost.map((k, i) => {
+      const top = [L[2], L[1], L[0]].map((l) => l.vals[i]).find((v) => v != null);
+      return { x: x(i), y: top == null ? null : yOf(top), label: k.label, dot: 'var(--text)',
+        rows: L.map((l) => [`<i style="--k:${l.col}"></i>${word} ${l.key}`, show(l.vals[i])])
+          .concat([['Spend', money(c0[i])]]) };
+    });
+    legend = L.map((l) => `<span class="key" style="--k:${l.col}"><i></i>${word} ${l.key}</span>`).join('') +
+      `<span class="key key-dash" style="--k:var(--target)"><i></i>Break-even</span>`;
   } else {
-    max = Math.max(...cost.map((k) => k.v), ...rev.map((k) => k.v), 1);
-    yOf = (v) => PT + ih - v / max * ih;
-    const ln = (a) => a.map((k, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + yOf(k.v).toFixed(1)).join(' ');
-    const dn = rev.slice().reverse().map((k, i) => 'L' + x(n - 1 - i).toFixed(1) + ' ' + yOf(k.v).toFixed(1)).join(' ');
-    body += `<path d="${ln(cost)} ${dn} Z" fill="var(--g-bad)" opacity=".15"/>
-      <path d="${ln(cost)}" fill="none" stroke="var(--g-cost)" stroke-width="2" stroke-linejoin="round"/>
-      <path d="${ln(rev)}" fill="none" stroke="var(--g-rev)" stroke-width="2" stroke-linejoin="round"/>`;
-    note = 'the shaded gap is cash';
-    pts = cost.map((k, i) => ({ x: x(i), y: yOf(k.v), label: k.label,
-      rows: [['Cost', money(k.v)], ['Revenue', money(rev[i].v)], ['Cash', money(rev[i].v - k.v)]] }));
+    const gp = cost.map((k, i) => rev[i].v - k.v);
+    const all = cost.map((k) => k.v).concat(rev.map((k) => k.v), gp);
+    ax = axis(Math.min(...all, 0), Math.max(...all, 1));
+    fmt = kmoney;
+    yOf = (v) => PT + ih - (v - ax.lo) / ((ax.hi - ax.lo) || 1) * ih;
+    const lnv = (vs) => vs.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + yOf(v).toFixed(1)).join(' ');
+    const y0 = yOf(0);
+    if (ax.lo < 0) {
+      body += `<line x1="${PL}" x2="${W - PR}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="var(--mut)" stroke-opacity=".45" stroke-width="1" stroke-dasharray="4 4"/>`;
+    }
+    /* Below-zero gross profit, made impossible to miss: a red band over every
+       losing period, a red fill between the line and $0, and the line itself
+       redrawn red under $0. Bands go first so the lines sit on top. */
+    const negI = gp.map((v, i) => (v < 0 ? i : -1)).filter((i) => i >= 0);
+    if (negI.length) {
+      const half = n > 1 ? iw / (n - 1) / 2 : iw / 2;
+      negI.forEach((i) => {
+        const a2 = Math.max(PL, x(i) - half), b2 = Math.min(W - PR, x(i) + half);
+        body += `<rect x="${a2.toFixed(1)}" y="${PT}" width="${(b2 - a2).toFixed(1)}" height="${ih}" fill="var(--red)" fill-opacity=".09"/>`;
+      });
+      body += `<defs><clipPath id="pdNegClip"><rect x="${PL - 4}" y="${y0.toFixed(1)}" width="${iw + 8}" height="${(PT + ih - y0 + 4).toFixed(1)}"/></clipPath></defs>` +
+        `<path d="${lnv(gp)} L ${x(n - 1).toFixed(1)} ${y0.toFixed(1)} L ${x(0).toFixed(1)} ${y0.toFixed(1)} Z" fill="var(--red)" fill-opacity=".22" clip-path="url(#pdNegClip)"/>`;
+    }
+    body += stroke(lnv(cost.map((k) => k.v)), 'var(--g-cost)') +
+      stroke(lnv(rev.map((k) => k.v)), 'var(--g-rev)') +
+      stroke(lnv(gp), 'var(--g-gp)');
+    if (negI.length) {
+      body += stroke(lnv(gp), 'var(--red)', 3, 'clip-path="url(#pdNegClip)"') +
+        negI.map((i) => `<circle cx="${x(i).toFixed(1)}" cy="${yOf(gp[i]).toFixed(1)}" r="3.5" fill="var(--red)" stroke="var(--sur)" stroke-width="1.5"/>`).join('');
+    }
+    pts = cost.map((k, i) => ({ x: x(i), y: yOf(gp[i]), label: k.label,
+      dot: gp[i] < 0 ? 'var(--red)' : 'var(--g-gp)',
+      rows: [['<i style="--k:var(--g-cost)"></i>Cost', money(k.v)],
+             ['<i style="--k:var(--g-rev)"></i>Revenue', money(rev[i].v)],
+             ['<i style="--k:var(--g-gp)"></i>Gross profit',
+               gp[i] < 0 ? `<span class="tip-neg">▼ ${money(gp[i])}</span>` : money(gp[i])]] }));
+    legend = `<span class="key" style="--k:var(--g-cost)"><i></i>Cost</span>
+       <span class="key" style="--k:var(--g-rev)"><i></i>Revenue</span>
+       <span class="key" style="--k:var(--g-gp)"><i></i>Gross profit</span>` +
+      (negI.length ? `<span class="negnote">▼ Below $0 in ${negI.length} of ${n} ${unit}</span>` : '');
   }
 
   let grid = '';
-  for (let g = 0; g <= 3; g++) {
-    const v = max * g / 3, yy = yOf(v);
+  for (let v = ax.lo; v <= ax.hi + ax.step / 2; v += ax.step) {
+    const yy = yOf(v);
     grid += `<line x1="${PL}" x2="${W - PR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" stroke="var(--g-grid)" stroke-width="1"/>
-      <text x="${PL - 9}" y="${(yy + 3.5).toFixed(1)}" text-anchor="end" font-size="10" font-family="DM Mono,monospace" fill="var(--t3)">${yFmt(v)}</text>`;
+      <text x="${PL - 10}" y="${(yy + 4.5).toFixed(1)}" text-anchor="end" font-size="14" font-weight="500" fill="var(--tick)">${fmt(v)}</text>`;
   }
   const ticks = [0, Math.floor((n - 1) / 2), n - 1].filter((v, i, a) => a.indexOf(v) === i).map((i) =>
-    `<text x="${x(i).toFixed(1)}" y="${H - 7}" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}" font-size="10" fill="var(--t3)">${cost[i].label}</text>`).join('');
+    `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}" font-size="14" font-weight="500" fill="var(--tick)">${cost[i].label}</text>`).join('');
 
   const svg = $('pdSvg');
   svg.innerHTML = grid + body + ticks +
-    `<line id="pdCross" x1="0" x2="0" y1="${PT}" y2="${PT + ih}" stroke="var(--t3)" stroke-width="1" opacity="0"/>
-     <circle id="pdDot" r="4.5" fill="var(--t1)" stroke="var(--card)" stroke-width="2" opacity="0"/>`;
+    `<line id="pdCross" x1="0" x2="0" y1="${PT}" y2="${PT + ih}" stroke="var(--hover-line)" stroke-width="1" stroke-dasharray="4 4" opacity="0"/>
+     <circle id="pdDot" r="5" fill="var(--g-gp)" stroke="var(--sur)" stroke-width="2.5" opacity="0"/>`;
 
   const o = sel.o;
   $('pdTitle').textContent = sel.title;
   $('pdMeta').innerHTML = `${money(o.cost)} spent · ${money(o.allRev)} back · ` +
-    `<span class="${o.cashGap < 0 ? 'g-neg' : 'pos'}">${money(o.cashGap)} cash</span>` +
-    (o.goal && o.goal !== '—' ? ` · judged on ${esc(o.goal)}` : '') +
-    (o.budgetOnly ? ' · budget, not ROAS' : '');
-  $('pdRef').textContent = note;
+    `<span class="${o.cashGap < 0 ? 'g-neg' : 'pos'}">${money(o.cashGap)} gross profit</span>`;
+  $('pdRef').innerHTML = legend;
+
+  /* the two chart toggles show the current choice */
+  $('pdMode').querySelectorAll('button').forEach((b2) => b2.setAttribute('aria-pressed', String(b2.dataset.c === CHART)));
+  $('pdKind').hidden = CHART !== 'roas';
+  $('pdKind').querySelectorAll('button').forEach((b2) => b2.setAttribute('aria-pressed', String(b2.dataset.k === ROASK)));
 
   const plot = $('pdPlot'), tip = $('pdTip');
   const cross = svg.querySelector('#pdCross'), dot = svg.querySelector('#pdDot');
@@ -541,13 +463,16 @@ function drawDetail(m) {
     let i = Math.round(((ev.clientX - bb.left) / bb.width * W - PL) / (iw || 1) * (n - 1));
     i = Math.max(0, Math.min(n - 1, i));
     const p = pts[i];
-    cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.setAttribute('opacity', '.5');
+    cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.setAttribute('opacity', '1');
     if (p.y == null) dot.setAttribute('opacity', '0');
-    else { dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); dot.setAttribute('opacity', '1'); }
+    else {
+      dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); dot.setAttribute('opacity', '1');
+      dot.setAttribute('fill', p.dot || 'var(--g-gp)');
+    }
     tip.innerHTML = `<div class="g-d">${esc(p.label)}</div>` +
       p.rows.map((kv) => `<div class="r"><span>${kv[0]}</span><b>${kv[1]}</b></div>`).join('');
     tip.classList.add('on');
-    tip.style.left = Math.min(p.x / W * bb.width + 16, bb.width - 190) + 'px';
+    tip.style.left = Math.min(p.x / W * bb.width + 16, bb.width - 230) + 'px';
     tip.style.top = '6px';
   };
   plot.onmouseleave = () => {
@@ -557,191 +482,18 @@ function drawDetail(m) {
 }
 
 /* ---------------------------------------------------------------------------
- * Break-even
- *
- * Cash and cohort payback are different questions and the page has to carry
- * both. Cash counts every dollar that landed inside the window, including from
- * users bought long before it, so on a growing account it reads positive while
- * the cohorts just bought are still under water. Payback counts only what the
- * window's own cohorts returned by their goal day.
- *
- * The blend is the same one the removed g-ladder used: revenue at each age over
- * the spend old enough to have reached it. Spend that has not aged that far is
- * excluded rather than counted as a zero - dividing matured revenue by
- * unmatured spend is the classic way to make a healthy account look broken.
- * ------------------------------------------------------------------------- */
-function paybackPoints(rows) {
-  const sum = (f) => rows.reduce((s, c) => s + (f(c) || 0), 0);
-  const at = (day, cost, rev) => {
-    const c = sum(cost), r = sum(rev);
-    return { day, ratio: c > 0 ? r / c : null, cost: c, rev: r };
-  };
-  return [
-    at(0,  (c) => c.cost,   (c) => (c.adD0 || 0) + (c.iapD0 || 0)),
-    at(7,  (c) => c.cost7,  (c) => (c.adD7 || 0) + (c.iapD7 || 0)),
-    at(28, (c) => c.cost28, (c) => (c.adD28 || 0) + (c.iapD28 || 0)),
-  ].filter((p) => p.ratio != null && p.cost > 0);
-}
-
-/**
- * Where the curve crosses 1.00x, fitted as ratio = a*ln(day+1) + b.
- *
- * A log curve is the usual shape for cumulative LTV and it fits three points
- * without pretending to more precision than three points carry. The result is
- * a projection, not a measurement, and is labelled as one everywhere it
- * appears: two of the three inputs are D0 and D7, so a break-even predicted at
- * day 200 rests almost entirely on the slope between day 7 and day 28.
- */
-function projectBreakEven(points) {
-  if (points.length < 2) return null;
-  const xs = points.map((p) => Math.log(p.day + 1)), ys = points.map((p) => p.ratio);
-  const n = xs.length;
-  const mx = xs.reduce((a, b2) => a + b2, 0) / n, my = ys.reduce((a, b2) => a + b2, 0) / n;
-  let num = 0, den = 0;
-  for (let i = 0; i < n; i++) { num += (xs[i] - mx) * (ys[i] - my); den += (xs[i] - mx) ** 2; }
-  if (den === 0) return null;
-  const a = num / den, b = my - a * mx;
-  if (a <= 0) return { a, b, day: null };            // flat or falling: never
-  const day = Math.exp((1 - b) / a) - 1;
-  return { a, b, day: isFinite(day) && day > 0 ? day : null };
-}
-
-function renderBreakEven(m) {
-  const card = $('beCard');
-  const judged = m.rows.filter((c) => c.goal && c.goal !== '\u2014' && !c.budgetOnly);
-  const pts = paybackPoints(judged);
-  if (pts.length < 2) { card.hidden = true; return; }
-  card.hidden = false;
-
-  const last = pts[pts.length - 1];
-  const fit = projectBreakEven(pts);
-  const HORIZON = 180;
-
-  const now = $('beNow');
-  now.textContent = last.ratio.toFixed(3) + 'x';
-  now.parentElement.className = 'be-now ' + (last.ratio >= 1 ? 'is-over' : 'under');
-  $('beNowSub').textContent = 'by day ' + last.day;
-  $('beNote').textContent = 'Cohorts old enough to judge, blended across the window.';
-
-  /* ---- g-ladder: one row per cohort age ----
-     Deliberately short on words. The old version wrote a sentence under every
-     bar - target, mature days, what the ratio means - which is four lines of
-     prose to carry three numbers. Those numbers are on the bar; the sentence
-     is in the tooltip for whoever wants it. */
-  const A = B().data.assumptions;
-  const TGT = { 0: A.target_d0, 7: A.target_d7, 28: A.target_d28 };
-  const scale = Math.max(1.15, ...pts.map((p) => p.ratio), ...Object.values(TGT)) * 1.06;
-  $('beLadder').innerHTML = pts.map((p) => {
-    const tgt = TGT[p.day];
-    const cls = p.ratio >= 1 ? 's-good' : (tgt != null && p.ratio >= tgt) ? 's-near' : 's-bad';
-    const tip = money(p.rev) + ' back on ' + money(p.cost) + ' spent' +
-      (tgt != null ? ' \u00b7 target ' + tgt.toFixed(2) + 'x' : '');
-    return `<div class="g-lad-row ${cls}">
-      <div class="g-lad-age">Day ${p.day}</div>
-      <div class="g-lad-track" title="${esc(tip)}">
-        <div class="g-lad-fill" style="width:${(Math.min(p.ratio, scale) / scale * 100).toFixed(1)}%"></div>
-        ${tgt != null ? `<div class="g-lad-tgt" style="left:${(tgt / scale * 100).toFixed(1)}%"></div>` : ''}
-        <div class="g-lad-be" style="left:${(1 / scale * 100).toFixed(1)}%"></div>
-      </div>
-      <div class="g-lad-val">${p.ratio.toFixed(3)}x</div>
-    </div>`;
-  }).join('') +
-  `<div class="g-lad-key"><span class="be"><i></i>1.00x break-even</span>
-     <span class="tg"><i></i>target for that day</span></div>`;
-
-  /* ---- plot ---- */
-  const plot = $('bePlot'), svg = $('beSvg');
-  const H = 190, PL = 46, PR = 90, PT = 14, PB = 26;
-  const W = Math.max(560, Math.round(plot.clientWidth || 900));
-  const iw = W - PL - PR, ih = H - PT - PB;
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-
-  const maxDay = Math.min(HORIZON, Math.max(35, fit && fit.day ? fit.day * 1.15 : 35));
-  const maxY = Math.max(1.15, last.ratio * 1.25, 1.15);
-  const x = (d) => PL + Math.min(d, maxDay) / maxDay * iw;
-  const y = (r) => PT + ih - Math.min(r, maxY) / maxY * ih;
-
-  let g = '';
-  for (let k = 0; k <= 4; k++) {
-    const v = maxY * k / 4, yy = y(v);
-    g += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) +
-         '" stroke="var(--g-grid)" stroke-width="1"/>' +
-         '<text x="' + (PL - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="end" font-size="10" ' +
-         'font-family="DM Mono,monospace" fill="var(--t3)">' + v.toFixed(2) + '</text>';
-  }
-  /* break-even is the only line on this chart anybody is aiming at */
-  g += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(1).toFixed(1) + '" y2="' + y(1).toFixed(1) +
-       '" stroke="var(--t2)" stroke-width="1.5" stroke-dasharray="5 4"/>' +
-       '<text x="' + (W - PR + 7) + '" y="' + (y(1) + 3.5).toFixed(1) + '" font-size="11" ' +
-       'fill="var(--t2)">1.00x break-even</text>';
-
-  const measured = pts.map((p, i) => (i ? 'L' : 'M') + x(p.day).toFixed(1) + ' ' + y(p.ratio).toFixed(1)).join(' ');
-  let proj = '';
-  if (fit && fit.a > 0) {
-    const seg = [];
-    for (let d = last.day; d <= maxDay; d += Math.max(1, maxDay / 90)) {
-      seg.push((seg.length ? 'L' : 'M') + x(d).toFixed(1) + ' ' + y(fit.a * Math.log(d + 1) + fit.b).toFixed(1));
-    }
-    proj = '<path d="' + seg.join(' ') + '" fill="none" stroke="var(--g-rev)" stroke-width="2" ' +
-           'stroke-dasharray="6 4" opacity=".75"/>';
-  }
-  /* Day 0 sits on the left edge, so a centred label above it lands on top of
-     the y-axis numbers - "0.29" and "0.18" printed as "0.290.18". Labels that
-     close to the axis are anchored to the right of their dot instead. */
-  const dots = pts.map((p) => {
-    const px = x(p.day), near = px - PL < 26;
-    return '<circle cx="' + px.toFixed(1) + '" cy="' + y(p.ratio).toFixed(1) + '" r="4.5" ' +
-      'fill="var(--g-rev)" stroke="var(--card)" stroke-width="2"/>' +
-      '<text x="' + (near ? px + 9 : px).toFixed(1) + '" y="' +
-      (near ? y(p.ratio) + 3.5 : y(p.ratio) - 11).toFixed(1) + '" ' +
-      'text-anchor="' + (near ? 'start' : 'middle') + '" ' +
-      'font-size="10.5" font-family="DM Mono,monospace" fill="var(--t2)">' + p.ratio.toFixed(2) + '</text>';
-  }).join('');
-  const ticks = [0, 7, 28, Math.round(maxDay)].filter((d, i, a) => a.indexOf(d) === i && d <= maxDay)
-    .map((d) => '<text x="' + x(d).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" font-size="10" ' +
-      'fill="var(--t3)">day ' + d + '</text>').join('');
-
-  let cross = '';
-  if (fit && fit.day && fit.day <= maxDay) {
-    cross = '<line x1="' + x(fit.day).toFixed(1) + '" x2="' + x(fit.day).toFixed(1) + '" y1="' + PT +
-            '" y2="' + (PT + ih) + '" stroke="var(--g-good)" stroke-width="1" stroke-dasharray="3 3"/>' +
-            '<circle cx="' + x(fit.day).toFixed(1) + '" cy="' + y(1).toFixed(1) +
-            '" r="4" fill="var(--g-good)" stroke="var(--card)" stroke-width="2"/>';
-  }
-
-  svg.innerHTML = g + proj +
-    '<path d="' + measured + '" fill="none" stroke="var(--g-rev)" stroke-width="2.5" stroke-linejoin="round"/>' +
-    cross + dots + ticks;
-
-  /* ---- the sentence under it ---- */
-  const shortfall = last.cost * (1 - last.ratio);
-  let verdict;
-  if (last.ratio >= 1) {
-    verdict = '<b>Already past break-even.</b> Spend at this age has returned more than it cost.';
-  } else if (!fit || !fit.day) {
-    verdict = '<b class="g-bad">No break-even in sight.</b> The curve is flat or falling between the ' +
-      'measured points, so nothing here projects a crossing.';
-  } else if (fit.day > HORIZON) {
-    verdict = '<b class="g-bad">Break-even projected past day ' + HORIZON + '.</b> That is far enough out ' +
-      'to treat as "not paying back" rather than as a date.';
-  } else {
-    verdict = '<b class="g-warn">Break-even projected around day ' + Math.round(fit.day) + '</b>, ' +
-      (fit.day <= 30 ? 'which is inside a normal payback window.'
-                     : 'which is a long wait - worth checking the targets are set for it.');
-  }
-  $('beFoot').innerHTML = verdict + ' <b>' + money(shortfall) + '</b> still out on ' +
-    money(last.cost) + ' of judgeable spend.' +
-    '<br><span style="color:var(--t3)">Measured at day ' + pts.map((p) => p.day).join(', ') +
-    '; the dashed curve past day ' + last.day + ' is a projection, not a measurement. ' +
-    'Budget-judged campaigns are excluded.</span>';
-}
-
-/* ---------------------------------------------------------------------------
  * Wiring
  * ------------------------------------------------------------------------- */
 function wireOnce() {
   if (wireOnce.done) return;
   wireOnce.done = true;
+
+  $('pdMode').querySelectorAll('button').forEach((b2) => {
+    b2.onclick = (ev) => { ev.stopPropagation(); CHART = b2.dataset.c; if (MODEL) drawDetail(MODEL); };
+  });
+  $('pdKind').querySelectorAll('button').forEach((b2) => {
+    b2.onclick = (ev) => { ev.stopPropagation(); ROASK = b2.dataset.k; if (MODEL) drawDetail(MODEL); };
+  });
 
   $('perfGrain').querySelectorAll('button').forEach((b2) => {
     b2.onclick = () => {
@@ -751,16 +503,11 @@ function wireOnce() {
       if (MODEL) { renderTable(MODEL); drawDetail(MODEL); }
     };
   });
-
-  /* Once chosen, the mode sticks. Moving down the table then compares like
-     with like instead of silently changing the question under the reader. */
-  $('perfMode').querySelectorAll('button').forEach((b2) => {
-    b2.onclick = () => { MODE = b2.dataset.m; if (MODEL) drawDetail(MODEL); };
-  });
 }
 
 window.__nsBridge.onRender = function (W) {
   wireOnce();
+  enhanceDate();
   MODEL = build(W);
 
   /* Open on the biggest spender rather than on nothing. An empty chart well
@@ -774,7 +521,6 @@ window.__nsBridge.onRender = function (W) {
   if (!stillThere) SELECTED = MODEL.networks.length ? 'n:' + MODEL.networks[0].name : null;
 
   renderHead(MODEL);
-  renderBreakEven(MODEL);
   renderTable(MODEL);
   drawDetail(MODEL);
 };
@@ -787,7 +533,7 @@ window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
     if (!MODEL) return;
-    try { renderBreakEven(MODEL); drawDetail(MODEL); } catch (e) {}
+    try { drawDetail(MODEL); } catch (e) {}
   }, 150);
 });
 

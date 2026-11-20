@@ -550,8 +550,22 @@ function syncCardTitles(){
     h.textContent=base+(name?' · '+name:'')+(span&&span!==name?' · '+span:'');
   });
 }
+/* Share charts are donuts now: the legend sits under the ring as
+   "name [share%]" with the chip in the slice colour (src/shared/donut.js). */
 function renderPieLegend(id,chart){
   const el=ensurePieRow(id); if(!el) return;
+  const ds=chart.data.datasets[0]||{data:[]};
+  const cols=Array.isArray(ds.backgroundColor)?ds.backgroundColor:[ds.backgroundColor];
+  if(window.__donut){
+    el.classList.add('dl'); el.classList.remove('two-col');
+    el.parentElement.classList.add('donut-row');
+    el.innerHTML=window.__donut.donutLegendHTML(chart.data.labels||[],ds.data||[],cols);
+    return;
+  }
+  renderPieLegendList(el,chart);
+}
+/* the older numbered list, kept as the fallback if the donut module is absent */
+function renderPieLegendList(el,chart){
   const ds=chart.data.datasets[0]||{data:[]}, vals=ds.data||[];
   const total=vals.reduce((s,v)=>s+(Number(v)||0),0);
   const cols=Array.isArray(ds.backgroundColor)?ds.backgroundColor:[ds.backgroundColor];
@@ -569,7 +583,18 @@ function renderPieLegend(id,chart){
       +'<span class="pl-pc">'+share.toFixed(1)+'%</span></div>';
   }).join('');
 }
-function pie(id,labels,values,title,opts){opts=opts||{};destroy(id);if(!$(id))return;ensurePieRow(id);charts[id]=new Chart($(id),{type:'pie',data:{labels,datasets:[{data:values,backgroundColor:PIE,borderColor:cssVar('--bg','#000'),borderWidth:1.5,hoverOffset:8,radius:opts.radius||'92%'}]},options:{maintainAspectRatio:false,layout:{padding:opts.padding||{top:26,right:28,bottom:18,left:28}},animation:{duration:500},plugins:{legend:{display:false},tooltip:{enabled:true,displayColors:true,callbacks:{label:ctx=>{const values=ctx.dataset.data,total=values.reduce((s,v)=>s+(Number(v)||0),0),value=Number(ctx.raw)||0,percentage=total?value/total*100:0;return ` ${percentage.toFixed(2)}%`}}},title:{display:!!title,text:title,color:cssVar('--t1','#edf2ff'),padding:{bottom:10},font:{size:13}}}},plugins:[uaPiePercentLabels]});renderPieLegend(id,charts[id])}
+/* What the number in the middle of a donut is a total of. */
+function donutCaption(title){
+  const t=String(title||'');
+  if(/IAP|In-App/i.test(t)&&!/IAA/i.test(t)) return 'Total IAP revenue';
+  if(/Ad Revenue Share/i.test(t)) return 'Total ad revenue';
+  if(/Spend/i.test(t)) return 'Total spend';
+  return 'Total revenue';
+}
+/* Share charts are donuts: a ring with gaps between slices, the total in the
+   hole (src/shared/donut.js) and the legend underneath. Shares live in the
+   legend chips, so nothing is printed on the slices any more. */
+function pie(id,labels,values,title,opts){opts=opts||{};destroy(id);if(!$(id))return;ensurePieRow(id);charts[id]=new Chart($(id),{type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:PIE,borderWidth:0,spacing:3,borderRadius:5,hoverOffset:6,radius:'94%',cutout:'66%'}]},options:{maintainAspectRatio:false,layout:{padding:{top:8,right:8,bottom:8,left:8}},animation:{duration:500},plugins:{donutCenter:{label:donutCaption(title)},legend:{display:false},tooltip:{enabled:true,displayColors:true,callbacks:{label:ctx=>{const values=ctx.dataset.data,total=values.reduce((s,v)=>s+(Number(v)||0),0),value=Number(ctx.raw)||0,percentage=total?value/total*100:0;return ` ${percentage.toFixed(2)}%`}}},title:{display:false}}}});renderPieLegend(id,charts[id])}
 function shortDate(v){const d=dateVal(v);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):String(v)}
 function channelAgg(rows,valueKey='cost'){const m={};rows.forEach(r=>{const k=r.channel||'Unknown';m[k]=(m[k]||0)+num(r[valueKey])});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
 /* The legend displays one decimal place. Drop entries whose dynamic share
@@ -966,8 +991,11 @@ function addCampaignSeparators(id,rows){
 const shareBarLabels={
   id:'shareBarLabels',
   afterDatasetsDraw(chart){
-    const ctx=chart.ctx;ctx.save();ctx.font='700 13px Poppins,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    chart.data.datasets.forEach((ds,di)=>chart.getDatasetMeta(di).data.forEach((bar,i)=>{const value=Number(ds.data[i])||0;if(value<.08)return;const p=bar.getProps(['x','base','y'],true),label=(value*100).toFixed(1)+'%';if(di===1){ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.32)';ctx.strokeText(label,(p.x+p.base)/2,p.y)}ctx.fillStyle=di===0?'#fff':'#071018';ctx.fillText(label,(p.x+p.base)/2,p.y)}));
+    /* Share written in the middle of each segment: white on magenta, near-black
+       on gold. Segments too thin to hold the text (<10%) are left clean - the
+       tooltip still has them. */
+    const ctx=chart.ctx;ctx.save();ctx.font="700 14.5px 'Segoe UI',system-ui,sans-serif";ctx.textAlign='center';ctx.textBaseline='middle';
+    chart.data.datasets.forEach((ds,di)=>chart.getDatasetMeta(di).data.forEach((bar,i)=>{const value=Number(ds.data[i])||0;if(value<.1)return;const p=bar.getProps(['x','base','y'],true),label=(value*100).toFixed(1)+'%';ctx.fillStyle=di===0?'#ffffff':'#1a1300';ctx.fillText(label,(p.x+p.base)/2,p.y)}));
     ctx.restore()
   }
 };
@@ -975,7 +1003,12 @@ function renderNetworkShareBar(id,rows){
   const el=$(id);if(!el)return;const chartId=id+'Chart';destroy(chartId);
   el.classList.remove('share-table');el.classList.add('share-chart');el.innerHTML=`<canvas id="${chartId}"></canvas>`;
   const sorted=rows.slice().sort((a,b)=>b.IAP_Share-a.IAP_Share),textColor=cssVar('--t1','#edf2ff'),gridColor=cssVar('--border','rgba(255,255,255,.08)');
-  charts[chartId]=new Chart($(chartId),{type:'bar',data:{labels:sorted.map(x=>x.channel),datasets:[{label:'Ad Share',data:sorted.map(x=>x.Ad_Share),backgroundColor:'rgba(236,10,155,.68)',borderColor:'rgba(236,10,155,.92)',borderWidth:1},{label:'IAP Share',data:sorted.map(x=>x.IAP_Share),backgroundColor:'rgba(255,184,0,.68)',borderColor:'rgba(255,184,0,.92)',borderWidth:1}]},options:{indexAxis:'y',maintainAspectRatio:false,interaction:{mode:'index',axis:'y',intersect:true},plugins:{legend:{position:'top',align:'start',labels:{color:textColor}},tooltip:{mode:'index',axis:'y',intersect:true,position:'nearest',xAlign:'left',yAlign:'center',caretPadding:10,callbacks:{label:ctx=>`${ctx.dataset.label}: ${(Number(ctx.raw)*100).toFixed(1)}%`}}},scales:{x:{stacked:true,min:0,max:1,ticks:{color:textColor,callback:v=>(v*100).toFixed(0)+'%'},grid:{color:gridColor}},y:{stacked:true,ticks:{color:textColor,autoSkip:false},grid:{display:false}}}},plugins:[shareBarLabels]})
+  /* Cleaner 100% bars: same magenta / gold, solid with no outline, thinner
+     with breathing room between rows, and rounded only at the two outer ends
+     of each bar (a bar that is all one colour is rounded on both). */
+  const R=7,adR=c=>{const iap=Number(sorted[c.dataIndex]?.IAP_Share)||0;return{topLeft:R,bottomLeft:R,topRight:iap?0:R,bottomRight:iap?0:R}},
+        iapR=c=>{const ad=Number(sorted[c.dataIndex]?.Ad_Share)||0;return{topRight:R,bottomRight:R,topLeft:ad?0:R,bottomLeft:ad?0:R}};
+  charts[chartId]=new Chart($(chartId),{type:'bar',data:{labels:sorted.map(x=>x.channel),datasets:[{label:'Ad Share',data:sorted.map(x=>x.Ad_Share),backgroundColor:'rgba(236,10,155,.86)',hoverBackgroundColor:'#ec0a9b',borderWidth:0,borderSkipped:false,borderRadius:adR,barPercentage:.86,categoryPercentage:.92},{label:'IAP Share',data:sorted.map(x=>x.IAP_Share),backgroundColor:'rgba(255,184,0,.86)',hoverBackgroundColor:'#ffb800',borderWidth:0,borderSkipped:false,borderRadius:iapR,barPercentage:.86,categoryPercentage:.92}]},options:{indexAxis:'y',maintainAspectRatio:false,layout:{padding:{top:4,right:6}},interaction:{mode:'index',axis:'y',intersect:true},plugins:{legend:{position:'top',align:'end',labels:{color:textColor,usePointStyle:true,pointStyle:'rectRounded',boxWidth:14,boxHeight:14,padding:20,font:{size:16,weight:'600'}}},tooltip:{mode:'index',axis:'y',intersect:true,position:'nearest',xAlign:'left',yAlign:'center',caretPadding:10,callbacks:{label:ctx=>`${ctx.dataset.label}: ${(Number(ctx.raw)*100).toFixed(1)}%`}}},scales:{x:{stacked:true,min:0,max:1,border:{display:false,dash:[4,4]},ticks:{color:textColor,stepSize:.25,padding:6,callback:v=>(v*100).toFixed(0)+'%'},grid:{color:gridColor,drawTicks:false}},y:{stacked:true,border:{display:false},ticks:{color:textColor,autoSkip:false,padding:12,font:{size:16,weight:'600'}},grid:{display:false}}}},plugins:[shareBarLabels]})
 }
 /* Collapse channel-level cohorts into one row per week. Currency/count metrics
    are additive; ROAS, ROI, rates, shares and CPI-style metrics are averaged. */

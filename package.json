@@ -13,6 +13,7 @@
     "test:fmt": "node tools/test-formatters.mjs",
     "test:markup": "node tools/test-markup.mjs",
     "test:fit": "node tools/test-fit.mjs",
+    "test:us": "node tools/test-us-section.mjs",
     "test:tables": "node tools/test-tables.mjs",
     "test:ranges": "node tools/test-ranges.mjs",
     "test:adnet": "node tools/test-ua-adnetwork.mjs",

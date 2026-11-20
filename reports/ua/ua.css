@@ -161,3 +161,13 @@ body.lt .date-confirm{background:#ffffff;color:#0d1b2e;border-color:rgba(15,30,6
 body.lt .loader{background:rgba(238,241,247,.85)}
 body.lt .spinner{border-color:rgba(15,30,60,.12);border-top-color:var(--teal);border-right-color:var(--blue)}
 body.lt .empty{color:#8394ad}
+
+/* IAA vs IAP bars: no inner box around the chart - it sits straight on the card */
+html body .tablewrap.share-chart{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important}
+
+
+/* IAA vs IAP bars, zoomed in: a taller plot so each bar gets more room */
+html body .tablewrap.share-chart{height:580px!important}
+
+/* Navigation and date rows match the pure-black report canvas. */
+body:not(.lt) .top,body:not(.lt) .sh{background:#000;backdrop-filter:none}

@@ -1,0 +1,37 @@
+/* ---------------------------------------------------------------------------
+ * typography.css — one family, tabular figures, the shared type scale
+ * (DESIGN.md §3). Import it LAST on a page so it wins over older stylesheets
+ * that still name Poppins, DM Mono, Syne, Quicksand or Trebuchet MS.
+ * ------------------------------------------------------------------------- */
+:root {
+  --type-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+*, *::before, *::after,
+svg text, button, input, select, textarea {
+  font-family: var(--type-family) !important;
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+}
+
+/* every figure: tabular, slashed zero */
+.num, td.n, td.num, .kpi .v, .amt, .tip b, svg text {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum", "zero";
+}
+
+/* shared scale */
+.eyebrow {
+  font-size: 14px !important; font-weight: 600 !important;
+  letter-spacing: .16em !important; text-transform: uppercase; color: var(--mut) !important;
+}
+.h1 { font-size: 34px !important; font-weight: 700 !important; letter-spacing: -.01em; line-height: 1.15 }
+.card h2, .card-title { font-size: 20px !important; font-weight: 700 !important; line-height: 1.35; letter-spacing: -.01em }
+.card-sub { font-size: 15px !important; font-weight: 500 !important; color: var(--mut) !important }
+.sf { font-size: 13px; font-weight: 500 }

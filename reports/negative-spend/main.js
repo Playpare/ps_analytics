@@ -9,8 +9,10 @@
  * them — see the note in reports/till-date/main.js.
  */
 
+import '../../src/shared/styles/theme-tokens.css';
 import '../../src/shared/styles/motion.css';
 import './negative-spend.css';
+import './design.css';
 
 import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';
@@ -22,3 +24,6 @@ import './negative-spend.legacy.js';
    Imported first, it would find no bridge to attach to and the new sections
    would silently never render. */
 import './glance.js';
+
+/* Last, so the one font stack and the type scale win (DESIGN.md §11). */
+import '../../src/shared/styles/typography.css';
