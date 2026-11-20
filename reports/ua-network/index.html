@@ -32,7 +32,7 @@
 
   <main class="wrap">
     <div class="phead">
-      <h1>Which part of IAP moved, and on which network?</h1>
+      <h1>Which part of IAP moved?</h1>
       <div class="sub" id="period">&nbsp;</div>
     </div>
 
@@ -45,17 +45,14 @@
 
     <section class="two wide-left">
       <article class="card">
-        <h2>Why did D7 IAP revenue change?</h2>
-        <p class="q">IAP is Installs &times; Payer % &times; Purchases per payer &times; Average
-          price. The four bars are that change, split between those four factors,
-          and they add back to the whole.</p>
+        <h2>Why D7 IAP revenue changed</h2>
+        <p class="q">Installs &times; Payer % &times; Purchases per payer &times; Avg price</p>
         <div class="chartbox"><canvas id="cWaterfall"></canvas></div>
         <p class="note" id="wfNote"></p>
       </article>
       <article class="card">
         <h2>What the numbers support</h2>
-        <p class="q">Only changes larger than this volume of installs could
-          produce by chance, biggest money first.</p>
+        <p class="q">Only changes too large to be chance. Biggest money first.</p>
         <div class="findings" id="findings"></div>
       </article>
     </section>
@@ -63,8 +60,7 @@
     <section class="two">
       <article class="card">
         <h2>Spend against what the cohort earned</h2>
-        <p class="q">Spend on the day, and what the users bought that day had
-          earned by their seventh day.</p>
+        <p class="q">Spend that day &middot; what that day's installs earned by D7</p>
         <div class="legend">
           <span><i style="background:var(--coral)"></i>Spend</span>
           <span><i style="background:var(--blue)"></i>D7 IAP revenue</span>
@@ -75,9 +71,7 @@
       </article>
       <article class="card">
         <h2>Payer % by install day</h2>
-        <p class="q">Share of each day's installs that had bought something by
-          D7. All networks together &mdash; the daily series is not broken out
-          by network.</p>
+        <p class="q">Bought by D7 &middot; all networks together</p>
         <div class="chartbox"><canvas id="cPayer"></canvas></div>
       </article>
     </section>
@@ -85,14 +79,14 @@
     <section class="two">
       <article class="card">
         <h2>ROAS by days since install</h2>
-        <p class="q">100% is break-even.</p>
+        <p class="q">100% is break-even &middot; 8 measured points</p>
         <div class="legend" id="lgRoas"></div>
         <div class="chartbox"><canvas id="cRoas"></canvas></div>
         <p class="note" id="roasNote"></p>
       </article>
       <article class="card">
         <h2>Retention</h2>
-        <p class="q">Share of installs still active on day N.</p>
+        <p class="q">Still active on day N</p>
         <div class="legend" id="lgRet"></div>
         <div class="chartbox"><canvas id="cRet"></canvas></div>
       </article>
@@ -100,14 +94,13 @@
 
     <section class="card">
       <h2>By network</h2>
-      <p class="q">Payer % is shaded only where the fall is larger than that
-        network's install count could produce by chance.</p>
+      <p class="q">Payer % shaded only where the fall is measurable</p>
       <div class="tablewrap"><table id="tbl"></table></div>
     </section>
 
-    <p class="foot">Adjust Report Service, through the Channel Performance tab.
-      Country, net-of-refund store revenue and the new-against-existing split
-      are not on this page because none of the three is measured yet.</p>
+    <p class="foot">Adjust Report Service &middot; Channel Performance tab.
+      Country, store-net revenue and the new-against-existing split are not
+      here: none of the three is measured yet.</p>
   </main>
 
   <div id="loader" class="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading Data</b><div class="pulse"></div></div></div>

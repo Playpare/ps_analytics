@@ -418,15 +418,41 @@ export function renderPage(curPayload, prevPayload, win, days) {
   g('period').textContent = win.cur.from + ' → ' + win.cur.to
     + '  ·  against the ' + days + ' days before it';
 
-  /* The legacy fallback carries no cohort columns at all. Saying so turns a
-     page of dashes into one sentence. */
-  if (curUa.channelSrc === 'legacy') {
-    g('srcWarn').innerHTML = 'This window is being served from the legacy'
-      + ' channel list, which has no payer or cohort columns — so the four-factor'
-      + ' cards below are blank for a reason that is not immaturity.';
-    g('srcWarn').hidden = false;
+  /* WHY THE COHORT CARDS ARE EMPTY, in one sentence instead of a page of
+     dashes.
+     
+     There are three different reasons they can be, and they look identical on
+     screen. Only the third is the page's own business:
+
+       the backend has not been redeployed - the Channel Performance tab has
+         the columns, the deployed script has no idea they exist, and every
+         cohort field is simply absent from the payload
+       the legacy channel list is being served - that fallback never carried
+         payer columns at all
+       the cohorts have not matured - the real one, and the only one worth
+         waiting out
+
+     The first is told apart from the third by the KEY being missing rather
+     than null: a deployed backend that has nothing to report sends null, and
+     one that has never heard of the column sends nothing. */
+  const rows = curUa.channels || [];
+  const COHORT_KEYS = ['payersD7', 'purchD7', 'cohortIapD7'];
+  const knowsCohorts = rows.some((r) => COHORT_KEYS.some((k) => k in r));
+  const warn = g('srcWarn');
+
+  if (rows.length && !knowsCohorts) {
+    warn.innerHTML = '<b>The backend has not been redeployed.</b> It is'
+      + ' answering without the payer and cohort columns — not reporting them'
+      + ' as empty, but not carrying them at all — so every card built on the'
+      + ' four factors is blank. Spend, installs and CPI are unaffected.';
+    warn.hidden = false;
+  } else if (curUa.channelSrc === 'legacy') {
+    warn.innerHTML = 'This window is served from the legacy channel list,'
+      + ' which has no payer or cohort columns, so the four-factor cards are'
+      + ' blank for a reason that is not immaturity.';
+    warn.hidden = false;
   } else {
-    g('srcWarn').hidden = true;
+    warn.hidden = true;
   }
 
   renderKpis(cur, prev);
