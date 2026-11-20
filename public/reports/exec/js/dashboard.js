@@ -11,8 +11,8 @@ function switchTab(name, btn) {
   const isDash = name==='dashboard';
   g('csvBtn').style.display  = isDash ? 'flex' : 'none';
   g('pdfBtn').style.display  = isDash ? 'flex' : 'none';
-  if(name==='targets') buildTargetsUI();
-  if(name==='ltv')     buildLtvUI();
+  /* Only one tab remains, so there is nothing to switch to. Kept as a
+     function because the tab bar still calls it. */
 }
 
 
@@ -93,8 +93,11 @@ async function fetchRoasData(token, forceRefresh=false) {
   }
 }
 function refreshData() {
-  loadData(true);                 // force bypass cache (dashboard data)
-  if(_ltvLoaded) reloadLtvData(); // keep the LTV tab in sync with the top Refresh
+  /* One thing left to refresh. The LTV reload that used to sit here named
+     _ltvLoaded, which ltv.js declared - and ltv.js is gone with the tab, so
+     this line would have thrown a ReferenceError on every Refresh click.
+     Deleting a page is also deleting what its variables promised. */
+  loadData(true);   // force bypass cache
 }
 function setupAutoRefresh() {
   clearInterval(refreshTimer);

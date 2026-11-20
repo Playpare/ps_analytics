@@ -77,8 +77,6 @@
     <div class="tsep"></div>
     <div class="tabNav">
       <button class="tabBtn active" data-tab="dashboard">Dashboard</button>
-      <button class="tabBtn" data-tab="ltv">LTV</button>
-      <button class="tabBtn u-style-010" data-tab="targets" id="targetsTabBtn">Targets</button>
     </div>
     <div class="topRight">
       <div class="alertBadge" id="alertBadge">⚠ <span id="alertCount">0</span> Alerts</div>
@@ -332,194 +330,22 @@
     </div>
   </div>
 
-  <!-- TARGETS TAB -->
-  <div class="tabPanel" id="tab-targets">
-    <div class="main">
-      <div class="viewerMsg" id="viewerMsg">🔒 Only Admins can edit targets. Contact your administrator.</div>
-      <div id="targetsEditArea" class="u-style-010">
-        <div class="targetsGrid">
-          <!-- LEFT -->
-          <div class="tCard">
-            <div class="tCardH">Performance Targets</div>
-            <div class="tCardSub">Set monthly profit & ROI goals and per-game thresholds.</div>
+  <!-- THE TARGETS TAB AND THE LTV TAB WERE HERE.
 
-            <!-- GLOBAL -->
-            <div class="u-style-013">
-              <div class="tSectionLbl">Global Settings</div>
-              <div class="tGlobalGrid">
-                <div class="tGItem"><label>Target Year</label><input type="number" class="tInput" id="tYear" placeholder="2026" min="2020" max="2035"/></div>
-              </div>
-              <div class="tGlobalGrid">
-                <div class="tGItem">
-                  <label>Quarter GP Target ($)</label>
-                  <input type="number" class="tInput" id="tQuarter" placeholder="Auto from months"/>
-                  <div class="tCalcNote" id="qAutoNote"></div>
-                </div>
-                <div class="tGItem">
-                  <label>Annual GP Target ($)</label>
-                  <input type="number" class="tInput" id="tAnnual" placeholder="Auto from months"/>
-                  <div class="tCalcNote" id="aAutoNote"></div>
-                </div>
-              </div>
-            </div>
+       Targets moved to Playspare Pulse, under Config > Thresholds. The place
+       you SET a goal was buried inside the place you WATCH it, and a second
+       editor is how two copies of one number start to disagree. This report
+       still READS them - the projection is drawn against them - it just no
+       longer offers to change them. Same dashTargets_v1 in the same backend;
+       nothing was migrated.
 
-            <!-- MONTHLY -->
-            <div class="u-style-013">
-              <div class="tSectionLbl">
-                <span>Monthly Targets</span>
-                <button class="tBulkBtn">📋 Set Full Year at Once</button>
-              </div>
-              <div class="tMonthHeader"><span>Month</span><span>Profit Target ($)</span><span>ROI Target</span></div>
-              <div id="monthlyInputs"></div>
-            </div>
-
-            <!-- PER GAME ROI -->
-            <div class="u-style-013">
-              <div class="tSectionLbl">Per-Game ROI Targets</div>
-              <div class="u-style-033">Leave blank to use the default ROI target (1.20).</div>
-              <div class="gameRoiGrid" id="gameRoiInputs"></div>
-            </div>
-
-            <button class="tSaveBtn">💾 Save All Targets</button>
-            <div id="savedInfo" class="u-style-034"></div>
-          </div>
-
-          <!-- RIGHT: PREVIEW -->
-          <div class="u-style-035">
-            <div class="tCard">
-              <div class="tCardH u-style-036">Live Preview</div>
-              <div class="tCardSub">Updates as you type</div>
-              <div id="targetPreview"></div>
-            </div>
-            <div class="tCard">
-              <div class="tCardH u-style-036">How It Works</div>
-              <div class="u-style-037">
-                <div class="u-style-038">📌 <b class="u-style-039">Monthly Profit Target</b> — drives projected month end, achievement % and required daily profit.</div>
-                <div class="u-style-038">📌 <b class="u-style-039">Monthly ROI Target</b> — shown in monthly table and Target vs Actual chart.</div>
-                <div class="u-style-038">📌 <b class="u-style-039">Per-Game ROI</b> — each game's ROI target, used in the ROI ranking & pill colours.</div>
-                <div class="u-style-038">📌 <b class="u-style-039">Quarter / Annual</b> — manually set or auto-calculated from monthly profit targets.</div>
-                <div>📌 <b class="u-style-039">Auto-calc</b> — leave Quarter/Annual blank to auto-sum from monthly targets.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- LTV TAB -->
-  <div class="tabPanel" id="tab-ltv">
-    <div class="main">
-      <!-- Filters -->
-      <div class="ltvBar">
-        <!-- Platform tabs: Android / iOS only (no "All") -->
-        <span class="lbLbl">Platform</span>
-        <div class="ltvTypeToggle" id="ltvPlatToggle">
-          <button class="on" data-ltv-plat="Android">Android</button>
-          <button data-ltv-plat="iOS">iOS</button>
-        </div>
-        <span class="tsep u-style-040"></span>
-        <span class="lbLbl">LTV Type</span>
-        <div class="ltvTypeToggle" id="ltvTypeToggle">
-          <button class="on" data-ltv-type="Total LTV">Total</button>
-          <button data-ltv-type="Ad LTV">Ad</button>
-          <button data-ltv-type="IAP LTV">IAP</button>
-        </div>
-        <span class="tsep u-style-040"></span>
-        <!-- Game: no "All" — defaults to the (only/first) game -->
-        <select class="fsel" id="ltvGame"></select>
-        <select class="fsel" id="ltvCountry"><option value="">All Countries</option></select>
-        <span class="tsep u-style-040"></span>
-        <!-- Install-date range presets — default to 90d -->
-        <span class="lbLbl">Range</span>
-        <div class="ltvTypeToggle" id="ltvDateToggle">
-          <button data-ltv-days="7">Last 7d</button>
-          <button data-ltv-days="28">Last 28d</button>
-          <button data-ltv-days="45">Last 45d</button>
-          <button class="on" data-ltv-days="90">Last 90d</button>
-          <button data-ltv-days="0">All</button>
-        </div>
-        <input type="date" class="fsel" id="ltvFrom" title="Custom from (install date)"/>
-        <input type="date" class="fsel" id="ltvTo" title="Custom to (install date)"/>
-        <div class="ltvDayToggle">
-          <button class="on" data-ltv-range="standard">Through D30</button>
-          <button data-ltv-range="extended">Show D40–D50</button>
-        </div>
-      </div>
-
-      <!-- KPI strip -->
-      <div class="ltvKpis" id="ltvKpis">
-        <div class="ltvLoading u-style-041">Loading LTV data…</div>
-      </div>
-
-      <!-- LTV curves chart -->
-      <div class="card u-style-042">
-        <div class="cardHead">
-          <span>LTV Cumulative Curves</span>
-          <span class="u-style-043">Avg LTV per install · click any day below to show/hide it on the chart</span>
-        </div>
-        <!-- Day chips: each chip toggles whether that day appears in the chart.
-             Default = key milestones (D7, D14, D30) on, others off. -->
-        <div class="ltvDayChips" id="ltvDayChips"></div>
-        <div class="u-style-044"><canvas id="ltvCurveChart"></canvas></div>
-      </div>
-
-      <!-- LTV Forecast — dedicated projection chart (D0 → D28/D30) -->
-      <div class="card u-style-042">
-        <div class="cardHead">
-          <span>LTV Forecast · D0 → target</span>
-          <span class="u-style-043">Projected cumulative LTV — historical scaling, curve-fit fallback</span>
-        </div>
-        <div class="ltvDayChips" id="ltvFcBar"></div>
-        <div class="u-style-014"><canvas id="ltvFcChart"></canvas></div>
-      </div>
-
-      <!-- Performance Trends — date-wise trend of a chosen cohort day -->
-      <div class="card u-style-042">
-        <div class="cardHead">
-          <span>Performance Trends</span>
-          <span class="u-style-043">How a single cohort day's LTV changes across install dates</span>
-        </div>
-        <div class="ltvPerfBar">
-          <span class="lbLbl">Period</span>
-          <select class="fsel" id="ltvPerfPeriod">
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly avg</option>
-            <option value="monthly">Monthly avg</option>
-          </select>
-          <span class="lbLbl u-style-045">Cohort Day</span>
-          <select class="fsel" id="ltvPerfDay">
-            <!-- populated from JS so it stays in sync with day list -->
-          </select>
-        </div>
-        <div class="u-style-046"><canvas id="ltvPerfChart"></canvas></div>
-      </div>
-
-      <!-- Cohort heatmap -->
-      <div class="card u-style-042">
-        <div class="cardHead">
-          <span>Cohort Heatmap</span>
-          <span class="u-style-043">Each row = install date · cell color shows LTV intensity within column</span>
-        </div>
-        <div class="heatmapWrap" id="ltvHeatmapWrap">
-          <div class="ltvLoading">Loading heatmap…</div>
-        </div>
-      </div>
-
-      <!-- Game leaderboard -->
-      <div class="card">
-        <div class="cardHead">
-          <span>Game Leaderboard</span>
-          <span class="u-style-043">Sorted by D30 by default · click any column to re-sort</span>
-        </div>
-        <div class="u-style-047"><table class="ltvLead" id="ltvLeadTable"></table></div>
-        <button class="ltvShowAll u-style-010" id="ltvShowAllBtn">Show all</button>
-      </div>
-    </div>
-  </div>
+       LTV is gone because the same curves are already shown elsewhere in
+       Pulse, and two places showing one dataset is a question about which is
+       right. getLtvData() is untouched in the backend, so bringing the tab
+       back is adding a tab, not rebuilding a feature. -->
 </div><!-- /app -->
 
-<!-- THESE SEVEN FILES LIVE IN public/reports/exec/js/, NOT NEXT TO THIS FILE.
+<!-- THESE SIX FILES LIVE IN public/reports/exec/js/, NOT NEXT TO THIS FILE.
      Do not move them back without reading this.
 
      They are classic scripts that share one global scope: utils.js declares
@@ -542,7 +368,6 @@
 <script src="js/session.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/charts.js"></script>
-<script src="js/ltv.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

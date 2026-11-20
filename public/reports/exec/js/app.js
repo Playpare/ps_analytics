@@ -44,8 +44,6 @@ function applySharedTheme(mode){
   try {
     Object.values(charts).forEach(c => { if(c) c.update(); });
     renderProjected();
-    if(typeof _ltvLoaded !== 'undefined' && _ltvLoaded &&
-       g('tab-ltv') && g('tab-ltv').classList.contains('active')) renderLtv();
   } catch(e) {
     /* Nothing to redraw yet. loadData() paints everything in the right
        theme a moment later, because isLight is already set above. */
@@ -69,7 +67,7 @@ window.addEventListener('storage', ev => {
   if(ev.key === THEME_KEY) applySharedTheme(ev.newValue === 'light' ? 'light' : 'dark');
 });
 
-/* Re-render LTV charts on theme toggle so colors stay accurate, and persist
+/* Re-render charts on theme toggle so colors stay accurate, and persist
    the choice where Pulse and every other report will read it. */
 const _origToggleTheme = toggleTheme;
 toggleTheme = function(){
@@ -77,7 +75,6 @@ toggleTheme = function(){
   document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
   try { localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark'); }
   catch(e) { /* storage blocked - the theme still applies for this page */ }
-  if(_ltvLoaded && g('tab-ltv').classList.contains('active')) renderLtv();
 };
 
 function bindStaticHandlers(){
@@ -123,21 +120,11 @@ function bindStaticHandlers(){
   bind('.qPill[data-q]', 'click', function(){ selectQuarter(Number(this.dataset.q), this); });
   bind('.presetBtn[data-gplat]', 'click', function(){ setGamePlatform(this.dataset.gplat, this); });
   bindId('roiExpandBtn', 'click', () => toggleRoiRank());
-  bind('.tBulkBtn', 'click', () => openBulkModal());
-  bind('.tSaveBtn', 'click', () => saveTargets());
-
-  bind('[data-ltv-plat]', 'click', function(){ setLtvPlat(this.dataset.ltvPlat, this); });
-  bind('[data-ltv-type]', 'click', function(){ setLtvType(this.dataset.ltvType, this); });
-  bindId('ltvGame', 'change', () => onLtvGameChange());
-  bindId('ltvCountry', 'change', () => renderLtv());
-  bind('[data-ltv-days]', 'click', function(){ setLtvDateRange(Number(this.dataset.ltvDays)); });
-  bindId('ltvFrom', 'change', () => onLtvDateInput());
-  bindId('ltvTo', 'change', () => onLtvDateInput());
-  bind('[data-ltv-range]', 'click', function(){ setLtvRange(this.dataset.ltvRange, this); });
-  bindId('ltvPerfPeriod', 'change', () => renderLtvPerformance());
-  bindId('ltvPerfDay', 'change', () => renderLtvPerformance());
-  bindId('ltvShowAllBtn', 'click', () => toggleLtvShowAll());
-
+  /* The Targets and LTV bindings went with their tabs. querySelectorAll on a
+     selector that matches nothing is a silent no-op, so these would never
+     have thrown - which is exactly why they are worth deleting rather than
+     leaving: a binding that quietly matches nothing outlives the feature it
+     belonged to and reads, later, as a feature that is merely broken. */
   delegate('[data-close-file-warning]', 'click', function(){
     const warning = g('fileProtoWarning');
     if(warning) warning.style.display = 'none';
@@ -154,16 +141,11 @@ function bindStaticHandlers(){
   delegate('.uDel[data-user-index]', 'click', function(){
     deleteUser(Number(this.dataset.userIndex));
   });
-  delegate('[data-ltv-day]', 'click', function(){
-    toggleLtvDay(this.dataset.ltvDay);
-  });
-  delegate('[data-ltv-forecast-toggle]', 'click', () => toggleLtvForecast());
-  delegate('[data-ltv-forecast-target]', 'click', function(){
-    setLtvForecastTarget(this.dataset.ltvForecastTarget);
-  });
-  delegate('[data-ltv-sort]', 'click', function(){
-    setLtvLeadSort(this.dataset.ltvSort);
-  });
+  /* The delegated LTV handlers went with the tab. They were listeners on
+     the document for elements that no longer exist, calling functions that
+     no longer exist - harmless until the day somebody reuses one of those
+     data attributes and gets a ReferenceError from a feature deleted months
+     earlier. */
 }
 
 bindStaticHandlers();

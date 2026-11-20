@@ -119,11 +119,6 @@ function enterApp(session) {
   const uname = g('unameEl');
   if (uname) uname.textContent = session.name || session.email;
 
-  /* Targets stays visible for everyone. The backend refuses a save from a
-     viewer; a hidden tab only ever hid it from the honest. */
-  const targetsBtn = g('targetsTabBtn');
-  if (targetsBtn) targetsBtn.style.display = 'inline-block';
-
   if (session.expires) {
     const remaining = session.expires - Date.now();
     /* setTimeout saturates past ~24.8 days and would fire immediately. A

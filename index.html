@@ -516,10 +516,23 @@
 
     <!-- ── THRESHOLDS ── -->
     <div class="tab-pane" id="tab-thresholds">
+      <!-- Executive targets come first because they are the ones somebody
+           opens this page to change. They are portfolio-wide - every game,
+           for a year - while the thresholds below are per-game, so the two
+           are separate cards rather than one list with a mixed meaning. -->
+      <div class="card" id="execTargetsCard" style="max-width:680px;margin-bottom:18px">
+        <div class="card-hd"><span class="card-title">Executive targets
+          <span class="card-sub">monthly profit &amp; ROI goals · all games</span></span></div>
+        <div id="execTargetsHost"></div>
+      </div>
+
       <div class="card" style="max-width:680px">
         <div class="card-hd"><span class="card-title">Alert thresholds <span class="card-sub">drive the alert strip</span></span></div>
         <div class="thresh-grid" id="threshGrid"></div>
-        <div style="margin-top:18px"><button class="btn-primary" onclick="saveThresh()">Save thresholds</button></div>
+        <div style="margin-top:18px;display:flex;align-items:center;gap:14px">
+          <button class="btn-primary" id="threshSaveBtn" onclick="saveThresh()">Save thresholds</button>
+          <span class="thresh-lbl" id="threshMsg"></span>
+        </div>
       </div>
       <div class="notice" style="margin-top:16px;max-width:680px">
         🎮 Games &amp; Google Sheet IDs Apps Script (<span style="color:var(--cyan)">Code.gs</span>) mein manage hongay — Phase 2 mein backend deploy karengay.
