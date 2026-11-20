@@ -143,6 +143,13 @@ const SECTION_META = {
                   report:'negative-spend', api:'negative' },
   uareport:     { group:'UA Reports', label:'UA Report',      order:210, scope:'ua',
                   report:'ua',             api:'ua' },
+  /* The one report that reads THIS project's own backend rather than a
+     report-specific one: it is built on ua.channels and ua.channelDaily,
+     which are part of the game payload. So api:'game', and reportUrl
+     hands it the shared key the same way it does for the UA report's ad
+     network cards. */
+  uanetwork:    { group:'UA Reports', label:'Networks',       order:215, scope:'ua',
+                  report:'ua-network',     api:'game' },
   monetization: { group:'UA Reports', label:'Monetization',   order:220, scope:'ua',
                   report:'weekly',         api:'weekly' },
   tilldate:     { group:'All Time',   label:'Life Time',      order:230, scope:'all',
@@ -235,6 +242,13 @@ function reportUrl(section) {
     url += '&gameApi=' + encodeURIComponent(API_URLS.game);
     if (GAME_API_KEY) url += '&gameKey=' + encodeURIComponent(GAME_API_KEY);
   }
+  /* A report reading this project's backend needs the shared key, which
+     route() checks before anything else. Without it the request is refused
+     in the body with a 200, and a refusal that arrives as a 200 looks like
+     a window with no rows. */
+  if (section.api === 'game' && GAME_API_KEY) {
+    url += '&key=' + encodeURIComponent(GAME_API_KEY);
+  }
   return url;
 }
 
@@ -278,7 +292,8 @@ const DEFAULT_ENABLED_SECTIONS = [
  * of the dashboard. Appending them, the way ADMIN_ONLY_SECTIONS already was,
  * is what makes that true in the code and not only in a comment.
  */
-const REPORT_SECTIONS = ['exec', 'negative', 'uareport', 'monetization', 'tilldate', 'aso', 'creative'];
+const REPORT_SECTIONS = ['exec', 'negative', 'uareport', 'uanetwork',
+                         'monetization', 'tilldate', 'aso', 'creative'];
 // Users section is always available but only shown to admins (filtered in getEnabledSections)
 const ADMIN_ONLY_SECTIONS = ['users'];
 

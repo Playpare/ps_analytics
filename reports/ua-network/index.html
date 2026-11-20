@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MSS3D &middot; UA Network Performance</title>
+
+  <!--THEME_BOOT-->
+  <!-- The same cube the shell shows while this document loads, so the
+       wait looks like one thing instead of two. See the file. -->
+  <link rel="stylesheet" href="../shared/ps-loader.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><b>playspare</b> &middot; UA Networks</div>
+    <div class="controls">
+      <span class="flabel">Window</span>
+      <div class="seg" id="fRange">
+        <button data-v="7">7D</button>
+        <button data-v="14" class="on">14D</button>
+        <button data-v="28">28D</button>
+      </div>
+      <span class="flabel">Platform</span>
+      <select id="fPlat">
+        <option value="android">Android</option>
+        <option value="ios">iOS</option>
+      </select>
+      <button id="refreshBtn" class="btn">&#8635; Refresh</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="phead">
+      <h1>Which part of IAP moved, and on which network?</h1>
+      <div class="sub" id="period">&nbsp;</div>
+    </div>
+
+    <div class="warn" id="srcWarn" hidden></div>
+    <div class="fatal" id="fatal" hidden></div>
+
+    <!-- Six tiles. Each answers a question none of the others answer; the
+         revenue tiles that used to sit here are the chart two cards down. -->
+    <div class="kpis" id="kpis"></div>
+
+    <section class="two wide-left">
+      <article class="card">
+        <h2>Why did D7 IAP revenue change?</h2>
+        <p class="q">IAP is Installs &times; Payer % &times; Purchases per payer &times; Average
+          price. The four bars are that change, split between those four factors,
+          and they add back to the whole.</p>
+        <div class="chartbox"><canvas id="cWaterfall"></canvas></div>
+        <p class="note" id="wfNote"></p>
+      </article>
+      <article class="card">
+        <h2>What the numbers support</h2>
+        <p class="q">Only changes larger than this volume of installs could
+          produce by chance, biggest money first.</p>
+        <div class="findings" id="findings"></div>
+      </article>
+    </section>
+
+    <section class="two">
+      <article class="card">
+        <h2>Spend against what the cohort earned</h2>
+        <p class="q">Spend on the day, and what the users bought that day had
+          earned by their seventh day.</p>
+        <div class="legend">
+          <span><i style="background:var(--coral)"></i>Spend</span>
+          <span><i style="background:var(--blue)"></i>D7 IAP revenue</span>
+          <span><i style="background:var(--teal)"></i>Ad revenue</span>
+        </div>
+        <div class="chartbox"><canvas id="cDaily"></canvas></div>
+        <p class="note" id="dailyNote"></p>
+      </article>
+      <article class="card">
+        <h2>Payer % by install day</h2>
+        <p class="q">Share of each day's installs that had bought something by
+          D7. All networks together &mdash; the daily series is not broken out
+          by network.</p>
+        <div class="chartbox"><canvas id="cPayer"></canvas></div>
+      </article>
+    </section>
+
+    <section class="two">
+      <article class="card">
+        <h2>ROAS by days since install</h2>
+        <p class="q">100% is break-even.</p>
+        <div class="legend" id="lgRoas"></div>
+        <div class="chartbox"><canvas id="cRoas"></canvas></div>
+        <p class="note" id="roasNote"></p>
+      </article>
+      <article class="card">
+        <h2>Retention</h2>
+        <p class="q">Share of installs still active on day N.</p>
+        <div class="legend" id="lgRet"></div>
+        <div class="chartbox"><canvas id="cRet"></canvas></div>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>By network</h2>
+      <p class="q">Payer % is shaded only where the fall is larger than that
+        network's install count could produce by chance.</p>
+      <div class="tablewrap"><table id="tbl"></table></div>
+    </section>
+
+    <p class="foot">Adjust Report Service, through the Channel Performance tab.
+      Country, net-of-refund store revenue and the new-against-existing split
+      are not on this page because none of the three is measured yet.</p>
+  </main>
+
+  <div id="loader" class="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading Data</b><div class="pulse"></div></div></div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

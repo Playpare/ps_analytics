@@ -81,6 +81,10 @@ export default defineConfig(({ mode }) => {
           // two front doors to the same system.
           shell: at('index.html'),
           ua: at('reports/ua/index.html'),
+          /* UA Network Performance. Reads the game backend rather than
+             the UA one, because the channel rollup it is built on lives in
+             that payload as ua.channels / ua.channelDaily. */
+          uanetwork: at('reports/ua-network/index.html'),
           weekly: at('reports/weekly/index.html'),
           tilldate: at('reports/till-date/index.html'),
           aso: at('reports/aso/index.html'),
