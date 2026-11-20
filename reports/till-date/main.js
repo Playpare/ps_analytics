@@ -1,5 +1,5 @@
 /**
- * Till Date report entry point.
+ * Life Time report entry point (formerly "Till Date"; the folder keeps its name).
  *
  * Two notes specific to this report:
  *
@@ -18,8 +18,14 @@
 
 import '../../src/shared/styles/motion.css';
 import './till-date.css';
+/* Negative Spend's fonts, sizes and control shapes. Loaded right after the
+   report's stylesheet and BEFORE its script, so the charts read the new
+   greys on their first draw (in dev, CSS lands in import order). */
+import './design.css';
 
 import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';
 
 import './till-date.legacy.js';
+
+import '../../src/shared/date-popup.js';

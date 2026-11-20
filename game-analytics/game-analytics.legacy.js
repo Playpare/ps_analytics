@@ -145,7 +145,7 @@ const SECTION_META = {
                   report:'ua',             api:'ua' },
   monetization: { group:'UA Reports', label:'Monetization',   order:220, scope:'ua',
                   report:'weekly',         api:'weekly' },
-  tilldate:     { group:'All Time',   label:'Till Date',      order:230, scope:'all',
+  tilldate:     { group:'All Time',   label:'Life Time',      order:230, scope:'all',
                   report:'till-date',      api:'tilldate' },
   aso:          { group:'Store',      label:'ASO',            order:240, scope:'aso',
                   report:'aso',            api:'aso' },
@@ -155,13 +155,13 @@ const SECTION_META = {
      network, which week. It was a separate repository with its own Google
      Sign-In; only the sign-in moved, and its data layer is untouched.
 
-     The VALIA page that shipped inside it is deliberately NOT here. It read a
-     third workbook through a third /exec of its own, and folding it in would
-     have meant carrying both into Pulse for a page nobody asked to see. */
+     The VALIA page ships inside it, as it always did: reportUrl() hands the
+     creative section a valiaApi of its own, so the third workbook is read
+     through its own endpoint without VALIA becoming a section here. */
   creative:     { group:'Creative',   label:'Creative',       order:250, scope:'ua',
                   report:'creative',       api:'creative' },
 
-  feedback:   { group:'Config',         label:'Feedback',        order:300, scope:'game' },
+  feedback:   { group:'Config',         label:'Feedback',        order:300, scope:'game', hidden:true },
   thresholds: { group:'Config',         label:'Thresholds',      order:310, scope:'game' },
   users:      { group:'Config',         label:'User Management', order:320, scope:'game' },
 };
@@ -468,6 +468,30 @@ function deltaHtml(cur, prev, goodUp=true){
   const cls = small ? 'flat' : good ? 'up' : 'dn';
   const arrow = small ? '•' : up ? '▲' : '▼';
   return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(dp).toFixed(1)}%</span>`;
+}
+/* Up / down arrow under a KPI value, as on the ASO page. Against the previous
+   period when the card has one, otherwise the second half of the card's graph
+   against the first. Green when the move is good for that card (k.better:
+   'up' or 'down'), amber when not. k.noTrend skips it (graphs that run across
+   funnel steps or levels rather than dates). Used on every hub page. */
+function kpiTrendHtml(k){
+  if (k.noTrend) return '';
+  let pct = null, vs = '';
+  if (k.prev != null && isFinite(k.prev) && +k.prev !== 0 && k.cur != null && isFinite(k.cur)) {
+    pct = (k.cur - k.prev) / Math.abs(k.prev) * 100; vs = 'vs previous period';
+  } else {
+    const v = (k.data||[]).filter(x=>x!=null && x!=='' && isFinite(x)).map(Number);
+    if (v.length >= 2) {
+      const h = Math.floor(v.length/2), mean = a=>a.reduce((s,x)=>s+x,0)/a.length;
+      const a = mean(v.slice(0, v.length-h)), b = mean(v.slice(v.length-h));
+      if (a) { pct = (b - a) / Math.abs(a) * 100; vs = 'vs first half'; }
+    }
+  }
+  if (pct == null || !isFinite(pct)) return '';
+  if (Math.abs(pct) < 0.05) return '<div class="kpi-trend flat">● no change <span>'+vs+'</span></div>';
+  const up = pct > 0, good = (k.better || 'up') === 'up' ? up : !up;
+  return '<div class="kpi-trend '+(good?'good':'bad')+'">'+(up?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% '
+    + '<span>'+vs+'</span></div>';
 }
 function getWindow(arr){
   if(!arr || !arr.length) return [];
@@ -1734,9 +1758,8 @@ function applyPresetToInputs(days){
 }
 
 function updateGameBranding(){
-  const game = games.find(x=>x.id===currentGame) || games[0];
-  g('sbGameName').textContent = game.name;
-  g('sbMark').textContent = gameBadge(game.name);
+  g('sbGameName').textContent = 'PlaySpare Pulse';
+  g('sbMark').textContent = 'PP';
 }
 
 /**
@@ -1923,7 +1946,12 @@ function renderOverview(){
     { cls:'vl', lbl:'D1 Retention',  val:d1?fmtPct(d1):'—',     data:cohortsCur.map(x=>+x.d1||0), dates:cohortsCur.map(x=>x.date), cur:d1, prev:prevD1, sub:'cohort-weighted',   col:'--violet',  fmt:fmtPct },
     { cls:'lm', lbl:'D0 Playtime',   val:fmtSec(d0Play),        data:cur.map(x=>+x.d0Playtime||0), dates:curDates, cur:d0Play,     prev:prevD0Play,   sub:'avg new user', col:'--lime',    fmt:fmtSec },
     { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'\u2014', data:cur.map(x=>+x.sessionsPerUser||0), dates:curDates, cur:spd, prev:spdPrev, sub:'period avg', col:'--amber', fmt:v=>(+v).toFixed(2) },
-    { cls:'co', lbl:'FTUE Complete', val:ftueComplete?fmtPct(ftueComplete):'\u2014', data:[], dates:[], cur:ftueComplete, prev:null,     sub:(ftueRef.name ? 'reached ' + ftueRef.name : 'final step'), col:'--coral', fmt:fmtPct },
+    /* No per-day series exists for FTUE completion, so its graph is the funnel
+       itself: share of users still engaged at each step, first to last. */
+    { cls:'co', lbl:'FTUE Complete', val:ftueComplete?fmtPct(ftueComplete):'\u2014',
+      data: ftueSteps.map(s => (s && s.engagement != null && isFinite(s.engagement)) ? +s.engagement : null),
+      dates: ftueSteps.map((s,i) => (s && (s.name || s.step || s.label)) || ('Step ' + (i+1))),
+      cur:ftueComplete, prev:null, noTrend:true, sub:(ftueRef.name ? 'reached ' + ftueRef.name : 'final step'), col:'--coral', fmt:fmtPct },
   ];
 
   g('heroKpis').innerHTML = kpis.map((k,i)=>`
@@ -1931,7 +1959,7 @@ function renderOverview(){
       <div class="kpi-text">
         <div class="kpi-label">${k.lbl}</div>
         <div class="kpi-val${String(k.val).length>6?' small':''}">${k.val}</div>
-        <div class="kpi-bottom">${k.prev!=null?deltaHtml(k.cur,k.prev):''}<span class="kpi-sub">${k.sub}</span></div>
+        ${kpiTrendHtml(k)}<div class="kpi-bottom"><span class="kpi-sub">${k.sub}</span></div>
       </div>
       <div class="kpi-spark-box"><canvas id="sp${i}"></canvas></div>
     </div>
@@ -2051,7 +2079,12 @@ function renderOverview(){
        spends the space twice and still makes the reader do the subtraction. */
     { cls:'am', lbl:'Ad / IAP Share',
       val: splitTot>0 ? adShare.toFixed(0)+'% / '+iapShare.toFixed(0)+'%' : '\u2014',
-      data:[], cur:null, prev:null,
+      /* graph: the ad share of each day's revenue (IAP net of the same cut) */
+      data: splitTot>0 ? cur.map(x => {
+        const a = +x.adRevenue || 0, ip = (+x.iapRevenue || 0) * (ovNettable ? 1 - ovCut : 1);
+        return (a + ip) > 0 ? a / (a + ip) * 100 : null;
+      }) : [],
+      cur:null, prev:null,
       /* Both halves net, so the split is of money we keep rather than money
          that passed through. */
       sub: splitTot>0
@@ -2072,7 +2105,7 @@ function renderOverview(){
         <div class="kpi-text">
           <div class="kpi-label">${k.lbl}</div>
           <div class="kpi-val${String(k.val).length>6?' small':''}">${k.val}</div>
-          <div class="kpi-bottom">${k.prev!=null?deltaHtml(k.cur,k.prev):''}<span class="kpi-sub">${k.sub}</span></div>
+          ${kpiTrendHtml(k)}<div class="kpi-bottom"><span class="kpi-sub">${k.sub}</span></div>
         </div>
         <div class="kpi-spark-box"><canvas id="sq${i}"></canvas></div>
       </div>
@@ -2452,22 +2485,37 @@ function renderGrowth(){
   // Paid Installs and Organic Installs were removed: both need attribution,
   // which has no source in this sheet, so one always read 0 and the other just
   // repeated Total Installs.
+  /* daily cohort ROAS rows for the visible window (payload: cohortRoas.daily) */
+  const growthRoasDaily = (((d.cohortRoas || (d.ua && d.ua.cohortRoas)) || {}).daily || [])
+    .filter(x => x && x.date >= dateFrom && x.date <= dateTo);
   const acqKpis2 = [
-    { cls:'mg', lbl:'Avg CPI',   val:fmtMoney(avgCpi, 3),
+    /* cheaper installs are the good direction */
+    { cls:'mg', lbl:'Avg CPI',   val:fmtMoney(avgCpi, 3), better:'down',
       data: chDaily.map(x=>(+x.installs>0 ? (+x.spend||0)/(+x.installs) : null)),
       dates: chDaily.map(x=>x.date), col:'--magenta',
       sub: uaSpendTot!=null ? 'blended · spend / all installs' : scStatus },
-    { cls:'am', lbl:'ROAS',      val:roas!=null?roas.toFixed(0)+'%':'—', sub:roasSub, col:'--amber' },
-    { cls:'vl', lbl:'LTV : CPI', val:ltvCpi!=null?ltvCpi.toFixed(2)+'x':'—', sub:sc?'D0 LTV vs cost':scStatus, col:'--violet' },
+    /* graph: daily cohort ROAS from Combines_ROAS - D7 where that cohort has
+       matured, D0 where it has not yet */
+    { cls:'am', lbl:'ROAS',      val:roas!=null?roas.toFixed(0)+'%':'—', sub:roasSub, col:'--amber',
+      data: growthRoasDaily.map(x => x.d7 != null ? +x.d7 : (x.d0 != null ? +x.d0 : null)),
+      dates: growthRoasDaily.map(x => x.date), fmt: v => (+v).toFixed(0) + '%' },
+    /* graph: the period's D0 LTV over each day's CPI. LTV arrives per cohort
+       age, not per day, so the day-to-day movement here is CPI's. */
+    { cls:'vl', lbl:'LTV : CPI', val:ltvCpi!=null?ltvCpi.toFixed(2)+'x':'—', sub:sc?'D0 LTV vs cost':scStatus, col:'--violet',
+      data: ltvD0 > 0 ? chDaily.map(x => (+x.installs > 0 && +x.spend > 0) ? ltvD0 / ((+x.spend) / (+x.installs)) : null) : [],
+      dates: chDaily.map(x => x.date), fmt: v => (+v).toFixed(2) + 'x' },
   ];
   // Growth cards now carry the same sparkline as the Overview cards. A card
   // with no series still renders — it just falls back to the plain layout
   // rather than reserving an empty chart box.
+  /* Under each value: an up / down arrow instead of an explanation line, as on
+     the ASO page. Against the previous period when the card has one,
+     otherwise the second half of this window against the first. Green when
+     the move is good for that card (k.better: 'up' or 'down'), amber when not. */
+  const trendHtml = kpiTrendHtml;
   const kpiHtml = (k, i, pfx) => {
     const hasData = (k.data||[]).filter(v=>v!=null && v!=='' && isFinite(v)).length >= 2;
-    const bottom = k.prev!=null
-      ? '<div class="kpi-bottom" style="margin-top:8px">'+deltaHtml(k.cur,k.prev)+'<span class="kpi-sub">'+k.sub+'</span></div>'
-      : '<div class="kpi-sub" style="margin-top:6px">'+k.sub+'</div>';
+    const bottom = trendHtml(k);
     if(!hasData){
       return '<div class="kpi '+k.cls+'"><div class="kpi-label">'+k.lbl+'</div>'
         + '<div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div>'
@@ -2936,24 +2984,21 @@ function renderGrowth(){
     markTable('growthAdTypeTbl', adTypes.length, 'ad types');
   }
 
-  // Whale concentration (weekly)
-  const whales = (d.monetization&&d.monetization.whale)||[];
-  if(g('cvGrowthWhale')){
-    if(whales.length){
-      makeChart('cvGrowthWhale','bar',{
-        labels: whales.map(w=>w.week.slice(5)+' '+w.platform),
-        datasets:[
-          {type:'bar', label:'Whale revenue',data:whales.map(w=>w.whaleRev),backgroundColor:cc.magenta+'cc',borderColor:cc.magenta,borderWidth:1,borderRadius:3},
-          {type:'bar', label:'Other revenue',data:whales.map(w=>w.totalRev-w.whaleRev),backgroundColor:cc.violet+'66',borderColor:cc.violet,borderWidth:1,borderRadius:3},
-          {type:'line',label:'Whale share %',data:whales.map(w=>w.whaleShare),borderColor:cc.amber,backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.3,yAxisID:'y2'},
-        ]
-      }, {
-        plugins:{legend:{display:true,labels:{color:cc.text,font:{family:CHART_FONT,size:10},boxWidth:10}}},
-        scales:{x:Object.assign({stacked:true},xAx),y:Object.assign({stacked:true},yUsd),
-          y2:{position:'right',grid:{display:false},ticks:{color:cc.amber,font:{family:CHART_FONT,size:9},callback:v=>v+'%'}}}
-      });
-    } else { wrapEmpty('cvGrowthWhale','No whale rows in range (weekly grain)'); }
-  }
+  // Whale concentration was removed with its card.
+  //
+  // It read d.monetization.whale, which comes from a tab called Whales, and
+  // growthProbe found that tab does not exist - not in the dashboard's
+  // workbook and not at the source. So the chart could never fill.
+  //
+  // What it showed instead was "No whale rows in range (weekly grain)",
+  // which reads as a quiet fortnight. Somebody widening the range to find
+  // the missing weeks would have found nothing and had no way to learn why.
+  // A card that cannot ever be right is worse than no card: it takes the
+  // space, and it invites the question every time.
+  //
+  // The payload still carries the section, and readTab on a tab that is not
+  // there costs nothing. If Whales is ever built, this is one card and one
+  // chart to restore - the backend half already works.
 
   // First-time payer conversion
   const ftpRows = getWindow((d.monetization&&d.monetization.ftp)||[]);
@@ -2966,7 +3011,23 @@ function renderGrowth(){
         labels: rows.map(r=>r.date.slice(5)),
         datasets:[{label:'First-payer conv %',data:rows.map(r=>r.installs>0?+(r.payers/r.installs*100).toFixed(3):null),borderColor:cc.lime,backgroundColor:cc.lime+'22',fill:true,tension:.35,borderWidth:2,pointRadius:0,spanGaps:true}]
       }, { scales:{x:xAx,y:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>(+v).toFixed(2)+'%'}}} });
-    } else { wrapEmpty('cvGrowthFtp','No first-payer rows in range'); }
+    } else {
+      /* Say WHEN it stopped, not just that there is nothing here.
+
+         "No first-payer rows in range" reads as a quiet fortnight, and it
+         said exactly that for the three months after the FirstPayers tab
+         stopped being written on 2026-08-06. Somebody widening the range to
+         find the missing weeks would have found nothing and learnt nothing.
+
+         freshness carries the newest date in each source, so the chart can
+         name it. If the entry is absent the old wording stands - an unknown
+         date is not worth inventing. */
+      const ftpLatest = (d.freshness && (d.freshness.sources||[])
+        .filter(s=>s.source==='First payers')[0] || {}).latest;
+      wrapEmpty('cvGrowthFtp', ftpLatest
+        ? 'FirstPayers stopped on ' + ftpLatest + ' — nothing written since'
+        : 'No first-payer rows in range');
+    }
   }
 
   /* -- United States -----------------------------------------------------
@@ -3655,20 +3716,44 @@ function renderRetention(){
     d7:{cls:'cy',lbl:'D7 Retention'},  d14:{cls:'mg',lbl:'D14 Retention'}
   };
 
-  g('retKpis').innerHTML = RET_DAYS.map(function(k){
+  /* Same card as the Overview: label, value, change pill, and a small graph
+     of the metric across the cohort dates in range. */
+  const RET_COL = { cy:'--cyan', mg:'--magenta', am:'--amber', lm:'--lime', vl:'--violet', co:'--coral' };
+  const kRows   = (isSplit ? cohorts : curR).slice().sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+  const kDates  = kRows.map(r => r.date);
+  const num     = v => (v == null || v === '' || isNaN(v)) ? null : +v;
+  const series  = k => kRows.map(r => num(r[k]));
+  const diff    = (a,b) => kRows.map(r => { const x = num(r[a]), y = num(r[b]); return (x==null||y==null) ? null : +(x-y).toFixed(2); });
+  const coRows  = cohorts.slice().sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+
+  const retCards = RET_DAYS.map(function(k){
     const st  = DAY_STYLE[k] || { cls:'cy', lbl:k.toUpperCase()+' Retention' };
     const v   = dayVals[k], p = prevVals[k];
     const bad = (k === 'd1' && v && v < thresholds.d1.val)
              || (k === 'd7' && v && v < thresholds.d7.val);
-    return '<div class="kpi '+st.cls+'"><div class="kpi-label">'+st.lbl+'</div>'
-      + '<div class="kpi-val'+(bad?' dn':'')+'">'+(v?fmtPct(v):'—')+'</div>'
-      + '<div class="kpi-bottom" style="margin-top:8px">'+(p?deltaHtml(v,p):'')
-      + '<span class="kpi-sub">'+(bad?'below target':'cohort-weighted')+'</span></div></div>';
-  }).join('')
-  + '<div class="kpi co"><div class="kpi-label">D1 Churn</div><div class="kpi-val">'+(d1?fmtPct(d1-100):'—')+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">engagement − 100%</div></div>'
-  + '<div class="kpi mg"><div class="kpi-label">D1 → D7 Drop</div><div class="kpi-val">'+((d1&&d7)?fmtPct(d1-d7):'—')+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">points lost in week 1</div></div>'
-  + '<div class="kpi am"><div class="kpi-label">D7 → D14 Drop</div><div class="kpi-val">'+((d7&&d14)?fmtPct(d7-d14):'—')+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">points lost in week 2</div></div>'
-  + '<div class="kpi lm"><div class="kpi-label">Cohort Size</div><div class="kpi-val'+(cohortSize>99999?' small':'')+'">'+fmtKn(cohortSize)+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">D0 installs in range</div></div>';
+    return { cls:st.cls, lbl:st.lbl, val:v?fmtPct(v):'—', bad:bad, cur:v, prev:p,
+             data:series(k), dates:kDates, fmt:fmtPct };
+  }).concat([
+    { cls:'co', lbl:'D1 Churn',      val:d1?fmtPct(d1-100):'—',
+      data:series('d1').map(v => v==null ? null : +(v-100).toFixed(2)), dates:kDates, fmt:fmtPct },
+    { cls:'mg', lbl:'D1 → D7 Drop',  better:'down', val:(d1&&d7)?fmtPct(d1-d7):'—',  data:diff('d1','d7'),  dates:kDates, fmt:fmtPct },
+    { cls:'am', lbl:'D7 → D14 Drop', better:'down', val:(d7&&d14)?fmtPct(d7-d14):'—', data:diff('d7','d14'), dates:kDates, fmt:fmtPct },
+    { cls:'lm', lbl:'Cohort Size',   val:fmtKn(cohortSize),
+      data:coRows.map(r => num(r.cohortSize)), dates:coRows.map(r => r.date), fmt:fmtKn }
+  ]);
+
+  g('retKpis').innerHTML = retCards.map(function(c, i){
+    return '<div class="kpi has-spark '+c.cls+'"><div class="kpi-text">'
+      + '<div class="kpi-label">'+c.lbl+'</div>'
+      + '<div class="kpi-val'+(c.bad?' dn':'')+'">'+c.val+'</div>'
+      + kpiTrendHtml(c)
+      + '</div><div class="kpi-spark-box"><canvas id="rk'+i+'"></canvas></div></div>';
+  }).join('');
+  retCards.forEach(function(c, i){
+    if(!c.data.length) return;
+    const color = getComputedStyle(document.documentElement).getPropertyValue(RET_COL[c.cls] || '--cyan').trim();
+    drawSpark('rk'+i, c.data, color, c.fmt, c.dates);
+  });
 
   // ── Decay curve ──
   // The full D1-D7 curve lives on the Retention tab, which has no platform
@@ -3721,6 +3806,15 @@ function renderRetention(){
   }
 
   // ── Cohort heatmap ──
+  // Row labels read "4th Nov", "5th Nov" rather than "11-04".
+  const HM_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const hmDay = function(s){
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ''));
+    if(!m) return String(s || '');
+    const dd = +m[3], t = dd % 100;
+    const suf = (t >= 11 && t <= 13) ? 'th' : ({1:'st',2:'nd',3:'rd'}[dd % 10] || 'th');
+    return dd + suf + ' ' + HM_MON[+m[2] - 1];
+  };
   const hm = g('retHeatmap');
   if(hm){
     const rows = isSplit ? cohorts : curR;
@@ -3728,18 +3822,20 @@ function renderRetention(){
     if(!rows.length){ hm.innerHTML = noData('No retention rows in range'); }
     else {
       const maxV = Math.max.apply(null, rows.map(r=>Math.max.apply(null, keys.map(k=>+r[k]||0))).concat([1]));
-      hm.innerHTML = '<div class="hm-grid" style="grid-template-columns:70px repeat('+keys.length+',1fr)">'
+      hm.innerHTML = '<div class="hm-grid" style="grid-template-columns:90px repeat('+keys.length+',1fr)">'
         + '<div class="hm-cell hm-hd"></div>'
         + keys.map(k=>'<div class="hm-cell hm-hd">'+k.toUpperCase()+'</div>').join('')
-        + rows.slice(-14).map(r=>'<div class="hm-cell hm-lbl">'+r.date.slice(5)+'</div>'
+        + rows.slice(-14).map(r=>'<div class="hm-cell hm-lbl">'+hmDay(r.date)+'</div>'
             + keys.map(k=>{
                 const v = +r[k];
                 if(!v && v!==0) return '<div class="hm-cell hm-na">—</div>';
                 const op = Math.min(1, v/maxV);
                 // Inverted scale: the strongest retention is the darkest cell.
                 const shade = ((1-op)*0.72+0.08).toFixed(2);
-                const ink = op < 0.45 ? '#061022' : 'var(--text)';
-                return '<div class="hm-cell" style="background:rgba(0,229,255,'+shade+');color:'+ink+'" title="'+r.date+' '+k+': '+v+'%">'+v.toFixed(1)+'</div>';
+                // Light cells get solid black, heavier text; darker cells keep white.
+                const dark = +shade >= 0.55;
+                const ink = dark ? '#000' : 'var(--text)';
+                return '<div class="hm-cell'+(dark?' hm-ink':'')+'" style="background:rgba(0,229,255,'+shade+');color:'+ink+'" title="'+r.date+' '+k+': '+v+'%">'+v.toFixed(1)+'</div>';
               }).join('')).join('')
         + '</div>';
     }
@@ -3891,19 +3987,27 @@ function renderPlaytime(){
   const totalSes = sum(cur.map(x=>+x.sessions||0));
 
   const pk = [
-    { cls:'mg', lbl:'D0 Playtime',     val:fmtSec(avgD0),   cur:avgD0,  prev:avgNN(prev.map(x=>x.d0Playtime)),   sub:'avg per new user' },
-    { cls:'cy', lbl:'Avg Playtime',    val:fmtSec(avgPlay), cur:avgPlay,prev:avgNN(prev.map(x=>x.playtimeAvg)),  sub:'avg per active user' },
-    { cls:'lm', lbl:'Session Len D0',  val:fmtSec(avgSess), cur:avgSess,prev:avgNN(prev.map(x=>x.sessionLenD0)), sub:'day-zero sessions' },
-    { cls:'vl', lbl:'Avg Session Len', val:fmtSec(avgSessG),cur:avgSessG,prev:avgNN(prev.map(x=>x.avgSessionLen)),sub:'all sessions' },
-    { cls:'am', lbl:'Sessions / User', val:spu?spu.toFixed(2):'—', cur:spu, prev:avgNN(prev.map(x=>x.sessionsPerUser)), sub:'per active user' },
-    { cls:'cy', lbl:'Total Playtime',  val:fmtKn(totalHrs)+'h', sub:'period hours' },
-    { cls:'lm', lbl:'Total Sessions',  val:fmtKn(totalSes), sub:'period count' },
+    { cls:'mg', lbl:'D0 Playtime',     val:fmtSec(avgD0),   cur:avgD0,  prev:avgNN(prev.map(x=>x.d0Playtime)),   sub:'avg per new user', key:'d0Playtime', fmt:fmtSec },
+    { cls:'cy', lbl:'Avg Playtime',    val:fmtSec(avgPlay), cur:avgPlay,prev:avgNN(prev.map(x=>x.playtimeAvg)),  sub:'avg per active user', key:'playtimeAvg', fmt:fmtSec },
+    { cls:'lm', lbl:'Session Len D0',  val:fmtSec(avgSess), cur:avgSess,prev:avgNN(prev.map(x=>x.sessionLenD0)), sub:'day-zero sessions', key:'sessionLenD0', fmt:fmtSec },
+    { cls:'vl', lbl:'Avg Session Len', val:fmtSec(avgSessG),cur:avgSessG,prev:avgNN(prev.map(x=>x.avgSessionLen)),sub:'all sessions', key:'avgSessionLen', fmt:fmtSec },
+    { cls:'am', lbl:'Sessions / User', val:spu?spu.toFixed(2):'—', cur:spu, prev:avgNN(prev.map(x=>x.sessionsPerUser)), sub:'per active user', key:'sessionsPerUser', fmt:v=>(+v).toFixed(2) },
+    { cls:'cy', lbl:'Total Playtime',  val:fmtKn(totalHrs)+'h', sub:'period hours', key:'playtimeHours', fmt:v=>fmtKn(v)+'h' },
+    { cls:'lm', lbl:'Total Sessions',  val:fmtKn(totalSes), sub:'period count', key:'sessions', fmt:fmtKn },
   ];
-  g('playKpis').innerHTML = pk.map(k=>
-    '<div class="kpi '+k.cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div>'
-    + (k.prev!=null ? '<div class="kpi-bottom" style="margin-top:8px">'+deltaHtml(k.cur,k.prev)+'<span class="kpi-sub">'+k.sub+'</span></div>'
-                    : '<div class="kpi-sub" style="margin-top:6px">'+k.sub+'</div>')
-    + '</div>').join('');
+  /* Same card as the Overview: label, value, change pill and a small daily graph */
+  const PK_COL = { cy:'--cyan', mg:'--magenta', am:'--amber', lm:'--lime', vl:'--violet', co:'--coral' };
+  const pkDates = cur.map(x=>x.date);
+  g('playKpis').innerHTML = pk.map((k,i)=>
+    '<div class="kpi has-spark '+k.cls+'"><div class="kpi-text">'
+    + '<div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div>'
+    + kpiTrendHtml(k) + '<div class="kpi-bottom"><span class="kpi-sub">'+k.sub+'</span></div>'
+    + '</div><div class="kpi-spark-box"><canvas id="pk'+i+'"></canvas></div></div>').join('');
+  pk.forEach((k,i)=>{
+    const data = cur.map(x => (x[k.key]==null || x[k.key]==='' || isNaN(x[k.key])) ? null : +x[k.key]);
+    const color = getComputedStyle(document.documentElement).getPropertyValue(PK_COL[k.cls] || '--cyan').trim();
+    drawSpark('pk'+i, data, color, k.fmt, pkDates);
+  });
 
   const xAx = {grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9}}};
   const ySec= {grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:9},callback:v=>Math.round(v)+'s'}};
@@ -3976,12 +4080,29 @@ function renderFtue(){
   const tenMin   = getWindow(d.tenMin || []);
   const tenPct   = avg(tenMin.map(x=>+x.pct||0));
 
-  g('ftueKpis').innerHTML = [
-    { cls:'cy', lbl:'Funnel Base',     val:fmtKn(base),                       sub:'active users in range' },
-    { cls:'lm', lbl:'Completion',      val:complete?fmtPct(complete):'—',     sub:'final step engagement' },
-    { cls:'co', lbl:'Biggest Drop',    val:biggest?fmtPct(biggest.stepDrop):'—', sub:biggest?biggest.name:'—' },
-    { cls:'am', lbl:'10-min Milestone',val:tenPct?fmtPct(tenPct):'—',         sub:'reached 10 minutes' },
-  ].map(k=>'<div class="kpi '+k.cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">'+k.sub+'</div></div>').join('');
+  /* Same card as the Overview: label, value and a small graph.
+     Step cards plot the funnel step by step; 10-min plots by day. */
+  const nn = v => (v == null || v === '' || isNaN(v)) ? null : +v;
+  const stepNames = f.map(s => s.id + '. ' + s.name);
+  const fk = [
+    { cls:'cy', col:'--cyan',  noTrend:true, lbl:'Funnel Base',     val:fmtKn(base),                       sub:'active users in range',
+      data:f.map(s=>nn(s.users)), dates:stepNames, fmt:fmtKn },
+    { cls:'lm', col:'--lime',  noTrend:true, lbl:'Completion',      val:complete?fmtPct(complete):'—',     sub:'final step engagement',
+      data:f.map(s=>nn(s.engagement)), dates:stepNames, fmt:fmtPct },
+    { cls:'co', col:'--coral', noTrend:true, lbl:'Biggest Drop',    val:biggest?fmtPct(biggest.stepDrop):'—', sub:biggest?biggest.name:'—',
+      data:f.map(s=>s.branch ? null : nn(s.stepDrop)), dates:stepNames, fmt:fmtPct },
+    { cls:'am', col:'--amber', lbl:'10-min Milestone',val:tenPct?fmtPct(tenPct):'—',         sub:'reached 10 minutes',
+      data:tenMin.map(x=>nn(x.pct)), dates:tenMin.map(x=>x.date), fmt:fmtPct },
+  ];
+  g('ftueKpis').innerHTML = fk.map((k,i)=>
+    '<div class="kpi has-spark '+k.cls+'"><div class="kpi-text">'
+    + '<div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div>'
+    + kpiTrendHtml(k) + '<div class="kpi-bottom"><span class="kpi-sub">'+k.sub+'</span></div>'
+    + '</div><div class="kpi-spark-box"><canvas id="fk'+i+'"></canvas></div></div>').join('');
+  fk.forEach((k,i)=>{
+    if(!k.data.length) return;
+    drawSpark('fk'+i, k.data, getComputedStyle(document.documentElement).getPropertyValue(k.col).trim(), k.fmt, k.dates);
+  });
 
   const hidden = (d.ftue && d.ftue.hiddenCount) || 0;
   g('ftueBadge').textContent = f.length + ' steps' + (hidden ? ' · ' + hidden + ' low-volume hidden (<1%)' : '')
@@ -4051,12 +4172,34 @@ function renderStability(){
   const anrAvg   = avg(and.filter(r=>r.anrRate!=null).map(r=>+r.anrRate));
   const crashFree= crashAvg ? 100 - crashAvg : null;
 
-  g('stabKpis').innerHTML = [
-    { cls: crashAvg>thresholds.crash.val?'co':'lm', lbl:'Crash Rate', val:crashAvg?crashAvg.toFixed(3)+'%':'—', sub:'limit '+thresholds.crash.val+'%' },
-    { cls: anrAvg>thresholds.anr.val?'co':'lm',     lbl:'ANR Rate',   val:anrAvg?anrAvg.toFixed(3)+'%':'—',     sub:'Android only · limit '+thresholds.anr.val+'%' },
-    { cls:'cy', lbl:'Crash-Free Users', val:crashFree?crashFree.toFixed(3)+'%':'—', sub:'100 − crash rate' },
-    { cls:'vl', lbl:'Days Tracked',     val:new Set(rows.map(r=>r.date)).size, sub:(ios.length?'Android + iOS':'Android only') },
-  ].map(k=>'<div class="kpi '+k.cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">'+k.sub+'</div></div>').join('');
+  /* Same card as the Overview: label, value and a small daily graph */
+  const sDates = Array.from(new Set(rows.map(r=>r.date))).sort();
+  const dayAvg = (arr, key) => sDates.map(d0 => {
+    const v = arr.filter(r => r.date === d0 && r[key] != null && r[key] !== '' && !isNaN(r[key])).map(r => +r[key]);
+    return v.length ? v.reduce((a,b)=>a+b,0) / v.length : null;
+  });
+  const crashSeries = dayAvg(rows, 'crashRate');
+  const pct3 = v => (+v).toFixed(3) + '%';
+  const sk = [
+    { cls: crashAvg>thresholds.crash.val?'co':'lm', lbl:'Crash Rate', better:'down', val:crashAvg?crashAvg.toFixed(3)+'%':'—', sub:'limit '+thresholds.crash.val+'%',
+      data:crashSeries, fmt:pct3 },
+    { cls: anrAvg>thresholds.anr.val?'co':'lm',     lbl:'ANR Rate',   better:'down', val:anrAvg?anrAvg.toFixed(3)+'%':'—',     sub:'Android only · limit '+thresholds.anr.val+'%',
+      data:dayAvg(and, 'anrRate'), fmt:pct3 },
+    { cls:'cy', lbl:'Crash-Free Users', val:crashFree?crashFree.toFixed(3)+'%':'—', sub:'100 − crash rate',
+      data:crashSeries.map(v => v == null ? null : 100 - v), fmt:pct3 },
+    { cls:'vl', noTrend:true, lbl:'Days Tracked',     val:sDates.length, sub:(ios.length?'Android + iOS':'Android only'),
+      data:sDates.map((_, i) => i + 1), fmt:v => String(Math.round(v)) },
+  ];
+  const SK_COL = { cy:'--cyan', mg:'--magenta', am:'--amber', lm:'--lime', vl:'--violet', co:'--coral' };
+  g('stabKpis').innerHTML = sk.map((k,i)=>
+    '<div class="kpi has-spark '+k.cls+'"><div class="kpi-text">'
+    + '<div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div>'
+    + kpiTrendHtml(k) + '<div class="kpi-bottom"><span class="kpi-sub">'+k.sub+'</span></div>'
+    + '</div><div class="kpi-spark-box"><canvas id="sk'+i+'"></canvas></div></div>').join('');
+  sk.forEach((k,i)=>{
+    if(!k.data.length) return;
+    drawSpark('sk'+i, k.data, getComputedStyle(document.documentElement).getPropertyValue(SK_COL[k.cls]).trim(), k.fmt, sDates);
+  });
 
   if(!rows.length){
     wrapEmpty('cvCrash', (d.missing && d.missing.stability) || 'No stability rows in range');
@@ -4110,14 +4253,27 @@ function renderRating(){
   const npsRows = getWindow(rt.nps || []);
   const npsVal  = sm.nps != null ? +sm.nps : null;
 
-  g('ratingKpis').innerHTML = [
-    { cls:'am', lbl:'In-Game Rating', val:overall?overall.toFixed(2):'—', sub:overall?starStr(overall):'awaiting data' },
-    /* The NPS and Responses tiles are hidden with the NPS card. Leaving them
-       would have the section still reporting a score whose card is gone, and
-       a response count for a survey nobody is being shown. npsVal is still
-       computed above; only the two tiles are withheld. */
-    { cls: last>=first?'lm':'co', lbl:'Movement', val:(last&&first)?((last-first)>=0?'+':'')+(last-first).toFixed(2):'—', sub:'first vs last day in range' },
-  ].map(k=>'<div class="kpi '+k.cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">'+k.sub+'</div></div>').join('');
+  /* Same card as the Overview: label, value and a small daily graph */
+  const rDates = rows.map(r=>r.date);
+  const rSeries = rows.map(r => (r.rating == null || r.rating === '' || isNaN(r.rating)) ? null : +r.rating);
+  const rk = [
+    { cls:'am', col:'--amber', lbl:'In-Game Rating', val:overall?overall.toFixed(2):'—', sub:overall?starStr(overall):'awaiting data',
+      data:rSeries, fmt:v=>(+v).toFixed(2) },
+    { cls: last>=first?'lm':'co', col: last>=first?'--lime':'--coral', lbl:'Movement',
+      val:(last&&first)?((last-first)>=0?'+':'')+(last-first).toFixed(2):'—', sub:'first vs last day in range',
+      data:rSeries.map(v => (v == null || !first) ? null : +(v - first).toFixed(2)), fmt:v=>((+v)>=0?'+':'')+(+v).toFixed(2) },
+  ];
+  g('ratingKpis').innerHTML = rk.map((k,i)=>
+    '<div class="kpi has-spark '+k.cls+'"><div class="kpi-text">'
+    + '<div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div>'
+    + kpiTrendHtml(k) + '<div class="kpi-bottom"><span class="kpi-sub">'+k.sub+'</span></div>'
+    + '</div><div class="kpi-spark-box"><canvas id="rtk'+i+'"></canvas></div></div>').join('');
+  rk.forEach((k,i)=>{
+    if(!k.data.length) return;
+    drawSpark('rtk'+i, k.data, getComputedStyle(document.documentElement).getPropertyValue(k.col).trim(), k.fmt, rDates);
+  });
+  /* The NPS and Responses tiles stay hidden with the NPS card; npsVal is
+     still computed above, only the two tiles are withheld. */
 
   // ── NPS gauge ──
   if(g('ratingNps')){
@@ -4409,12 +4565,30 @@ function renderEvents(){
   const medDay   = weightedMid(days);
   const lvlReach = shop.length ? shop[shop.length-1].value : null;
 
-  g('eventsKpis').innerHTML = [
-    { cls:'cy', lbl:'Active Players', val:fmtKn(totalActive),        sub:'in progression window' },
-    { cls:'mg', lbl:'Median Shop Lvl',val:medLevel!=null?medLevel:'—',sub:'50% of players reach' },
-    { cls:'lm', lbl:'Median Day',     val:medDay!=null?medDay:'—',    sub:'50% of players reach' },
-    { cls:'am', lbl:'Deepest Level',  val:lvlReach!=null?lvlReach:'—',sub:'highest shop level' },
-  ].map(k=>'<div class="kpi '+k.cls+'"><div class="kpi-label">'+k.lbl+'</div><div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div><div class="kpi-sub" style="margin-left:0;margin-top:6px">'+k.sub+'</div></div>').join('');
+  /* Same card as the Overview: label, value and a small graph across the
+     levels / days (there is no per-date series for progression). */
+  const nn  = v => (v == null || v === '' || isNaN(v)) ? null : +v;
+  const shopT = shop.length ? trimProgressionTail(shop).rows : [];
+  const dayT  = days.length ? trimProgressionTail(days).rows : [];
+  const ek = [
+    { cls:'cy', col:'--cyan',    noTrend:true, lbl:'Active Players', val:fmtKn(totalActive),        sub:'in progression window',
+      data:shopT.map(x=>nn(x.users)), dates:shopT.map(x=>'Level '+x.value), fmt:fmtKn },
+    { cls:'mg', col:'--magenta', noTrend:true, lbl:'Median Shop Lvl',val:medLevel!=null?medLevel:'—',sub:'50% of players reach',
+      data:shopT.map(x=>nn(x.countPct)), dates:shopT.map(x=>'Level '+x.value), fmt:fmtPct },
+    { cls:'lm', col:'--lime',    noTrend:true, lbl:'Median Day',     val:medDay!=null?medDay:'—',    sub:'50% of players reach',
+      data:dayT.map(x=>nn(x.users)), dates:dayT.map(x=>'Day '+x.value), fmt:fmtKn },
+    { cls:'am', col:'--amber',   noTrend:true, lbl:'Deepest Level',  val:lvlReach!=null?lvlReach:'—',sub:'highest shop level',
+      data:shopT.map(x=>nn(x.playtimeSec)), dates:shopT.map(x=>'Level '+x.value), fmt:fmtSec },
+  ];
+  g('eventsKpis').innerHTML = ek.map((k,i)=>
+    '<div class="kpi has-spark '+k.cls+'"><div class="kpi-text">'
+    + '<div class="kpi-label">'+k.lbl+'</div><div class="kpi-val">'+k.val+'</div>'
+    + kpiTrendHtml(k) + '<div class="kpi-bottom"><span class="kpi-sub">'+k.sub+'</span></div>'
+    + '</div><div class="kpi-spark-box"><canvas id="ek'+i+'"></canvas></div></div>').join('');
+  ek.forEach((k,i)=>{
+    if(!k.data.length) return;
+    drawSpark('ek'+i, k.data, getComputedStyle(document.documentElement).getPropertyValue(k.col).trim(), k.fmt, k.dates);
+  });
 
   buildProgressionChart('cvShopLevel', shop, 'L', cc.cyan, 'Shop level');
   buildProgressionChart('cvDayCount',  days, 'D', cc.violet, 'Day completed');
@@ -4811,11 +4985,11 @@ function renderUsersList(users){
   if(!users.length){ g('usersList').innerHTML = '<div class="notice">No users found.</div>'; return; }
   const roleColor = {admin:'var(--magenta)', manager:'var(--cyan)', viewer:'var(--text3)'};
   g('usersList').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 110px 80px 90px 80px;gap:10px;padding:0 4px 10px;font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);margin-bottom:8px">
+    <div class="tbl-head users-head" style="display:grid;grid-template-columns:1fr 130px 110px 110px 90px;gap:10px;padding:0 4px 10px;font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);margin-bottom:8px">
       <span>Email / Name</span><span>Role</span><span>Games</span><span>Status</span><span></span>
     </div>
     ${users.map(u => `
-    <div style="display:grid;grid-template-columns:1fr 110px 80px 90px 80px;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--border)">
+    <div class="users-row" style="display:grid;grid-template-columns:1fr 130px 110px 110px 90px;gap:10px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:12px;font-weight:600;color:var(--text)">${u.name || '—'}</div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">${u.email}</div>
@@ -5149,7 +5323,8 @@ function goTab(id, el){
 
   // Topbar title from section registry (respects custom labels from sheet Config tab)
   const matched = getEnabledSections().find(function(s){ return s.id === id; });
-  g('topTitle').textContent = matched ? matched.label : (SECTION_META[id] && SECTION_META[id].label) || id;
+  const title = matched ? matched.label : (SECTION_META[id] && SECTION_META[id].label) || id;
+  g('topTitle').textContent = section.report ? title+' · MSS3D' : title;
 
   // A report section draws itself, inside its own page. Nothing to render.
   if(section.report) return;
@@ -5193,6 +5368,17 @@ function applySidebarState(collapsed){
     const lbl = el.querySelector('.nav-lbl');
     el.title = collapsed && lbl ? lbl.textContent : '';
   });
+}
+
+/* The sidebar footer's user block: initial in a circle, name, role. */
+function fillSidebarUser(){
+  const name = (CU && (CU.name || CU.username)) || '';
+  const role = (CU && CU.role) || '';
+  const av = g('sbAvatar'), nm = g('sbUserName'), rl = g('sbUserRole'), box = g('sbUser');
+  if(av) av.textContent = name ? name.trim().charAt(0).toUpperCase() : '·';
+  if(nm) nm.textContent = name;
+  if(rl) rl.textContent = role ? role.charAt(0).toUpperCase() + role.slice(1) : '';
+  if(box) box.title = name + (role ? ' · ' + role : '');
 }
 
 function toggleSidebar(){
@@ -5646,6 +5832,7 @@ function loginSuccess(){
   g('loginScreen').style.display = 'none';
   g('appShell').style.display = '';
   g('unameEl').textContent = (CU && CU.name) || '';
+  fillSidebarUser();
   init();
 }
 

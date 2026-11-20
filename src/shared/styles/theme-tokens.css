@@ -1,0 +1,91 @@
+/* ---------------------------------------------------------------------------
+ * theme-tokens.css — every colour in the system (DESIGN.md §2).
+ *
+ * Dark is the default. Light is set with data-theme="light" on <html>, and the
+ * light values live on the root element so aliases declared on :root resolve
+ * to them (DESIGN.md §2.4).
+ *
+ * `html:root` rather than `:root`: older report stylesheets still declare
+ * their own --bg / --teal on :root, and the extra type selector makes these
+ * win regardless of import order.
+ * ------------------------------------------------------------------------- */
+html:root {
+  /* core */
+  --bg:   #08090d;
+  --sur:  #0b0c0f;
+  --sur2: #1c1f2e;
+  --bor:  rgba(255, 255, 255, .08);
+  --text: #e8ebfa;
+  --mut:  #dbe0f2;
+  --acc:  #4d9fff;
+  --grn:  #18c97a;
+  --amb:  #f5a623;
+  --red:  #f05252;
+  --pur:  #9b72f5;
+  --teal: #00e5c3;
+  --brand-gradient: linear-gradient(135deg, #00E5C3 0%, #4D9FFF 100%);
+
+  /* fixed roles */
+  --num-lbl:    #dbe1f5;
+  --on-grad:    #001014;
+  --on-solid:   #ffffff;
+  --on-chip:    #000000;
+  --backdrop:   rgba(0, 0, 0, .45);
+  --sb-thumb:   #353b58;
+  --sb-thumb-h: #4a5275;
+  --tip-bg:     rgba(17, 20, 36, .96);
+  --tip-title:  #ffffff;
+  --tip-body:   #dde1f5;
+  --grid:       rgba(150, 160, 220, .08);
+  --tick:       #d6dbee;
+  --target:     #5b6ef5;
+  --hover-line: rgba(255, 255, 255, .35);
+
+  /* tinted fills (§2.3) */
+  --tint-ok:     rgba(24, 201, 122, .15);  --ring-ok:   rgba(24, 201, 122, .30);
+  --tint-warn:   rgba(245, 166, 35, .12);  --ring-warn: rgba(245, 166, 35, .30);
+  --tint-bad:    rgba(240, 82, 82, .15);   --ring-bad:  rgba(240, 82, 82, .30);
+  --tint-info:   rgba(77, 159, 255, .12);  --ring-info: rgba(77, 159, 255, .30);
+  --tint-pur:    rgba(155, 114, 245, .15);
+  --tint-brand:  rgba(0, 229, 195, .12);
+  --tint-mut:    rgba(194, 200, 223, .15);
+
+  /* surfaces in motion (§4) */
+  --row-hover:   rgba(255, 255, 255, .035);
+  --row-child:   rgba(255, 255, 255, .015);
+  --row-on:      rgba(77, 159, 255, .10);
+  --card-shadow: 0 8px 40px rgba(0, 0, 0, .6);
+  --lift-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+
+  color-scheme: dark;
+}
+
+html[data-theme="light"]:root {
+  --bg:   #f0f2f9;
+  --sur:  #ffffff;
+  --sur2: #e8ebf5;
+  --bor:  #d4d8ed;
+  --text: #14172a;
+  --mut:  #353a5c;
+  --acc:  #4050e8;
+  --grn:  #0aaa62;
+  --amb:  #c47e0a;
+  --red:  #d93535;
+  --pur:  #7c3aed;
+  --teal: #0e9f9f;
+
+  --num-lbl:    #353a5c;
+  --sb-thumb:   #c3c8de;
+  --sb-thumb-h: #a3a9c6;
+  --grid:       rgba(0, 0, 0, .06);
+  --tick:       #353a5c;
+  --hover-line: rgba(20, 23, 42, .35);
+
+  --row-hover:   rgba(20, 23, 42, .035);
+  --row-child:   rgba(20, 23, 42, .02);
+  --row-on:      rgba(64, 80, 232, .09);
+  --card-shadow: 0 8px 30px rgba(26, 29, 46, .12);
+  --lift-shadow: 0 8px 24px rgba(26, 29, 46, .14);
+
+  color-scheme: light;
+}

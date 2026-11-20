@@ -1,223 +1,251 @@
 /* ---------------------------------------------------------------------------
- * glance.css — the decision summary and the performance table.
+ * glance.css — headline, the three decision cards, the performance table and
+ * its detail chart. Built on the system tokens (DESIGN.md §2) only.
  *
- * Everything here is scoped to the new sections. The report's own tokens are
- * reused unchanged for surfaces and text; the only new values are five marks,
- * and they exist because the report's --coral/--amber/--green/--blue/--teal
- * are tuned as TEXT accents and sit outside the OKLCH lightness band for use
- * as fills on this surface.
- *
- * Both groups were run through a palette validator rather than eyeballed:
- *
- *   status  --g-bad / --g-warn / --g-good     band PASS, chroma PASS,
- *                                             contrast PASS, CVD 7.0 protan
- *                                             (floor band) — legal only
- *                                             because every status also
- *                                             carries an icon and a word
- *   series  --g-cost / --g-rev                ALL CHECKS PASS, both surfaces
+ * Series colours follow §7.2 for decision views: cost = --acc,
+ * revenue = --teal, gross profit = --pur (the system's secondary series,
+ * because teal is already revenue). Status uses the meaning colours and
+ * always carries an icon, a word or a sign as well (§1.3).
  * ------------------------------------------------------------------------- */
 
 :root {
-  --g-bad:  #e23a59;
-  --g-warn: #c78400;
-  --g-good: #00a065;
-  --g-none: #5a6779;
-  --g-cost: #2f7fe0;
-  --g-rev:  #00a58f;
-  --g-grid: rgba(255, 255, 255, .07);
-}
-body.lt {
-  --g-bad:  #c32f4c;
-  --g-warn: #a06a00;
-  --g-good: #008151;
-  --g-none: #6b7789;
-  --g-grid: rgba(15, 30, 60, .09);
+  --g-bad:  var(--red);
+  --g-warn: var(--amb);
+  --g-good: var(--grn);
+  --g-none: var(--mut);
+  --g-cost: var(--acc);
+  --g-rev:  var(--teal);
+  --g-gp:   var(--pur);
+  --g-grid: var(--grid);
 }
 
-/* ---------- headline ---------- */
-#glanceHead { margin: 2px 0 4px }
-#glanceHead .gh { font: 650 24px 'Segoe UI', Arial, sans-serif; letter-spacing: -.01em }
-#glanceHead .gh .lost { color: var(--g-bad) }
-#glanceHead .gs { color: var(--t2); font-size: 13px; line-height: 1.55; margin-top: 4px; max-width: 78ch }
-#glanceHead .aside { color: var(--t3); font-size: 12.5px }
-#glanceHead .aside b { color: var(--t2); font-weight: 600 }
+/* ---------- headline (§8.7.1) ---------- */
+#glanceHead {
+  margin: 4px 0 6px; padding: 18px 20px;
+  background: var(--sur); border: 1px solid var(--bor); border-radius: 14px; box-shadow: var(--card-shadow);
+}
+#glanceHead .gh {
+  font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.25; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+#glanceHead .gh .lost { color: var(--red) }
+#glanceHead .gh .won  { color: var(--grn) }
+#glanceHead .gs {
+  color: var(--mut); font-size: 15.5px; font-weight: 400; line-height: 1.6; margin-top: 8px; max-width: 80ch;
+}
+#glanceHead .gs b { color: var(--text); font-weight: 600 }
 
+/* facts: one chip per fact, label above value */
+#glanceHead .facts {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--bor);
+}
+#glanceHead .fact {
+  display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center;
+  padding: 10px 14px; border-radius: 10px; max-width: 100%;
+  background: var(--sur2); border: 1px solid var(--bor); border-left: 3px solid var(--tone);
+}
+#glanceHead .fact.f-bad  { --tone: var(--red) }
+#glanceHead .fact.f-warn { --tone: var(--amb) }
+#glanceHead .fact .g-ic { grid-row: 1 / span 3; color: var(--tone); width: 18px; height: 18px }
+#glanceHead .fact em {
+  font-style: normal; color: var(--mut); font-size: 12px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+#glanceHead .fact b { color: var(--text); font-size: 16px; font-weight: 600; line-height: 1.35 }
+#glanceHead .fact i { font-style: normal; color: var(--mut); font-size: 13px; font-weight: 500 }
 
-/* ---------- the three decisions ---------- */
-.acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0 18px }
+/* ---------- the three decisions (§6.8) ---------- */
+.acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0 28px }
 .acts:empty { display: none }
 .act {
-  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
-  padding: 15px 17px 14px; border-top: 3px solid var(--tone);
+  position: relative; display: flex; flex-direction: column;
+  background: var(--sur); border: 1px solid var(--bor); border-radius: 14px;
+  border-top: 3px solid var(--tone); padding: 16px 18px;
+  box-shadow: var(--card-shadow);
+  transition: transform .18s ease, box-shadow .18s ease;
 }
-.act.a1 { --tone: var(--g-warn) } .act.a2 { --tone: var(--g-bad) } .act.a3 { --tone: var(--g-good) }
+.act::before {                      /* faint tone wash under the rule */
+  content: ''; position: absolute; inset: 0; border-radius: 11px 11px 14px 14px; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 7%, transparent), transparent 42%);
+}
+.act:hover { transform: translateY(-1px); box-shadow: var(--lift-shadow) }
+.act.a1 { --tone: var(--amb) } .act.a2 { --tone: var(--red) } .act.a3 { --tone: var(--grn) }
 .act .hd {
-  display: flex; align-items: center; gap: 7px; color: var(--tone);
-  font: 700 11px 'Segoe UI', sans-serif; letter-spacing: .11em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px; color: var(--tone);
+  font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
 }
-.act .amt { font: 600 26px 'Segoe UI', sans-serif; margin: 7px 0 2px; letter-spacing: -.02em }
-.act .amt.quiet { color: var(--t3); font-weight: 500 }
-.act .g-why { color: var(--t2); font-size: 13px; line-height: 1.5 }
-.act .who { color: var(--t3); font-size: 12px; margin-top: 8px; line-height: 1.55 }
-.act .who b { color: var(--t2); font-weight: 600 }
+.act .amt {
+  font-size: 27.5px; font-weight: 700; margin: 10px 0 4px; letter-spacing: -.02em; line-height: 1.1;
+  color: var(--text); font-variant-numeric: tabular-nums;
+}
+.act .amt.quiet { color: var(--mut); font-weight: 500 }
+.act .g-why { color: var(--text); font-size: 14.5px; font-weight: 400; line-height: 1.5 }
+.act .g-why b { font-weight: 600 }
+.act .who {
+  color: var(--mut); font-size: 13px; font-weight: 400; line-height: 1.55;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bor);
+}
+.act .who b { color: var(--text); font-weight: 600 }
 .act .fix {
-  margin-top: 10px; border: 1px solid var(--borderB); background: transparent;
-  color: var(--t2); border-radius: 999px; padding: 5px 12px;
-  font: 600 11.5px 'Segoe UI', sans-serif; cursor: pointer;
+  align-self: flex-start; margin-top: auto; position: relative;
+  border: 1px solid var(--bor); background: var(--sur2); color: var(--text);
+  border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
 }
-.act .fix:hover { color: var(--t1); border-color: var(--tone) }
-.g-ic { width: 15px; height: 15px; flex: none }
+.act .who + .fix, .act .g-why + .fix { margin-top: 14px }
+.act .fix:hover { color: var(--tone); border-color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, transparent) }
+.g-ic { width: 16px; height: 16px; flex: none }
 
-/* ---------- performance table ---------- */
-#perfCard .chead { display: flex; align-items: flex-end; gap: 16px; padding: 15px 18px 13px; flex-wrap: wrap }
-#perfCard .chead h2 { font: 650 15px Syne, 'Segoe UI', sans-serif }
-#perfCard .chead .note { color: var(--t3); font-size: 12px; margin-top: 3px }
+/* ---------- performance card (§6.1, §8.7.3) ---------- */
+#perfCard { padding: 0; overflow: hidden }
+#perfCard .chead { display: flex; align-items: center; gap: 16px; padding: 18px 20px 16px; flex-wrap: wrap }
+#perfCard .chead h2 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -.01em }
+#perfCard .chead .note { color: var(--mut); font-size: 15.5px; font-weight: 500; margin-top: 2px }
 #perfCard .chead .spacer { flex: 1 }
-#perfCard .ctrls { display: flex; align-items: center; gap: 10px }
-.seg { display: inline-flex; border: 1px solid var(--borderB); border-radius: 999px; overflow: hidden }
-.seg button {
-  border: 0; background: transparent; color: var(--t2); cursor: pointer;
-  padding: 6px 13px; font: 600 12px 'Segoe UI', sans-serif;
-}
-.seg button + button { border-left: 1px solid var(--borderB) }
-.seg button[aria-pressed=true] { background: var(--t1); color: var(--bg) }
-.seg button:hover:not([aria-pressed=true]) { color: var(--t1) }
-.keys { display: flex; align-items: center; gap: 13px; color: var(--t3); font-size: 11.5px }
-.key { display: inline-flex; align-items: center; gap: 6px }
-.key i { width: 15px; height: 2.5px; border-radius: 2px; background: var(--k); display: inline-block }
+#perfCard .ctrls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
 
-#perfTable table { width: 100%; border-collapse: collapse; font-size: 13px }
+/* segmented control (§6.5) */
+.seg { display: inline-flex; border: 1px solid var(--bor); border-radius: 999px; overflow: hidden; background: var(--sur) }
+.seg button {
+  border: 0; background: transparent; color: var(--mut); cursor: pointer;
+  padding: 9px 18px; font-size: 15px; font-weight: 500; transition: color .15s, background .15s;
+}
+.seg button + button { border-left: 1px solid var(--bor) }
+.seg button[aria-pressed=true] { background: var(--text); color: var(--bg) }
+.seg button:hover:not([aria-pressed=true]) { color: var(--text); background: var(--row-hover) }
+
+/* legend keys: 2.5px colour lines */
+.keys { display: flex; align-items: center; gap: 16px; color: var(--mut); font-size: 15px; font-weight: 500 }
+.key { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap }
+.key i { width: 20px; height: 3px; border-radius: 2px; background: var(--k); display: inline-block }
+
+/* ---------- table (§6.7) ---------- */
+#perfTable { overflow-x: auto }
+#perfTable table { width: 100%; border-collapse: collapse }
 #perfTable th {
-  text-align: left; color: var(--t3); font: 600 10.5px 'Segoe UI', sans-serif;
-  letter-spacing: .08em; text-transform: uppercase; padding: 9px 14px;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  background: var(--card2); white-space: nowrap;
+  position: sticky; top: 0; z-index: 1;
+  text-align: left; color: var(--mut); font-size: 15px; font-weight: 600; letter-spacing: 0;
+  text-transform: none; padding: 12px 20px; white-space: nowrap;
+  background: var(--sur2); border-top: 1px solid var(--bor); border-bottom: 1px solid var(--bor);
 }
 #perfTable th em {
-  display: block; font-style: normal; font-weight: 400; letter-spacing: .02em;
-  text-transform: none; font-size: 10.5px; color: var(--t3); opacity: .72; margin-top: 3px;
+  display: block; font-style: normal; font-weight: 500; font-size: 13px;
+  color: var(--mut); margin-top: 1px;
 }
 #perfTable th.n, #perfTable td.n { text-align: right }
-#perfTable td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle }
-#perfTable tbody tr:last-child td { border-bottom: 0 }
-#perfTable tr.grow { cursor: pointer }
-#perfTable tr.grow:hover td { background: rgba(255, 255, 255, .03) }
-body.lt #perfTable tr.grow:hover td { background: rgba(15, 30, 60, .035) }
-#perfTable tr.grow.on td { background: rgba(47, 127, 224, .10) }
-#perfTable tr.camp td { background: rgba(255, 255, 255, .015) }
-body.lt #perfTable tr.camp td { background: rgba(15, 30, 60, .02) }
-#perfTable td.n { font-family: 'DM Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums }
-#perfTable .g-neg { color: var(--g-bad) } #perfTable .g-pos { color: var(--g-good) }
-
-.g-nm { display: flex; align-items: center; gap: 9px; font-weight: 600 }
-.g-nm .tw { width: 13px; color: var(--t3); font-size: 10px; flex: none; transition: transform .16s }
-.g-nm.open .tw { transform: rotate(90deg) }
-#perfTable tr.camp .g-nm { font-weight: 400; padding-left: 22px; color: var(--t2); font-size: 12.5px }
-#perfTable tr.camp .g-nm > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 330px; display: block }
-.g-nm small { display: block; color: var(--t3); font-weight: 400; font-size: 11px; margin-top: 2px }
-
-/* spend cell: the number, then how much of the budget it used */
-.g-spend b { font-weight: 400; display: block }
-.g-spend .bar { display: flex; align-items: center; gap: 7px; justify-content: flex-end; margin-top: 4px }
-.g-spend .t { position: relative; width: 56px; height: 6px; border-radius: 3px; background: var(--g-grid); flex: none; overflow: hidden }
-.g-spend .f { position: absolute; left: 0; top: 0; height: 100%; border-radius: 3px; background: var(--tone) }
-.g-spend .lb { font: 400 11px 'Segoe UI', sans-serif; color: var(--t3) }
-.g-spend.s-ok { --tone: var(--g-good) } .g-spend.s-near { --tone: var(--g-warn) } .g-spend.s-over { --tone: var(--g-bad) }
-.g-spend .nocap { display: block; margin-top: 4px; font: 400 11px 'Segoe UI', sans-serif; color: var(--g-warn) }
-.g-blend { color: var(--t3); cursor: help }
-
-/* roas vs target: a bullet where the target is the 100% mark */
-.g-bul { display: flex; align-items: center; gap: 9px; justify-content: flex-end }
-.g-bul .t { position: relative; width: 70px; height: 7px; border-radius: 4px; background: var(--g-grid); flex: none }
-.g-bul .f { position: absolute; left: 0; top: 0; height: 100%; border-radius: 4px; background: var(--tone) }
-.g-bul .mk { position: absolute; top: -3px; left: 71%; width: 2px; height: 13px; background: var(--t2); border-radius: 1px }
-.g-bul .g-v { font-family: 'DM Mono', monospace; font-size: 12.5px; min-width: 72px; text-align: right }
-.g-bul.gb-good { --tone: var(--g-good) } .g-bul.gb-warn { --tone: var(--g-warn) } .g-bul.gb-bad { --tone: var(--g-bad) }
-.g-dash { color: var(--t3); font-size: 12px }
-
-.g-chip {
-  display: inline-flex; align-items: center; gap: 6px; padding: 3.5px 10px 3.5px 8px;
-  border-radius: 999px; font: 650 11.5px 'Segoe UI', sans-serif; white-space: nowrap;
-  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
-  background: color-mix(in srgb, var(--tone) 14%, transparent); color: var(--tone);
+#perfTable td {
+  padding: 16px 20px; border-bottom: 1px solid var(--bor); vertical-align: middle;
+  font-size: 16.5px; font-weight: 400; color: var(--text);
 }
-.g-chip .g-ic { width: 13px; height: 13px }
-.g-chip.c-bad { --tone: var(--g-bad) } .g-chip.c-warn { --tone: var(--g-warn) }
-.g-chip.c-good { --tone: var(--g-good) } .g-chip.c-none { --tone: var(--g-none) }
+#perfTable td.n { font-weight: 600; font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "zero" }
+#perfTable tbody tr:last-child td { border-bottom: 0 }
+#perfTable tr.grow { cursor: pointer; transition: background .12s }
+#perfTable tr.grow:hover td { background: var(--row-hover) }
+#perfTable tr.camp td { background: var(--row-child) }
+#perfTable tr.grow.on td { background: var(--row-on) }
+#perfTable tr.grow.on td:first-child { box-shadow: inset 3px 0 0 var(--acc) }
+#perfTable .g-neg { color: var(--red) } #perfTable .pos, #perfTable .g-pos { color: var(--grn) }
+#perfTable .g-rank { color: var(--mut); font-size: 15px; font-weight: 500; width: 44px }
 
-/* ---------- detail chart ---------- */
-#perfCard .detail { border-top: 1px solid var(--border); padding: 16px 18px 18px; display: none }
-#perfCard .detail.on { display: block }
-.dhead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; flex-wrap: wrap }
-.dhead h3 { font: 650 13.5px 'Segoe UI', sans-serif }
-.dhead .m { color: var(--t3); font-size: 12px }
+.g-nm { display: flex; align-items: center; gap: 12px; font-weight: 600; color: var(--text); font-size: 17px }
+.g-nm .tw { width: 14px; color: var(--mut); font-size: 12px; flex: none; transition: transform .18s ease }
+.g-nm.open .tw { transform: rotate(90deg); color: var(--acc) }
+#perfTable tr.camp .g-nm { font-weight: 500; padding-left: 26px; color: var(--mut); font-size: 15.5px; font-weight: 400 }
+#perfTable tr.camp .g-nm > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 420px; display: block }
+.g-nm small { display: block; color: var(--mut); font-weight: 400; font-size: 14px; margin-top: 2px }
+
+.g-spend b { font-weight: 600; display: block }
+
+/* ---------- detail chart (§7) ---------- */
+#perfCard .detail { border-top: 1px solid var(--bor); padding: 20px 20px 22px; display: none; background: var(--sur) }
+#perfCard .detail.on { display: block; animation: gIn .25s ease }
+@keyframes gIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+.dhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap }
+.dhead h3 { font-size: 20px; font-weight: 700; color: var(--text) }
+.dhead .m { color: var(--mut); font-size: 15.5px; font-weight: 500 }
+.dhead .m .g-neg { color: var(--red) } .dhead .m .pos { color: var(--grn) }
 .dhead .spacer { flex: 1 }
-.dhead .cmode { margin-left: 10px }
-.dhead .cmode button { padding: 5px 11px; font-size: 11.5px }
-.plot { position: relative }
-.plot svg { display: block; width: 100%; height: 210px; overflow: visible }
+.plot { position: relative; height: 300px }
+.plot svg { display: block; width: 100%; height: 300px; overflow: visible }
 .tip {
   position: absolute; pointer-events: none; opacity: 0; transition: opacity .1s; z-index: 5;
-  background: var(--card2); border: 1px solid var(--borderB); border-radius: 9px;
-  padding: 8px 11px; font-size: 12px; min-width: 156px; box-shadow: 0 8px 26px rgba(0, 0, 0, .45);
+  background: var(--tip-bg); border: 1px solid rgba(255, 255, 255, .08); border-radius: 10px;
+  padding: 11px 14px; font-size: 15px; min-width: 210px; box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+  color: var(--tip-body);
 }
-body.lt .tip { box-shadow: 0 8px 26px rgba(30, 50, 90, .16) }
 .tip.on { opacity: 1 }
-.tip .g-d { color: var(--t3); font-size: 11px; margin-bottom: 5px }
-.tip .r { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 3px }
-.tip .r span { color: var(--t2) }
-.tip .r b { font-family: 'DM Mono', monospace; font-weight: 500 }
+.tip .g-d { color: var(--tip-title); font-size: 15px; font-weight: 600; margin-bottom: 6px }
+.tip .r { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px }
+.tip .r span { color: var(--tip-body); font-weight: 500; display: inline-flex; align-items: center; gap: 7px }
+.tip .r span i { width: 9px; height: 9px; border-radius: 3px; background: var(--k); display: inline-block }
+.tip .r b { color: var(--tip-title); font-weight: 600 }
 
-@media (max-width: 1000px) { .acts { grid-template-columns: 1fr } }
-
-/* ---------------------------------------------------------------------------
- * Break-even
- * ------------------------------------------------------------------------- */
-#beCard .be-now { text-align: right }
-#beCard .be-now span { display: block; font: 600 26px 'Segoe UI', sans-serif; letter-spacing: -.02em }
-#beCard .be-now em { font-style: normal; color: var(--t3); font-size: 11.5px }
-#beCard .be-now.is-under span { color: var(--g-bad) }
-#beCard .be-now.is-over span { color: var(--g-good) }
-.be-plot { padding: 4px 18px 0 }
-.be-plot svg { display: block; width: 100%; height: 190px; overflow: visible }
-.be-foot {
-  padding: 12px 18px 16px; color: var(--t2); font-size: 12.5px; line-height: 1.6;
-  border-top: 1px solid var(--border); margin-top: 10px;
+@media (max-width: 1100px) { .acts { grid-template-columns: 1fr } }
+@media (prefers-reduced-motion: reduce) {
+  .act, .act:hover, #perfTable tr.grow, .g-nm .tw, .seg button { transition: none; transform: none }
+  #perfCard .detail.on { animation: none }
 }
-.be-foot b { color: var(--t1); font-weight: 600 }
-.be-foot .g-warn { color: var(--g-warn) }
-.be-foot .g-bad  { color: var(--g-bad) }
-#perfTable .g-rank { color: var(--t3); font-size: 11.5px; padding-right: 4px }
 
-
-/* ---------------------------------------------------------------------------
- * Payback g-ladder
- *
- * One row per cohort age. Colour carries STATUS - is this age above or below
- * the target set for it - and nothing else. The old g-ladder gave each row its
- * own hue (teal, blue, purple), which looked deliberate but said nothing: the
- * age is already the row label, so spending colour on it leaves status with
- * no channel of its own.
- * ------------------------------------------------------------------------- */
-.g-ladder { padding: 6px 18px 14px; display: grid; gap: 12px }
-.g-lad-row { display: grid; grid-template-columns: 58px 1fr 92px; align-items: center; gap: 14px }
-.g-lad-age { color: var(--t2); font: 600 12.5px 'Segoe UI', sans-serif }
-.g-lad-track {
-  position: relative; height: 26px; border-radius: 7px; overflow: hidden;
-  background: var(--g-grid); cursor: help;
+/* ---------- campaign trend, opened in a row under the campaign ----------
+   Its own framed panel: inset from the table on all sides, rounded, raised,
+   with a small notch pointing up at the campaign it belongs to, and a clear
+   gap before the next campaign so the two never read as one block. */
+#perfTable tr.cdrow > td {
+  padding: 4px 20px 22px 56px; background: var(--bg);
+  border-bottom: 1px solid var(--bor);
+  box-shadow: inset 0 10px 16px -14px rgba(0, 0, 0, .7);
 }
-.g-lad-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 7px; background: var(--tone) }
-.g-lad-row.s-good { --tone: var(--g-good) }
-.g-lad-row.s-near { --tone: var(--g-warn) }
-.g-lad-row.s-bad  { --tone: var(--g-bad) }
-/* break-even is the line everything is aimed at, so it is the solid one */
-.g-lad-be   { position: absolute; top: 0; width: 2px; height: 100%; background: var(--t1); opacity: .55 }
-.g-lad-tgt  { position: absolute; top: 0; width: 0; height: 100%; border-left: 2px dashed var(--t3) }
-.g-lad-val  { text-align: right; font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500 }
-.g-lad-row.s-good .g-lad-val { color: var(--g-good) }
-.g-lad-row.s-near .g-lad-val { color: var(--g-warn) }
-.g-lad-row.s-bad  .g-lad-val { color: var(--g-bad) }
-.g-lad-key { padding: 0 18px 10px; color: var(--t3); font-size: 11.5px; display: flex; gap: 16px }
-.g-lad-key i { display: inline-block; width: 14px; vertical-align: middle; margin-right: 5px }
-.g-lad-key .be i { border-top: 2px solid var(--t1); opacity: .55 }
-.g-lad-key .tg i { border-top: 2px dashed var(--t3) }
+#perfTable tr.cdrow:hover > td { background: var(--bg) }
+#perfTable tr.grow.camp.on > td { border-bottom-color: transparent }
+#perfCard .detail.inrow {
+  position: relative; margin: 12px 0 0; padding: 18px 22px 20px;
+  background: var(--sur); border: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bor));
+  border-radius: 14px; box-shadow: 0 14px 36px rgba(0, 0, 0, .45);
+}
+html[data-theme="light"] #perfCard .detail.inrow { box-shadow: 0 14px 36px rgba(26, 29, 46, .12) }
+#perfCard .detail.inrow::before {       /* notch pointing at the campaign row */
+  content: ''; position: absolute; top: -7px; left: 30px; width: 12px; height: 12px;
+  background: var(--sur); transform: rotate(45deg);
+  border-left: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bor));
+  border-top: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bor));
+}
+#perfCard .detail.inrow .dhead h3::before {
+  content: 'Campaign trend'; display: block; margin-bottom: 3px;
+  color: var(--acc); font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+}
+#perfCard .detail.inrow .dhead { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--bor) }
+#perfCard .detail.inrow.on { animation: gDrop .45s cubic-bezier(.2, .7, .2, 1) }
+@keyframes gDrop {
+  from { opacity: 0; transform: translateY(-10px) }
+  to   { opacity: 1; transform: none }
+}
+
+/* ---------- below-$0 gross profit ---------- */
+.negnote {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px;
+  background: var(--tint-bad); border: 1px solid var(--ring-bad); color: var(--red);
+  font-size: 14px; font-weight: 600; white-space: nowrap;
+}
+.tip .r b .tip-neg { color: #ff8181 }
+
+@media (prefers-reduced-motion: reduce) { #perfCard .detail.inrow.on { animation: none } }
+
+/* ---------- trend toggles: Cost · Revenue · Gross | ROAS, then All / IAP / Ad ---------- */
+.pd-ctrls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.seg.seg-sm button { padding: 7px 14px; font-size: 14px }
+.seg[hidden] { display: none }
+#perfCard .detail .pd-legend { margin: -4px 0 12px; flex-wrap: wrap; justify-content: flex-end }
+.key.key-dash i { background: none; border-top: 2px dashed var(--k); height: 0 }
+.tip .r b .tip-na { color: var(--tip-body); font-weight: 500; opacity: .75 }
+
+/* ---------- headline removed; three totals cards ---------- */
+#glanceHead:empty { display: none }
+.act.k-spend { --tone: var(--acc) }
+.act.k-rev   { --tone: var(--teal) }
+.act.k-gp    { --tone: var(--grn) }
+.act.k-gp.neg { --tone: var(--red) }
+.act .amt { font-size: 32px; margin: 10px 0 6px }
+.act.k-gp .amt { color: var(--tone) }
+.act .gp-sign { font-size: .6em; margin-right: 8px; vertical-align: .2em }
+.act .g-why b { color: var(--text); font-weight: 600 }
+.act .sub2 { display: block; color: var(--mut); font-size: 13px; margin-top: 4px }

@@ -1217,6 +1217,9 @@ function populateSelectors(){
 function populateMarginFilters(){
   if(!DATA)return;
   const period=$('marginPeriod'),channel=$('marginChannel'),campaign=$('marginCampaign');
+  /* The margin strip was removed from the page; without this a platform
+     change threw here and the page never re-rendered. */
+  if(!period||!channel||!campaign)return;
   const sourceCampaigns=SLICE?SLICE.campaigns:DATA.campaigns,sourceChannels=SLICE?SLICE.channels:DATA.channels;
   const available=sourceCampaigns.filter(c=>PLATFORM==='all'||String(c[2]||'').toLowerCase()===PLATFORM);
   const channels=[...new Set(available.map(c=>sourceChannels[c[1]]).filter(Boolean))].sort();
@@ -1241,6 +1244,7 @@ function populateCampaignChannels(){
     .map(c=>DATA.channels[c[1]]).filter(Boolean))].sort();
   if(FILTERS.campChannel!=='all'&&!allowed.includes(FILTERS.campChannel))FILTERS.campChannel='all';
   const sel=$('campChannel');
+  if(!sel)return;   // campaigns list removed from the page
   sel.innerHTML='<option value="all">All networks</option>'+allowed.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   sel.value=FILTERS.campChannel;
   sel.onchange=()=>{FILTERS.campChannel=sel.value;FILTERS.campCampaign='all';populateCampaignDropdown();renderWatchlistOnly()};
@@ -1255,6 +1259,7 @@ function populateCampaignDropdown(){
     .map(c=>c[0]).filter(Boolean))].sort();
   if(FILTERS.campCampaign!=='all'&&!names.includes(FILTERS.campCampaign))FILTERS.campCampaign='all';
   const sel=$('campCampaign');
+  if(!sel)return;
   sel.innerHTML='<option value="all">All campaigns</option>'+names.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
   sel.value=FILTERS.campCampaign;
   sel.onchange=()=>{FILTERS.campCampaign=sel.value;renderWatchlistOnly()};
@@ -3509,6 +3514,13 @@ $('mapSearch').oninput=ev=>{MAP_SEARCH=ev.target.value;renderMapTable()};
  * Same walk as dailyCostByCampaign, same platform filter, same SLICE
  * handling - deliberately, so the two cannot drift on which rows count.
  *
+ * Also carries the cohort revenue the ROAS trend needs, per day:
+ *   iap0/iap7/iap28  revenue_total_d0/d7/d28     (sheet cols O, P, Q)
+ *   ad0/ad7/ad28     ad_revenue_total_d0/d7/d28  (sheet cols R, S, T)
+ *   c7/c28           spend (col G) on days whose d7 / d28 cohort is mature
+ * A cohort that has not reached its age is left out of both numerator and
+ * denominator, using the same "window end minus 7/28" cut as computeWindow.
+ *
  * @return {{days:string[], byKey:Map<string,{cost:number[],rev:number[]}>}}
  */
 function dailySeriesByCampaign(){
@@ -3520,6 +3532,8 @@ function dailySeriesByCampaign(){
 
   for(let di=idx.si;di<=idx.ei;di++)out.days.push(days[di]);
   const n=out.days.length;
+  const cut7=isoShift(idx.to,-7),cut28=isoShift(idx.to,-28);
+  const Z=()=>new Array(n).fill(0);
 
   for(let di=idx.si;di<=idx.ei;di++){
     const slot=di-idx.si;
@@ -3528,9 +3542,13 @@ function dailySeriesByCampaign(){
       if(PLATFORM!=='all'&&String(camp[2]||'').toLowerCase()!==PLATFORM)return;
       const key=camp[0]+'||'+channels[camp[1]];
       let m=out.byKey.get(key);
-      if(!m){m={cost:new Array(n).fill(0),rev:new Array(n).fill(0)};out.byKey.set(key,m)}
+      if(!m){m={cost:Z(),rev:Z(),ad0:Z(),iap0:Z(),c7:Z(),ad7:Z(),iap7:Z(),c28:Z(),ad28:Z(),iap28:Z()};out.byKey.set(key,m)}
       m.cost[slot]+=r[2];
       m.rev[slot]+=r[4]+r[5];      // ad + iap, the same "all revenue" used above
+      m.ad0[slot]+=r[6];m.iap0[slot]+=r[7];
+      const iso=days[di];
+      if(iso<=cut7){m.c7[slot]+=r[2];m.ad7[slot]+=r[8];m.iap7[slot]+=r[9]}
+      if(iso<=cut28){m.c28[slot]+=r[2];m.ad28[slot]+=r[10];m.iap28[slot]+=r[11]}
     });
   }
   return out;

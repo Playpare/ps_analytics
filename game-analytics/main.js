@@ -24,7 +24,16 @@
  */
 
 import './game-analytics.css';
+/* dashboard-wide fonts, sizes and chart scale - colours untouched */
+import '../src/shared/styles/report-type.css';
+/* the hub's own pages on the UA Report's design (sizes and shapes only) */
+import './design.css';
 
 import '../src/shared/chart.js';
+import '../src/shared/chart-type.js';
+/* brighter axis numbers on Overview / Growth / Retention */
+import './axis.js';
+/* Range + game dropdowns in the topbar use the UA-style rounded popup */
+import '../src/shared/date-popup.js';
 
 import './game-analytics.legacy.js';

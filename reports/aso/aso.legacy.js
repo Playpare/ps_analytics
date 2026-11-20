@@ -281,6 +281,122 @@ function initDateFilters(){
 /* ==========================================================================
    KPI CARD BUILDERS
    ========================================================================== */
+/* Up / down line for a rate where LOWER is better (crash, ANR): latest day
+   against the day before, green when it fell, amber when it rose. */
+function rateTrend(series,fmt){
+  const v=(series||[]).filter(x=>x!==null&&x!==undefined&&!isNaN(x));
+  if(v.length<2)return '';
+  const last=v[v.length-1], prev=v[v.length-2], diff=last-prev;
+  if(Math.abs(diff)<1e-9)return '<span class="tr flat">● no change vs day before</span>';
+  return '<span class="tr '+(diff>0?'up':'down')+'">'+(diff>0?'▲ ':'▼ ')+fmt(Math.abs(diff))+' vs day before</span>';
+}
+/* Arrow for any change. better: 'up' (higher is good), 'down' (lower is
+   good) or null (neutral). Good moves are green, bad ones amber. */
+function moveArrow(diff,better,text){
+  if(diff===null||diff===undefined||isNaN(diff))return '';
+  if(Math.abs(diff)<1e-9)return '<span class="tr flat">● '+text+'</span>';
+  const rising=diff>0, good=better===null?null:(better==='up'?rising:!rising);
+  return '<span class="tr '+(good===null?'flat':good?'down':'up')+'">'+(rising?'▲ ':'▼ ')+text+'</span>';
+}
+/* Mean of the second half of a dated list against the first half. */
+function halfChange(values){
+  const v=(values||[]).filter(x=>x!==null&&x!==undefined&&!isNaN(x));
+  if(v.length<2)return null;
+  const h=Math.floor(v.length/2);
+  return mean(v.slice(v.length-h))-mean(v.slice(0,v.length-h));
+}
+/* A star's share of all ratings in the second half of the days against the
+   first half, in percentage points. days: [{1:n,2:n,…,5:n}] oldest first. */
+function starShareChange(days,star){
+  const d=(days||[]).filter(x=>x&&[1,2,3,4,5].some(s=>(x[s]||0)>0));
+  if(d.length<2)return null;
+  const h=Math.floor(d.length/2), share=part=>{
+    const all=part.reduce((a,x)=>a+[1,2,3,4,5].reduce((b,s)=>b+(x[s]||0),0),0);
+    return all?part.reduce((a,x)=>a+(x[star]||0),0)/all*100:null;
+  };
+  const a=share(d.slice(0,d.length-h)), b=share(d.slice(d.length-h));
+  return a===null||b===null?null:b-a;
+}
+const STAR_BETTER={5:'up',4:'up',3:null,2:'down',1:'down'};
+const ptsTxt=v=>nf(Math.abs(v),2)+' pts';
+const pctTxt=v=>nf(Math.abs(v),1)+'%';
+
+/* Splits dated rows into the earlier and later half of the days they cover,
+   so a card can say which way a figure moved inside the selected window.
+   Per-day averages are used for counts, so an odd number of days does not
+   tilt the comparison. */
+function halves(rows){
+  const days=[...new Set((rows||[]).map(r=>r&&r.date).filter(Boolean))].sort();
+  if(days.length<2)return null;
+  const h=Math.floor(days.length/2), late=new Set(days.slice(days.length-h));
+  const a=[],b=[];(rows||[]).forEach(r=>{if(r&&r.date)(late.has(r.date)?b:a).push(r)});
+  return {a,b,da:days.length-h,db:h};
+}
+/* % change of a per-day total, second half vs first half */
+function perDayChange(H,val){
+  if(!H)return null;
+  const x=sum(H.a.map(val))/H.da, y=sum(H.b.map(val))/H.db;
+  return x?((y-x)/x*100):null;
+}
+/* change of a ratio (num / den) in percentage points, second half vs first */
+function ratioChange(H,num,den){
+  if(!H)return null;
+  const r=part=>{const d=sum(part.map(den));return d?sum(part.map(num))/d*100:null};
+  const x=r(H.a), y=r(H.b);
+  return x===null||y===null?null:y-x;
+}
+const VS_HALF=' vs first half';
+
+/* How a platform's written reviews moved, second half of the window vs first. */
+function reviewMoves(RV){
+  const H=halves(RV.all||[]);
+  const avgOf=part=>{const r=part.filter(x=>x.rating);return r.length?mean(r.map(x=>x.rating)):null};
+  const avg=H?(()=>{const x=avgOf(H.a),y=avgOf(H.b);return x===null||y===null?null:y-x})():null;
+  return {H,avg,
+    vol:perDayChange(H,()=>1),
+    pos:ratioChange(H,r=>(r.rating||0)>=4?1:0,()=>1),
+    neg:ratioChange(H,r=>(r.rating||0)>0&&r.rating<=2?1:0,()=>1)};
+}
+/* Store conversion rate move (Play: acquisitions / visitors, App Store:
+   converters / impressions), in points. */
+function convMove(C,ios){
+  return ratioChange(halves(C.rows||[]),ios?r=>r.converters||0:r=>r.acquisition||0,ios?r=>r.impressions||0:r=>r.visitors||0);
+}
+/* Two arrows side by side for the Android vs IOS comparison cards. */
+function pairArrows(a,b,better,fmt){
+  const one=(name,v)=>v===null||v===undefined||isNaN(v)?'':'<span class="tr-pl">'+name+'</span>'+moveArrow(v,better,fmt(v));
+  const parts=[one('Android',a),one('IOS',b)].filter(Boolean);
+  /* kept to one line: "vs first half" is on hover rather than spelled out */
+  return parts.length?'<span class="tr-pair" title="second half of the period'+VS_HALF+'">'+parts.join('<span class="tr-gap">·</span>')+'</span>':'';
+}
+
+/* The four Reviews cards (Android and IOS share them). Each one's line under
+   the value is an arrow for how it moved, second half of the window against
+   the first: green when that is good, amber when it is not. */
+function reviewCards(RV,negT){
+  const M=reviewMoves(RV), H=M.H, avgMove=M.avg, posMove=M.pos, negMove=M.neg;
+  /* 'Uncategorised' is not a complaint - it is this dashboard's own keyword
+     list falling short - so the top complaint is the top NAMED theme. */
+  const t=topNamedTheme(negT);
+  const has=(r,k)=>r.primary===k||(r.themes||[]).indexOf(k)>=0;
+  const topMove=t.top?perDayChange(H,r=>(r.rating||0)>0&&r.rating<=2&&has(r,t.top.key)?1:0):null;
+  return [
+    kpiSingle({label:'Average Rating · Written',accent:'teal',value:n2(RV.averageRatingWithText),
+      sub:avgMove===null?'':moveArrow(avgMove,'up',nf(Math.abs(avgMove),2)+VS_HALF)}),
+    kpiSingle({label:'Positive Share',accent:'green',value:pc(RV.positiveSharePct,1),
+      sub:posMove===null?'':moveArrow(posMove,'up',ptsTxt(posMove)+VS_HALF)}),
+    kpiSingle({label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
+      sub:negMove===null?'':moveArrow(negMove,'down',ptsTxt(negMove)+VS_HALF)}),
+    kpiSingle({label:'Top Complaint',accent:'amber',
+      value:t.top?esc(t.top.label):'—',
+      sub:t.top?(topMove===null?'':moveArrow(topMove,'down',pctTxt(topMove)+' per day'+VS_HALF))
+        :(t.uncategorised?'no 1★–2★ review matched a theme':'—')})];
+}
+/* Green tick when a count of bad days is zero, amber ▲ when it is not. */
+function badDays(n,what){
+  return n?'<span class="tr up">▲ '+n+' day'+(n===1?'':'s')+' '+what+'</span>'
+          :'<span class="tr down">✓ never '+what+'</span>';
+}
 function kpiSingle(o){
   return '<div class="kpi a-'+o.accent+'"><div class="l">'+o.label+'</div>'+
     '<div class="v'+(o.tone?' '+o.tone:'')+'">'+o.value+'</div>'+
@@ -330,11 +446,35 @@ const row=(host,cards)=>{if($(host))$(host).innerHTML=cards.join('')};
    day ranges - iOS is typed in by hand and usually lags - so nothing here may
    assume a single shared x-axis.
    ========================================================================== */
-Chart.defaults.font.family='Poppins';
-Chart.defaults.font.size=11;
+Chart.defaults.font.family="'Segoe UI', 'Segoe UI Variable', system-ui, Arial, sans-serif";
+Chart.defaults.font.size=14;
 Chart.defaults.font.weight='500';
 Chart.defaults.color='#c0ccdf';
-Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
+Chart.defaults.plugins.legend.labels.font={family:"'Segoe UI', 'Segoe UI Variable', system-ui, Arial, sans-serif",size:15,weight:'500'};
+
+/* The dashboard's cleaner chart look (as on UA / Negative Spend), applied in
+   one place to every ASO chart builder below:
+   - legend keys are small rounded squares with more breathing room
+   - grid lines are faint and dashed, with no axis border lines
+   - bars get rounded corners; stacked bars only on the outer ends of the
+     whole stack, so segments still meet flush */
+const CLEAN_LEGEND={usePointStyle:true,pointStyle:'rectRounded',boxWidth:12,boxHeight:12,padding:16};
+function cleanScales(scales){
+  Object.values(scales||{}).forEach(s=>{
+    if(!s||typeof s!=='object')return;
+    s.border=Object.assign({display:false,dash:[4,4]},s.border||{});
+    if(s.grid&&s.grid.display!==false)s.grid=Object.assign({drawTicks:false},s.grid);
+    s.ticks=Object.assign({padding:8},s.ticks||{});
+  });
+  return scales;
+}
+function cleanBars(datasets,stacked){
+  return (datasets||[]).map(d=>{
+    if(d.type&&d.type!=='bar')return d;            // line overlays keep their look
+    if(stacked)return Object.assign({borderWidth:0},d);
+    return Object.assign({borderRadius:6,borderSkipped:false,borderWidth:0,maxBarThickness:44},d);
+  });
+}
 
 /* Chart.js label padding only spaces legend items from each other. This
    reserves a gap below the legend so it does not crowd the top y-axis tick. */
@@ -356,12 +496,12 @@ function baseX(dates){
   const grid=cssVar('--border','rgba(255,255,255,.08)'), tick=cssVar('--t2','#a6b8d4');
   return {maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     animation:{duration:dates.length>60?0:420},
-    plugins:{legend:{position:'top',align:'start',labels:{color:tick,boxWidth:11,boxHeight:11,padding:12}},
+    plugins:{legend:{position:'top',align:'start',labels:Object.assign({color:tick},CLEAN_LEGEND)},
       tooltip:{backgroundColor:cssVar('--card2','#070809'),borderColor:cssVar('--borderB','rgba(255,255,255,.14)'),borderWidth:1,
-        titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:10,cornerRadius:8,
+        titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:12,cornerRadius:10,
         callbacks:{title:it=>shortDate(dates[it[0].dataIndex])}}},
-    scales:{x:{ticks:{color:tick,autoSkip:dates.length>18,maxRotation:0},grid:{color:grid}},
-            y:{ticks:{color:tick},grid:{color:grid}}}};
+    scales:cleanScales({x:{ticks:{color:tick,autoSkip:dates.length>18,maxRotation:0},grid:{color:grid}},
+            y:{ticks:{color:tick},grid:{color:grid}}})};
 }
 const labelsOf=dates=>dates.map(shortDate);
 
@@ -375,40 +515,41 @@ function mixedX(id,dates,ds,yOpts,extra){
   destroy(id); if(!$(id))return;
   const o=baseX(dates); Object.assign(o.scales.y,yOpts||{});
   if(extra)Object.assign(o.scales,extra);
-  charts[id]=new Chart($(id),{type:'bar',data:{labels:labelsOf(dates),datasets:ds},options:o});
+  charts[id]=new Chart($(id),{type:'bar',data:{labels:labelsOf(dates),datasets:cleanBars(ds,o.scales.x&&o.scales.x.stacked)},options:o});
 }
 /* horizontal ranked bars — themes, devices, builds, per-source CVR */
 function hbar(id,labels,datasets,fmt,stacked){
   destroy(id); if(!$(id))return;
   const grid=cssVar('--border','rgba(255,255,255,.08)'), tick=cssVar('--t2','#a6b8d4');
   charts[id]=new Chart($(id),{type:'bar',
-    data:{labels,datasets},
+    data:{labels,datasets:cleanBars(datasets,stacked)},
     options:{indexAxis:'y',maintainAspectRatio:false,animation:{duration:420},
       /* Index + non-intersect selected a nearby row/segment even when the
          pointer was over empty plot space. Stacked bars should report only
          the exact coloured segment beneath the cursor. */
       interaction:stacked?{mode:'point',intersect:true,axis:'xy'}:undefined,
-      plugins:{legend:{display:datasets.length>1,position:'top',align:'start',labels:{color:tick,boxWidth:11,boxHeight:11,padding:10}},
+      plugins:{legend:{display:datasets.length>1,position:'top',align:'start',labels:Object.assign({color:tick},CLEAN_LEGEND)},
         tooltip:{mode:stacked?'point':'nearest',intersect:!!stacked,
           backgroundColor:cssVar('--card2','#070809'),borderColor:cssVar('--borderB','#333'),borderWidth:1,
-          titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:10,cornerRadius:8,
+          titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:12,cornerRadius:10,
           callbacks:{label:c=>' '+c.dataset.label+': '+(fmt?fmt(c.raw):nf(c.raw,0))}}},
-      scales:{x:{stacked:!!stacked,beginAtZero:true,ticks:{color:tick,callback:v=>fmt?fmt(v):nf(v,0)},grid:{color:grid}},
-              y:{stacked:!!stacked,ticks:{color:tick},grid:{display:false}}}}});
+      scales:cleanScales({x:{stacked:!!stacked,beginAtZero:true,ticks:{color:tick,callback:v=>fmt?fmt(v):nf(v,0)},grid:{color:grid}},
+              y:{stacked:!!stacked,ticks:{color:tick},grid:{display:false}}})}});
 }
 /* grouped vertical bars — used by the two Overview comparisons */
 function groupBar(id,labels,datasets,fmt){
   destroy(id); if(!$(id))return;
   const grid=cssVar('--border','rgba(255,255,255,.08)'), tick=cssVar('--t2','#a6b8d4');
-  charts[id]=new Chart($(id),{type:'bar',data:{labels,datasets},
+  const overview=id==='ovDist'||id==='ovVolume';
+  charts[id]=new Chart($(id),{type:'bar',data:{labels,datasets:cleanBars(datasets,false)},
     options:{maintainAspectRatio:false,animation:{duration:labels.length>60?0:420},
       interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'top',align:'start',labels:{color:tick,boxWidth:11,boxHeight:11,padding:12}},
+      plugins:{legend:{position:'top',align:'start',labels:Object.assign({color:tick},CLEAN_LEGEND,overview?{font:{size:17,weight:'600'},padding:22,boxWidth:15,boxHeight:15}:{})},
         tooltip:{backgroundColor:cssVar('--card2','#070809'),borderColor:cssVar('--borderB','#333'),borderWidth:1,
-          titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:10,cornerRadius:8,
+          titleColor:cssVar('--t1','#edf2ff'),bodyColor:tick,padding:12,cornerRadius:10,
           callbacks:{label:c=>' '+c.dataset.label+': '+(fmt?fmt(c.raw):nf(c.raw,0))}}},
-      scales:{x:{ticks:{color:tick,autoSkip:labels.length>18,maxRotation:0},grid:{color:grid}},
-              y:{beginAtZero:true,ticks:{color:tick,callback:v=>fmt?fmt(v):nf(v,0)},grid:{color:grid}}}}});
+      scales:cleanScales({x:{ticks:{color:tick,autoSkip:labels.length>18,maxRotation:0,font:overview?{size:16,weight:'600'}:undefined,padding:overview?9:3},grid:{color:grid}},
+              y:{beginAtZero:true,ticks:{color:tick,font:overview?{size:16,weight:'600'}:undefined,padding:overview?9:3,callback:v=>fmt?fmt(v):nf(v,0)},grid:{color:grid}}})}});
 }
 /* a flat reference line, e.g. the Play Store threshold or a period average */
 const refLine=(label,value,n)=>({label:label,data:new Array(n).fill(value),borderColor:cssVar('--t3','#7589a8'),
@@ -581,7 +722,9 @@ function quickReviews(platform,hostId,chipId,rows){
 
   table(hostId,[{label:'Rating',w:'12%'},{label:'Date',w:'12%'},{label:'Review',txt:true}],
     shown.slice(0,40).map(r=>[
-      {v:'<span class="stars star'+Math.round(r.rating||0)+'">'+STARS(r.rating)+'</span>'},
+      /* one compact badge - "5 ★" - toned by the rating (green 4-5, amber 3,
+       red 1-2) instead of a row of five small stars */
+    {v:'<span class="rv-rate r'+Math.round(r.rating||0)+'" title="'+STARS(r.rating)+'">'+Math.round(r.rating||0)+' ★</span>'},
       '<span class="rv-number">'+shortDate(r.date)+'</span>',
       esc(r.textEnglish||r.text||'')]));
 }
@@ -692,12 +835,16 @@ function renderAndroid(){
 
   row('anRow2',[
     kpiSingle({label:'Average Crash Rate',accent:'coral',value:p2(avg.crashRate),
+      sub:rateTrend(crash,p2),
       note:'daily mean across the selected period · '+statusPill((S.status||{}).crash)}),
     kpiSingle({label:'Average ANR Rate',accent:'amber',value:p2(avg.anrRate),
+      sub:rateTrend(anr,p2),
       note:'daily mean across the selected period · '+statusPill((S.status||{}).anr)}),
     kpiSingle({label:'Peak Crash Rate',accent:'coral',value:p2(peak.crashRate),
+      sub:badDays(over.crash||0,'above 1.09%'),
       note:over.crash?over.crash+' day(s) above 1.09%':'never above threshold'}),
     kpiSingle({label:'Peak ANR Rate',accent:'amber',value:p2(peak.anrRate),
+      sub:badDays(over.anr||0,'above 0.47%'),
       note:over.anr?over.anr+' day(s) above 0.47%':'never above threshold'})]);
 
   lineX('anCrash',D,[
@@ -742,15 +889,15 @@ function renderAndroid(){
 
   row('anRatingKpis',[
     kpiSingle({label:'Average Rating',accent:'green',value:n3(periodRating),
-      sub:ratingDays.length?'mean of '+n0(ratingDays.length)+' daily averages':'',
+      sub:(()=>{const c=halfChange(ratingDays.map(x=>x.rating));return c===null?'':moveArrow(c,'up',nf(Math.abs(c),3)+' vs first half')})(),
       note:'daily mean across the selected period · not the store’s default rating'}),
     kpiSingle({label:'Latest Daily Rating',accent:'teal',
       value:latestRating?n3(latestRating.rating):'—',
-      sub:latestRating?latestRating.date:'no rated day in this period',
+      sub:latestRating?(ratingDays.length>1?moveArrow(ratingDays[ratingDays.length-1].rating-ratingDays[ratingDays.length-2].rating,'up',nf(Math.abs(ratingDays[ratingDays.length-1].rating-ratingDays[ratingDays.length-2].rating),3)+' vs day before'):''):'no rated day in this period',
       note:'the newest day the sheet holds'}),
     kpiSingle({label:'Change Across Period',accent:'blue',
       value:R.changePts==null?'—':(R.changePts>0?'+':'')+n3(R.changePts),
-      sub:ratingDays.length>1?ratingDays[0].date+' → '+ratingDays[ratingDays.length-1].date:'',
+      sub:R.changePts==null?'':moveArrow(R.changePts,'up',R.changePts>0?'rating rose':R.changePts<0?'rating fell':'no change'),
       /* How many days actually carried a rating used to be a card of its own.
          It is a fact about coverage, not about the app, so it belongs beside
          the figure it qualifies rather than taking a quarter of the row. */
@@ -763,10 +910,15 @@ function renderAndroid(){
   const starHost=$('anRow3');
   if(totalRatings>0){
     if(starHost)starHost.className='kpi-row five';
-    row('anRow3',[5,4,3,2,1].map(star=>kpiSingle({
-      label:star+'★ Share',accent:ratingColors[star],value:pc(ratingShare(star),2),
-      sub:n0(ratingCounts[star])+' of '+n0(totalRatings)+' ratings'
-    })));
+    const anStarDays=ratingRows.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)))
+      .map(r=>({1:r.star1||0,2:r.star2||0,3:r.star3||0,4:r.star4||0,5:r.star5||0}));
+    row('anRow3',[5,4,3,2,1].map(star=>{
+      const c=starShareChange(anStarDays,star);
+      return kpiSingle({
+        label:star+'★ Share',accent:ratingColors[star],value:pc(ratingShare(star),2),
+        sub:c===null?'':moveArrow(c,STAR_BETTER[star],ptsTxt(c)+' vs first half')
+      });
+    }));
   }else{
     if(starHost)starHost.className='kpi-row one';
     row('anRow3',[kpiSingle({label:'Star Breakdown',accent:'amber',value:'—',
@@ -779,26 +931,7 @@ function renderAndroid(){
   const cnt=RV.counts||{}, themes=RV.themes||[], negT=RV.negativeThemes||[], posT=RV.positiveThemes||[];
   const volume=align(RV.volumeByDate,'count',D), volAvg=align(RV.volumeByDate,'avgRating',D);
 
-  row('anRow4',[
-    kpiSingle({label:'Average Rating · Written',accent:'teal',value:n2(RV.averageRatingWithText),
-      sub:'across '+n0(cnt.withText)+' written reviews'}),
-    kpiSingle({label:'Positive Share',accent:'green',value:pc(RV.positiveSharePct,1),
-      sub:n0(RV.positiveCount)+' reviews at 4★–5★',note:'higher is better'}),
-    kpiSingle({label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
-      sub:n0(RV.negativeCount)+' reviews at 1★–2★',note:'lower is better'}),
-    (function(){
-      /* 'Uncategorised' is not a complaint - it is this dashboard's own
-         keyword list falling short. Naming it as the top complaint reads as
-         a finding about the game, which it is not. */
-      const t=topNamedTheme(negT);
-      return kpiSingle({label:'Top Complaint',accent:'amber',
-        value:t.top?esc(t.top.label):'—',
-        sub:t.top?(n0(t.top.count)+' of '+n0(RV.negativeCount)+' negative'):
-          (t.uncategorised?'no 1★–2★ review matched a theme':'—'),
-        note:t.uncategorised
-          ? 'most common NAMED theme · '+n0(t.uncategorised)+' uncategorised'
-          : 'most common 1★–2★ theme'});
-    })()]);
+  row('anRow4',reviewCards(RV,negT));
 
   mixedX('anReviewVol',D,[
     {type:'bar',label:'Reviews',data:volume,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
@@ -829,18 +962,22 @@ function renderAndroid(){
   /* ---------------- CONVERSION ---------------- */
   const tot=C.totals||{}, rec=C.recent||{}, best=C.bestSource;
 
+  /* Each card's line is an arrow for how it moved, second half of the window
+     against the first (green = good, amber = not). */
+  const cH=halves(C.rows||[]);
+  const cvrMove=ratioChange(cH,r=>r.acquisition||0,r=>r.visitors||0);
+  const visMove=perDayChange(cH,r=>r.visitors||0), acqMove=perDayChange(cH,r=>r.acquisition||0);
+  const bestMove=best?ratioChange(halves((C.rows||[]).filter(r=>r.source===best.source)),r=>r.acquisition||0,r=>r.visitors||0):null;
   row('anRow5',[
-    kpiDelta({label:'Conversion Rate',accent:'pink',value:pc(rec.conversionRate,2),
-      curr:rec.conversionRate,prev:null,sub:'period total',
-      note:'acquisitions ÷ visitors, re-divided from totals'}),
+    kpiSingle({label:'Conversion Rate',accent:'pink',value:pc(rec.conversionRate,2),
+      sub:cvrMove===null?'':moveArrow(cvrMove,'up',ptsTxt(cvrMove)+VS_HALF)}),
     kpiSingle({label:'Store Visitors',accent:'blue',value:cp(tot.visitors),
-      sub:n0(tot.visitors)+' total',note:'across all traffic sources'}),
+      sub:visMove===null?'':moveArrow(visMove,'up',pctTxt(visMove)+' per day'+VS_HALF)}),
     kpiSingle({label:'Acquisitions',accent:'green',value:cp(tot.acquisition),
-      sub:n0(tot.acquisition)+' total',note:'store listing acquisitions'}),
+      sub:acqMove===null?'':moveArrow(acqMove,'up',pctTxt(acqMove)+' per day'+VS_HALF)}),
     kpiSingle({label:'Best Converting Source',accent:'teal',
       value:best?('<span style="font-size:19px">'+esc(best.source)+'</span>'):'—',
-      sub:best?(pc(best.conversionRate,2)+' CVR · '+cp(best.visitors)+' visitors → '+cp(best.acquisition)+' installs'):'—',
-      note:'highest conversion rate of any traffic source'})]);
+      sub:best?(bestMove===null?pc(best.conversionRate,2)+' CVR':moveArrow(bestMove,'up',pc(best.conversionRate,2)+' CVR · '+ptsTxt(bestMove)+VS_HALF)):'—'})]);
 
   drawConversionCharts(C);
 
@@ -993,18 +1130,23 @@ function renderIos(){
 
   row('ioRow2',[
     kpiSingle({label:'Average Crash Rate',accent:'coral',value:p3(avgRate),
-      sub:periodRate==null?'':'period rate '+p3(periodRate),
+      sub:rateTrend(crashRates,p3)||(periodRate==null?'':'period rate '+p3(periodRate)),
       note:'daily mean · crashes over sessions, opted-in devices only'}),
     kpiSingle({label:'Peak Crash Rate',accent:'coral',value:p3(peak.crashRate),
+      sub:badDays(S.daysAboveAverage||0,'25%+ above average'),
       note:(S.daysAboveAverage||0)+' day(s) more than 25% above average'}),
     /* The count is kept, and deliberately. It is what these cards held until
        now, and it is the only figure that shows a Crashes/Sessions column
        swapped at the source - the stored rate reads the same either way. */
     kpiSingle({label:'Total Crashes',accent:'blue',value:cp(tot.crashes),
-      sub:tot.sessions?cp(tot.sessions)+' sessions':'',
+      sub:(()=>{const c=perDayChange(halves(S.series),r=>r.crashes||0);return c===null?'':moveArrow(c,'down',pctTxt(c)+' per day'+VS_HALF)})(),
       note:'sum across the selected period'}),
     kpiSingle({label:'Days With Crash Data',accent:'amber',value:n0(S.series.length),
-      sub:n0(S.series.length)+' of '+D.length+' selected days',
+      /* coverage, not a trend: green when every selected day has data,
+         amber with the count of days that do not */
+      sub:(()=>{const miss=Math.max(0,D.length-S.series.length);return miss
+        ?'<span class="tr up">▲ '+miss+' day'+(miss===1?'':'s')+' without data</span>'
+        :'<span class="tr down">✓ every selected day has data</span>'})(),
       note:low.date?'lowest daily rate: '+p3(low.crashRate):'no rows in selected period'})]);
 
   /* ONE chart, not two. The smoothed line answers the same question as the
@@ -1044,15 +1186,15 @@ function renderIos(){
 
   row('ioRatingKpis',[
     kpiSingle({label:'Average Rating',accent:'green',value:n3(ioPeriodRating),
-      sub:ioRatingDays.length?'mean of '+n0(ioRatingDays.length)+' daily averages':(ioGap?ioGap.sub:''),
+      sub:ioRatingDays.length?(()=>{const c=halfChange(ioRatingDays.map(x=>x.rating));return c===null?'':moveArrow(c,'up',nf(Math.abs(c),3)+' vs first half')})():(ioGap?ioGap.sub:''),
       note:ioGap?ioGap.note:'daily mean across the selected period · one storefront, not a world average'}),
     kpiSingle({label:'Latest Daily Rating',accent:'teal',
       value:ioLatest?n3(ioLatest.rating):'—',
-      sub:ioLatest?ioLatest.date:(ioGap?ioGap.sub:'no rated day in this period'),
+      sub:ioLatest?(ioRatingDays.length>1?moveArrow(ioRatingDays[ioRatingDays.length-1].rating-ioRatingDays[ioRatingDays.length-2].rating,'up',nf(Math.abs(ioRatingDays[ioRatingDays.length-1].rating-ioRatingDays[ioRatingDays.length-2].rating),3)+' vs day before'):''):(ioGap?ioGap.sub:'no rated day in this period'),
       note:'the newest day the sheet holds'}),
     kpiSingle({label:'Change Across Period',accent:'blue',
       value:R.changePts==null?'—':(R.changePts>0?'+':'')+n3(R.changePts),
-      sub:ioRatingDays.length>1?ioRatingDays[0].date+' → '+ioRatingDays[ioRatingDays.length-1].date:'',
+      sub:R.changePts==null?'':moveArrow(R.changePts,'up',R.changePts>0?'rating rose':R.changePts<0?'rating fell':'no change'),
       note:n0(ioRatingDays.length)+' of '+D.length+' selected days had a rating'})]);
 
   /* Unlike Android, these five come from the reviews themselves rather than a
@@ -1062,10 +1204,17 @@ function renderIos(){
   const ioStarHost=$('ioRow3');
   if(tw>0){
     if(ioStarHost)ioStarHost.className='kpi-row five';
-    row('ioRow3',[5,4,3,2,1].map(star=>kpiSingle({
-      label:star+'★ Share',accent:ratingColors[star],value:pc(share(star),2),
-      sub:n0(dist0[star]||0)+' of '+n0(tw)+' ratings'
-    })));
+    /* per-day star counts from the written reviews, oldest first */
+    const ioByDay={};
+    (RV.all||[]).forEach(r=>{const s=Math.round(r.rating||0);if(s>=1&&s<=5&&r.date){const d=ioByDay[r.date]||(ioByDay[r.date]={});d[s]=(d[s]||0)+1;}});
+    const ioStarDays=Object.keys(ioByDay).sort().map(k=>ioByDay[k]);
+    row('ioRow3',[5,4,3,2,1].map(star=>{
+      const c=starShareChange(ioStarDays,star);
+      return kpiSingle({
+        label:star+'★ Share',accent:ratingColors[star],value:pc(share(star),2),
+        sub:c===null?'':moveArrow(c,STAR_BETTER[star],ptsTxt(c)+' vs first half')
+      });
+    }));
   }else{
     if(ioStarHost)ioStarHost.className='kpi-row one';
     row('ioRow3',[kpiSingle({label:'Star Breakdown',accent:'amber',value:'—',
@@ -1092,26 +1241,7 @@ function renderIos(){
   const cnt=RV.counts||{}, themes=RV.themes||[], negT=RV.negativeThemes||[], posT=RV.positiveThemes||[];
   const volume=align(RV.volumeByDate,'count',D), volAvg=align(RV.volumeByDate,'avgRating',D);
 
-  row('ioRow4',[
-    kpiSingle({label:'Average Rating · Written',accent:'teal',value:n2(RV.averageRatingWithText),
-      sub:'across '+n0(cnt.withText)+' written reviews'}),
-    kpiSingle({label:'Positive Share',accent:'green',value:pc(RV.positiveSharePct,1),
-      sub:n0(RV.positiveCount)+' reviews at 4★–5★',note:'higher is better'}),
-    kpiSingle({label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
-      sub:n0(RV.negativeCount)+' reviews at 1★–2★',note:'lower is better'}),
-    (function(){
-      /* 'Uncategorised' is not a complaint - it is this dashboard's own
-         keyword list falling short. Naming it as the top complaint reads as
-         a finding about the game, which it is not. */
-      const t=topNamedTheme(negT);
-      return kpiSingle({label:'Top Complaint',accent:'amber',
-        value:t.top?esc(t.top.label):'—',
-        sub:t.top?(n0(t.top.count)+' of '+n0(RV.negativeCount)+' negative'):
-          (t.uncategorised?'no 1★–2★ review matched a theme':'—'),
-        note:t.uncategorised
-          ? 'most common NAMED theme · '+n0(t.uncategorised)+' uncategorised'
-          : 'most common 1★–2★ theme'});
-    })()]);
+  row('ioRow4',reviewCards(RV,negT));
 
   mixedX('ioReviewVol',D,[
     {type:'bar',label:'Reviews',data:volume,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
@@ -1126,19 +1256,22 @@ function renderIos(){
   /* ---------------- CONVERSION ---------------- */
   const cTot=C.totals||{}, rec=C.recent||{}, best=C.bestSource;
 
+  /* Each card's line is an arrow for how it moved, second half of the window
+     against the first (green = good, amber = not). */
+  const cH=halves(C.rows||[]);
+  const cvrMove=ratioChange(cH,r=>r.converters||0,r=>r.impressions||0);
+  const impMove=perDayChange(cH,r=>r.impressions||0), conMove=perDayChange(cH,r=>r.converters||0);
+  const bestMove=best?ratioChange(halves((C.rows||[]).filter(r=>r.source===best.source)),r=>r.converters||0,r=>r.impressions||0):null;
   row('ioRow5',[
-    kpiDelta({label:'Conversion Rate',accent:'pink',value:pc(cTot.conversionRate,2),
-      curr:cTot.conversionRate,prev:null,sub:'period total · converters ÷ impressions',
-      note:'App Store Connect definition, re-divided from totals'}),
+    kpiSingle({label:'Conversion Rate',accent:'pink',value:pc(cTot.conversionRate,2),
+      sub:cvrMove===null?'':moveArrow(cvrMove,'up',ptsTxt(cvrMove)+VS_HALF)}),
     kpiSingle({label:'Impressions',accent:'blue',value:cp(cTot.impressions),
-      sub:n0(cTot.impressions)+' total',
-      note:pc(cTot.viewRate,2)+' went on to open the listing'}),
+      sub:impMove===null?'':moveArrow(impMove,'up',pctTxt(impMove)+' per day'+VS_HALF)}),
     kpiSingle({label:'Converters',accent:'green',value:cp(cTot.converters),
-      sub:n0(cTot.converters)+' total',note:'App Store conversions'}),
+      sub:conMove===null?'':moveArrow(conMove,'up',pctTxt(conMove)+' per day'+VS_HALF)}),
     kpiSingle({label:'Best Converting Source',accent:'teal',
       value:best?('<span style="font-size:19px">'+esc(best.source)+'</span>'):'—',
-      sub:best?(pc(best.conversionRate,2)+' CVR · '+cp(best.impressions)+' impressions → '+cp(best.converters)+' installs'):'—',
-      note:'highest conversion rate of any traffic source'})]);
+      sub:best?(bestMove===null?pc(best.conversionRate,2)+' CVR':moveArrow(bestMove,'up',pc(best.conversionRate,2)+' CVR · '+ptsTxt(bestMove)+VS_HALF)):'—'})]);
 
   drawIosConversionCharts(C);
 
@@ -1241,27 +1374,30 @@ function renderOverview(){
   banner('ovWarnings',LAST_META.warnings||[]);
 
   const aCvr=(AC.totals||{}).conversionRate, iCvr=(IC.totals||{}).conversionRate;
+  /* the line under each pair of values is one arrow per platform: how that
+     figure moved in the second half of the window against the first */
+  const aM=reviewMoves(AR), iM=reviewMoves(IR);
 
   row('ovRow1',[
     kpiCompare({label:'Average Rating · Written',accent:'teal',
       a:AR.averageRatingWithText,b:IR.averageRatingWithText,fmt:n2,lower:false,
-      sub:n0((AR.counts||{}).withText)+' vs '+n0((IR.counts||{}).withText)+' written reviews',
+      sub:pairArrows(aM.avg,iM.avg,'up',v=>nf(Math.abs(v),2)),
       note:'mean star rating of reviews that carry text'}),
 
     kpiCompare({label:'Written Reviews',accent:'blue',
       a:(AR.counts||{}).withText,b:(IR.counts||{}).withText,fmt:cp,lower:false,
-      sub:n1(((AR.counts||{}).withText||0)/selectedDays)+' vs '+
-          n1(((IR.counts||{}).withText||0)/selectedDays)+' per day',
+      /* more reviews is neither good nor bad on its own, so these arrows are neutral */
+      sub:pairArrows(aM.vol,iM.vol,null,v=>pctTxt(v)+' /day'),
       note:'one row per review, both stores'}),
 
     kpiCompare({label:'Negative Share',accent:'coral',
       a:AR.negativeSharePct,b:IR.negativeSharePct,fmt:v=>pc(v,1),lower:true,
-      sub:n0(AR.negativeCount)+' vs '+n0(IR.negativeCount)+' reviews at 1★–2★',
+      sub:pairArrows(aM.neg,iM.neg,'down',ptsTxt),
       note:'lower is better · share of each platform\u2019s own written reviews'}),
 
     kpiCompare({label:'Store Conversion Rate',accent:'pink',
       a:aCvr,b:iCvr,fmt:v=>pc(v,2),lower:false,
-      sub:cp((AC.totals||{}).visitors)+' visitors vs '+cp((IC.totals||{}).impressions)+' impressions',
+      sub:pairArrows(convMove(AC,false),convMove(IC,true),'up',ptsTxt),
       note:'different denominators: Play counts listing visitors, App Store counts impressions'})]);
 
   /* ---- chart 1: star mix, as a share so volume does not decide the shape ---- */
@@ -1352,6 +1488,9 @@ function buildReviewFilters(all){
 function applyReviewFilters(all){
   const q=RVF.text.trim().toLowerCase();
   return all.filter(r=>
+    /* English only: a review with no English text yet (not translated, not
+       written in English) is left out. english is sent by aso.gs. */
+    r.english!==false &&
     dateAllowed(r.date||'') &&
     (!RVF.from  || (r.date||'')>=RVF.from) &&
     (!RVF.to    || (r.date||'')<=RVF.to) &&
@@ -1372,20 +1511,35 @@ function sortReviews(rows){
     return x.localeCompare(y)*d;
   });
 }
+/* Column order: Date · User Name · Rating · Lang · Themes · Device · Review.
+   Lang and Device exist only where the store supplies them (Google Play);
+   the App Store sheet has neither, so those two drop out on iOS. */
 function rvCols(){
   const F=rvFields();
-  const cols=[{key:'rating',label:'Rating',num:true,w:'11%'},{key:'date',label:'Date',w:'13%'}];
+  const cols=[{key:'date',label:'Date'},{key:'rating',label:'Rating',num:true}];
   if(F.language) cols.push({key:'language',label:'Lang'});
-  cols.push({key:'themes',label:'Themes'},{key:'text',label:'Review',txt:true,w:'50%'});
+  cols.push({key:'themes',label:'Themes'});
+  if(F.device) cols.push({key:'device',label:'Device'});
+  cols.push({key:'text',label:'Review',txt:true});
   return cols;
 }
+/* Cells in rvCols() order: Date · Rating · (Lang) · Themes ·
+   (Device) · Review. Placeholders the loader writes for empty cells
+   ("(unknown)", "(unspecified)") show as a dash. */
 function reviewRowCells(r,COLS,F){
+  const blank=v=>!v||/^\((unknown|unspecified|not set)\)$/i.test(String(v));
+  const dash='<span class="rv-none">—</span>';
   const cells=[
-    {v:'<span class="stars star'+Math.round(r.rating||0)+'">'+STARS(r.rating)+'</span>'},
-    '<span class="rv-number">'+shortDate(r.date)+'</span>'];
-  if(F.language) cells.push(esc(r.language).toUpperCase());
-  cells.push('<span class="chip main">'+esc(r.primary||'other')+'</span>'+ 
-    (r.themes||[]).filter(t=>t!==r.primary).map(t=>'<span class="chip">'+esc(t)+'</span>').join(''));
+    '<span class="rv-number">'+shortDate(r.date)+'</span>',
+    /* one compact badge - "5 ★" - toned by the rating (green 4-5, amber 3,
+       red 1-2) instead of a row of five small stars */
+    {v:'<span class="rv-rate r'+Math.round(r.rating||0)+'" title="'+STARS(r.rating)+'">'+Math.round(r.rating||0)+' ★</span>'}];
+  if(F.language) cells.push('<span class="rv-lang">'+esc(r.language).toUpperCase()+'</span>');
+  /* each theme tag carries its name in data-t so the stylesheet can give it
+     its own colour and dot (ads amber, praise green, complaint red …) */
+  const tag=(t,main)=>'<span class="chip'+(main?' main':'')+'" data-t="'+esc(String(t).toLowerCase())+'">'+esc(t)+'</span>';
+  cells.push(tag(r.primary||'other',true)+(r.themes||[]).filter(t=>t!==r.primary).map(t=>tag(t,false)).join(''));
+  if(F.device) cells.push(blank(r.device)?dash:'<span class="rv-dev" title="'+esc(r.device)+'">'+esc(r.device)+'</span>');
   cells.push(esc(r.textEnglish||r.textEn||r.text));
   return cells;
 }
@@ -1411,9 +1565,10 @@ function renderReviewTable(){
 
   if($('fCount')){
     const pending=!REVIEWS_READY[RVPLAT];
-    $('fCount').innerHTML='<b>'+nf(RVROWS.length,0)+'</b> of '+nf(all.length,0)+' reviews'+
-      (RVROWS.length?' · avg <b>'+nf(mean(RVROWS.map(r=>r.rating)),2)+'★</b>':'')+
-      (pending?' · <span style="color:var(--amber)">still loading…</span>':'');
+    /* count | average, as two parts of one chip (the divider is CSS) */
+    $('fCount').innerHTML='<span class="fc-n"><b>'+nf(RVROWS.length,0)+'</b> of '+nf(all.length,0)+' reviews</span>'+
+      (RVROWS.length?'<span class="fc-avg">avg <b>'+nf(mean(RVROWS.map(r=>r.rating)),2)+' ★</b></span>':'')+
+      (pending?'<span class="fc-load">still loading…</span>':'');
   }
 
   const COLS=rvCols();
@@ -1559,11 +1714,18 @@ function showView(name){
   document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===name));
   if($('reviewMenuBtn'))$('reviewMenuBtn').classList.toggle('active',name==='reviews');
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===name));
+  placeTabs(name);
   ensureRendered(name);
   /* Charts laid out while their container was hidden need a nudge once it is
      visible, or they keep the width they were built at. */
   requestAnimationFrame(()=>{Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}})});
   window.scrollTo({top:0,behavior:'instant'});
+}
+
+function placeTabs(name){
+  const tabs=document.querySelector('.tabs');
+  const row=document.querySelector('#'+name+' > .slide > .sh');
+  if(tabs&&row&&tabs.parentElement!==row)row.prepend(tabs);
 }
 
 /* ==========================================================================
@@ -1616,8 +1778,16 @@ let ASO_STAMP='';
    person who calls connect() from anywhere new. */
 let BOOT_CACHE=null;
 
+/* Shape of the stored copy. The server's stamp only moves when sheet DATA
+   moves, so a change in what the server SENDS (English-only review text, the
+   english flag) left an old copy - with untranslated review rows - being
+   painted and "verified" forever. Bump this whenever the payload shape
+   changes; a copy saved under another number is ignored and refetched. */
+const ASO_CACHE_SCHEMA=2;
+
 async function cacheSave(core, stamp){
   return SnapshotStore.put(ASO_STORE,{
+    schema: ASO_CACHE_SCHEMA,
     stamp: stamp||ASO_STAMP||'',
     who: sessionFingerprint(),
     /* checkedAt no longer decides whether to make a request - every load
@@ -1636,6 +1806,7 @@ async function cacheLoad(){
   try{
     const rec=await SnapshotStore.get(ASO_STORE);
     if(!rec||!rec.data)return null;
+    if(rec.schema!==ASO_CACHE_SCHEMA)return null;    // saved by older code; refetch
     if(rec.who!==sessionFingerprint())return null;   // different session; start clean
     return { at: rec.builtAt||0, core: rec.data, stamp: rec.stamp||'', checkedAt: rec.checkedAt||0 };
   }catch(e){ return null; }
@@ -1910,12 +2081,23 @@ async function connect(force){
     }
     /* PHASE 1 - browser/server 30-day core window. The visual filter remains
        Last 7 Days, while 7/14/30-day switches all render from this one block. */
+    /* Refresh must also replace the review rows on screen. applyCore keeps
+       the old rows while a core reply omits them, and ensureReviewsForRange
+       skips a window it believes it already holds - together they kept old
+       review text alive through every Refresh. Forget both first. */
+    if(force){
+      if(A&&A.reviews){A.reviews.all=[];A.reviews.allOmitted=true;}
+      if(I&&I.reviews){I.reviews.all=[];I.reviews.allOmitted=true;}
+      REVIEW_WINDOW=null;
+    }
     const win30=rollingWindow(PERF.firstWindowDays);
     /* Refresh follows the same key as a cold opening. The forced core:d30
        rebuild refreshes both platform source caches; reviews:d7 is then read
        from that fresh source and persisted under its normal opening key. */
     const core30=await fetchPart('core',force,win30);
     applyCore(core30);
+    // the core reply carries no review rows, so nothing is held yet
+    if(force)REVIEW_WINDOW=null;
     /* Review-derived cards need row-level data for sentiment and themes. Load
        the small opening review window before the first visible render, then
        persist the merged result so later openings paint it in one pass. */
@@ -1980,6 +2162,7 @@ async function connect(force){
   }
 }
 
+placeTabs(ACTIVE);
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 document.querySelectorAll('[data-review-platform]').forEach(b=>b.onclick=()=>{
   RVPLAT=b.dataset.reviewPlatform;

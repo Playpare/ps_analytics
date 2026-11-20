@@ -1,10 +1,10 @@
 /* eslint-disable */
 /* --- from till_date_report.html · block 5ac8b7ca90 --- */
-Chart.defaults.font.family='Poppins';
-Chart.defaults.font.size=11;
+Chart.defaults.font.family="'Segoe UI', system-ui, Arial, sans-serif";
+Chart.defaults.font.size=14.5;
 Chart.defaults.font.weight='500';
-Chart.defaults.color='#c0ccdf';
-Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
+Chart.defaults.color='#dce3ef';
+Chart.defaults.plugins.legend.labels.font={family:"'Segoe UI', system-ui, Arial, sans-serif",size:15.5,weight:'500'};
 /* ---- shared theme, synced across the hub and every report ----
    The choice is written to localStorage, which same-origin documents share.
    A `storage` event fires in every OTHER document when one of them writes,
@@ -147,11 +147,11 @@ const API = {
         lastError=e;
         const retryable=e.retryable===true||e.name==='AbortError'||e instanceof TypeError;
         if(!retryable||attempt===4)throw e;
-        setDataStatus(e?.authFailure?`Till Date authentication rejected — retrying automatically (${attempt}/4)…`:`Till Date request interrupted — retrying automatically (${attempt}/4)…`);
+        setDataStatus(e?.authFailure?`Life Time authentication rejected — retrying automatically (${attempt}/4)…`:`Life Time request interrupted — retrying automatically (${attempt}/4)…`);
         await new Promise(resolve=>setTimeout(resolve,Math.min(10000,1500*Math.pow(2,attempt-1))));
       }
     }
-    throw lastError||new Error('Till Date request failed');
+    throw lastError||new Error('Life Time request failed');
   }
 };
 
@@ -352,7 +352,7 @@ function buildLogAnnotations(dates, plat){
         type:'line', xMin:idx, xMax:idx,
         borderColor: rgba(color,0.85), borderWidth:1.5, borderDash:[5,4],
         label:{display:false, content:['\u25CF '+ptag+' change log', cl.label], position:'start',
-          backgroundColor:cv('--card2'), color:cv('--t1'), font:{family:'Poppins',size:10}, padding:6, borderRadius:4},
+          backgroundColor:cv('--card2'), color:cv('--t1'), font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:13.5}, padding:7, borderRadius:6},
         enter({element}){element.label.options.display=true; return true;},
         leave({element}){element.label.options.display=false; return true;}
       };
@@ -367,7 +367,7 @@ function buildLogAnnotations(dates, plat){
           type:'line', xMin:idx, xMax:idx,
           borderColor: rgba(color,0.85), borderWidth:1.5, borderDash:[1,3],
           label:{display:false, content:['\u25CF '+ptag+' rollout '+(k==='start'?'start':'end'), ro.name], position:'end',
-            backgroundColor:cv('--card2'), color:cv('--t1'), font:{family:'Poppins',size:10}, padding:6, borderRadius:4},
+            backgroundColor:cv('--card2'), color:cv('--t1'), font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:13.5}, padding:7, borderRadius:6},
           enter({element}){element.label.options.display=true; return true;},
           leave({element}){element.label.options.display=false; return true;}
         };
@@ -380,18 +380,18 @@ function buildLogAnnotations(dates, plat){
 function dsLine(label,data,color,dash){
   /* spanGaps: a missing day mid-series bridges rather than splitting the line
      in two, which reads as a rendering fault rather than absent data. */
-  return {label,data,borderColor:color,backgroundColor:rgba(color,0.08),borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0.3,fill:false,spanGaps:true,borderDash:dash?[4,4]:undefined};
+  return {label,data,borderColor:color,backgroundColor:rgba(color,0.08),borderWidth:2.75,pointRadius:0,pointHoverRadius:5,tension:0.3,fill:false,spanGaps:true,borderDash:dash?[4,4]:undefined};
 }
 
 const BASE_CFG = {
   responsive:true, maintainAspectRatio:false,
   plugins:{
-    legend:{labels:{color:cv('--t2'),font:{family:'Poppins',size:12.5,weight:'400'}}},
-    tooltip:{backgroundColor:cv('--card2'),borderColor:cv('--borderB'),borderWidth:1,titleColor:cv('--t1'),bodyColor:cv('--t2'),padding:10,titleFont:{family:'Poppins'},bodyFont:{family:'DM Mono'}}
+    legend:{labels:{color:cv('--t2'),font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:15.5,weight:'500'}}},
+    tooltip:{backgroundColor:cv('--card2'),borderColor:cv('--borderB'),borderWidth:1,titleColor:cv('--t1'),bodyColor:cv('--t2'),padding:10,titleFont:{family:"'Segoe UI', system-ui, Arial, sans-serif"},titleFont:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:14.5,weight:'600'},bodyFont:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:14}}
   },
   scales:{
-    x:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'Poppins',size:11,weight:'400'},maxTicksLimit:12}},
-    y:{grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'Poppins',size:11,weight:'400'}},beginAtZero:true}
+    x:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:15,weight:'500'},maxTicksLimit:12}},
+    y:{grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:15,weight:'500'}},beginAtZero:true}
   }
 };
 
@@ -432,18 +432,18 @@ function mkChart(id,type,labels,datasets,yFmt,yOpts,logAnnotations){
   if(!el)return null;
   if(el._chart)el._chart.destroy();
   if(type==='line') datasets=withTrendLines(datasets);
-  const yAxis={grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'Poppins',size:11,weight:'400'},callback:yFmt||undefined},beginAtZero:true};
+  const yAxis={grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:15,weight:'500'},callback:yFmt||undefined},beginAtZero:true};
   if(yOpts)Object.assign(yAxis,yOpts);
   const cfg={
     responsive:true, maintainAspectRatio:false,
     plugins:{
-      legend:{labels:{color:cv('--t2'),font:{family:'Poppins',size:12.5,weight:'400'}}},
-      tooltip:{mode:'index',intersect:false,backgroundColor:cv('--card2'),borderColor:cv('--borderB'),borderWidth:1,titleColor:cv('--t1'),bodyColor:cv('--t2'),padding:10,titleFont:{family:'Poppins'},bodyFont:{family:'DM Mono'},callbacks:{label:function(ctx){var v=ctx.parsed.y;var s=(v==null)?'\u2014':(yFmt?yFmt(v):v.toLocaleString());return ctx.dataset.label+': '+s;}}},
+      legend:{labels:{color:cv('--t2'),font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:15.5,weight:'500'}}},
+      tooltip:{mode:'index',intersect:false,backgroundColor:cv('--card2'),borderColor:cv('--borderB'),borderWidth:1,titleColor:cv('--t1'),bodyColor:cv('--t2'),padding:10,titleFont:{family:"'Segoe UI', system-ui, Arial, sans-serif"},titleFont:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:14.5,weight:'600'},bodyFont:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:14},callbacks:{label:function(ctx){var v=ctx.parsed.y;var s=(v==null)?'\u2014':(yFmt?yFmt(v):v.toLocaleString());return ctx.dataset.label+': '+s;}}},
       annotation:{annotations:logAnnotations||{}}
     },
     interaction:{mode:'index',intersect:false},
     scales:{
-      x:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'Poppins',size:11,weight:'400'},maxTicksLimit:12}},
+      x:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:15,weight:'500'},maxTicksLimit:12}},
       y:yAxis
     }
   };
@@ -479,16 +479,16 @@ function dateInPeriod(s,per){
 }
 
 // ── STATE ──
-let ovPlat='ios', ovPer='30d';
+let ovPlat='ios', ovPer='90d';
 let ltvCountry='all', ltvMetric='d0', ltvPlat='ios';
 let stickPlat='ios', stickMetric='stickiness';
 let whalePlat='ios', retPlat='ios', retMetric='all', ratioPlat='ios', ftpPlat='ios';
-let iapPlat='ios', iapPer='30d';
+let iapPlat='ios', iapPer='90d';
 let cohPlat='android', cohType='Rewarded';
-let netRevPlat='android', netRevNetwork='all', netRevPer='30d';
+let netRevPlat='android', netRevNetwork='all', netRevPer='90d';
 let purRatePlat='both';
 
-let adsPlat='ios', adsType='all', adsPer='30d';
+let adsPlat='ios', adsType='all', adsPer='90d';
 
 // ── IAP ──
 function iapFilter(v,btn){
@@ -1034,7 +1034,7 @@ function renderNetRev(){
       const {ctx}=chart;
       const meta=chart.getDatasetMeta(0);
       ctx.save();
-      ctx.font="400 12.5px Poppins, system-ui, sans-serif";
+      ctx.font="400 14px 'Segoe UI', system-ui, sans-serif";
       ctx.fillStyle=cv('--t1');
       ctx.textBaseline='middle';
       meta.data.forEach((bar,i)=>{
@@ -1056,7 +1056,7 @@ function renderNetRev(){
       layout:{padding:{right:40}},
       plugins:{
         legend:{display:false},
-        tooltip:{backgroundColor:cv('--card2'),borderColor:cv('--borderB'),borderWidth:1,titleColor:cv('--t1'),bodyColor:cv('--t2'),padding:10,titleFont:{family:'Poppins'},bodyFont:{family:'DM Mono'},
+        tooltip:{backgroundColor:cv('--card2'),borderColor:cv('--borderB'),borderWidth:1,titleColor:cv('--t1'),bodyColor:cv('--t2'),padding:10,titleFont:{family:"'Segoe UI', system-ui, Arial, sans-serif"},titleFont:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:14.5,weight:'600'},bodyFont:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:14},
           callbacks:{label:ctx=>{
             const [,rev]=entries[ctx.dataIndex];
             return ctx.parsed.x.toFixed(2)+'% \u2014 '+fmtMoney(rev);
@@ -1064,8 +1064,8 @@ function renderNetRev(){
         }
       },
       scales:{
-        x:{grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:'Poppins',size:11,weight:'400'},callback:v=>v+'%'},beginAtZero:true, suggestedMax:maxShare*1.15},
-        y:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:'Poppins',size:11,weight:'400'}}}
+        x:{grid:{color:cv('--grid')},ticks:{color:cv('--t2'),font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:15,weight:'500'},callback:v=>v+'%'},beginAtZero:true, suggestedMax:maxShare*1.15},
+        y:{grid:{color:cv('--grid')},ticks:{color:cv('--tick'),font:{family:"'Segoe UI', system-ui, Arial, sans-serif",size:15,weight:'500'}}}
       }
     }
   });
@@ -1208,7 +1208,7 @@ function renderAds(){
   const avrDates=dates.filter(dt=>dt>=avrStart);
   const avrLabels=avrDates.map(fmtDate);
   const avrVals=avrDates.map(dt=>(byDate[dt].avr/byDate[dt].n_avr)*100);
-  mkChart('c-avr','line',avrLabels,[dsLine('Ad Viewer Rate %',avrVals,CARD_COLORS.adsViewer)],v=>v.toFixed(1)+'%',null,buildLogAnnotations(avrDates,adsPlat));
+  renderAvrByType(avrStart);
 
   const ecpmStart='2024-07-24';
   const ecpmDates=dates.filter(dt=>dt>=ecpmStart);
@@ -1255,6 +1255,43 @@ function renderRevShare(){
 }
 
 // ── ARPDAU per ad type (compares all four types; uses Platform + Period only) ──
+/* Ad Viewer Rate by ad type - the same shape as ARPDAU by Ad Type: one line
+   per type, each sourced only from rows whose ad_type matches that exact name
+   (ALL<-ALL, Rewarded<-Rewarded ...), never re-derived from the others. A
+   day's rate per type is the mean of that type's ad_viewer_rate across apps,
+   the same rule the single-line chart used, so the ALL line is unchanged.
+   Honours Platform, Ad Type and the date filter. */
+function renderAvrByType(avrStart){
+  const isUS = adsPlat==='us_ios' || adsPlat==='us_android';
+  let d = isUS ? (RAW.user_activity_us||[]) : RAW.user_activity;
+  if(adsPlat==='ios'||adsPlat==='us_ios') d=d.filter(r=>r.app&&r.app.includes('iOS'));
+  else if(adsPlat==='android'||adsPlat==='us_android') d=d.filter(r=>r.app&&r.app.includes('Android'));
+  d=d.filter(r=>dateInPeriod(r.date,adsPer) && r.date>=avrStart);
+
+  const TYPES=['ALL','Rewarded','Interstitial','Banner','App Open'];
+  const TCOL={ALL:CARD_COLORS.adsArpdau[0],Rewarded:CARD_COLORS.adsArpdau[1],Interstitial:CARD_COLORS.adsArpdau[2],Banner:CARD_COLORS.adsArpdau[3],'App Open':CARD_COLORS.adsArpdau[4]};
+  const shown = (adsType==='all') ? TYPES : TYPES.filter(t=>t===adsType);
+
+  const byDate={};
+  d.forEach(r=>{
+    if(shown.indexOf(r.ad_type)<0) return;
+    const b=byDate[r.date]||(byDate[r.date]={});
+    const x=b[r.ad_type]||(b[r.ad_type]={sum:0,n:0});
+    x.sum+=(r.ad_viewer_rate||0); x.n++;
+  });
+  const dates=Object.keys(byDate).sort();
+  // trailing days the ad pipeline has not finished yet read as zero, not as a drop
+  while(dates.length>1){
+    const last=byDate[dates[dates.length-1]];
+    if(shown.every(t=>!(last[t]&&last[t].sum>0))) dates.pop(); else break;
+  }
+  const labels=dates.map(fmtDate);
+  const ds=shown.map(t=>dsLine(t==='ALL'?'All types':t, dates.map(dt=>{
+    const x=byDate[dt][t]; return x&&x.n ? (x.sum/x.n)*100 : null;
+  }), TCOL[t]));
+  mkChart('c-avr','line',labels,ds,v=>v.toFixed(1)+'%',null,buildLogAnnotations(dates,adsPlat));
+}
+
 function renderArpdauByType(){
   const isUS = adsPlat==='us_ios' || adsPlat==='us_android';
   let d = isUS ? (RAW.user_activity_us||[]) : RAW.user_activity;
@@ -1299,6 +1336,9 @@ function renderArpdauByType(){
 // ── NAV ──
 let activeSection='overview';
 function renderActive(){
+  /* text the charts don't colour explicitly follows the page's secondary
+     grey for the current theme */
+  const t2=cv('--t2'); if(t2) Chart.defaults.color=t2;
   if(activeSection==='overview') renderOverview();
   else if(activeSection==='iap') renderIAP();
   else if(activeSection==='ads') renderAds();
@@ -1616,7 +1656,9 @@ async function rebuildRawFromGoogleSheet(windowDays){
    Stage 2 widens to 90 days in the background. Full history is deliberately
    not downloaded during startup. The generation counter stops a stale
    background fetch from clobbering a newer Refresh. */
-const LOAD_STAGES = [30, 90];
+/* Life Time opens on 90 days, so the first request IS the 90-day window -
+   no 30-day first paint that would sit under a "Last 90 days" label. */
+const LOAD_STAGES = [90];
 let loadGeneration = 0;
 
 async function refreshData(){
@@ -1838,9 +1880,9 @@ function weekWindow(weeks, anchor){
     [single, start, end].forEach(i=>{ i.min = min; i.max = max; });
     single.value = max; start.value = min; end.value = max;
 
-    /* The first server payload contains 30 days, so the visual filter must
-       match it immediately instead of showing a misleading 90-day selection. */
-    select.value = '30';
+    /* Life Time always opens on the last 90 days - the same window the
+       first server request loads. */
+    select.value = '90';
     box.classList.remove('single','custom');
 
     select.onchange = () => {

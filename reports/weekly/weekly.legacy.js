@@ -5,6 +5,48 @@
    the web app URL arrives as ?api= and the token from sessionStorage. */
 window.WEEKLY_LIVE_CONFIG = { live: true };
 
+/* Keep slide titles focused on the report itself. These platform context lines
+   repeat information already present in the tab and slide headings. */
+const REMOVED_PLATFORM_LINES = [
+  'Daily Trends',
+  'Ad Format Deep-Dive',
+  'Immersive Network Comparison',
+  'Where Ad Revenue Comes From',
+  'IAP Product Share',
+  'ARPPU · Purchase Rate',
+  'In-App Purchase Detail',
+  'All Networks + Google Ad Manager Fill Rate',
+  'Network Revenue Share'
+];
+document.querySelectorAll('.eyebrow').forEach(el=>{
+  const copy=el.textContent||'';
+  if(REMOVED_PLATFORM_LINES.some(line=>copy.includes(line))||
+     copy.includes('Platform: Android · Engagement & Retention')||
+     copy.includes('Platform: Android · Playtime · Session · Progression · FTUE')||
+     copy.includes('Platform: iOS · Engagement & Retention')||
+     copy.includes('Platform: iOS · Playtime · Session · Progression · FTUE'))el.classList.add('copy-hidden');
+});
+const REMOVED_CHART_HELPERS = [
+  'dashed = competitor avg',
+  'dashed = industry benchmark',
+  'no competitor benchmark available',
+  'daily, 90d',
+  'payers ÷ active',
+  'sales ÷ paying users',
+  'seconds · dashed = trend',
+  'seconds, cohort day 0 · dashed = trend',
+  'seconds, daily average · dashed = trend',
+  '% still active daily · dashed = trend'
+];
+document.querySelectorAll('h2 span:not(.cohort-tog)').forEach(el=>{
+  const copy=(el.textContent||'').trim();
+  if(REMOVED_CHART_HELPERS.some(line=>copy.includes(line))||copy==='· daily')el.remove();
+});
+document.querySelectorAll('.card div').forEach(el=>{
+  const copy=(el.textContent||'').trim();
+  if(copy.startsWith('Top networks:')||copy.startsWith('Reporting week W4 ='))el.remove();
+});
+
 /* --- from weekly_report.html · block e28313ffee --- */
 /* ---- API client: URL arrives via ?api= from the hub, token via sessionStorage ---- */
 window.__themeRerender = function(){ if (STATE && STATE.data) renderAll(STATE.data); };
@@ -395,9 +437,25 @@ function lineChart(id,labels,series,yFormatter){
   const formatter=yFormatter||num,options=commonOptions(formatter,false);options.layout={padding:{right:82}};options.plugins.liveEndLabels={formatter};
   STATE.charts[id]=new Chart(el,{type:'line',data:{labels,datasets},options,plugins:[liveEndLabels]});
 }
+/* Donuts match the UA Report: a ring with gaps between slices, the total in
+   the hole (src/shared/donut.js) and shares in the legend chips, so nothing is
+   printed on the slices. The caption says what the middle number totals. */
+function donutCaption(id){
+  if(/Split$/.test(id))return 'Total revenue';
+  if(/IapPie$/.test(id))return 'Total IAP';
+  if(/NetPie$/.test(id))return 'Total ad revenue';
+  return 'Total';
+}
 function doughnut(id,labels,values,colors,labelColor){
   destroyChart(id);const el=document.getElementById(id);if(!el)return;const valid=values.map(v=>finite(v)&&v>0?v:0);if(!valid.some(Boolean)){noChart(id,'No live data returned for this chart');return;}
-  STATE.charts[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data:valid,backgroundColor:colors,borderColor:'#0b0c0f',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,animation:false,cutout:'66%',plugins:{legend:{display:false},livePiePercentLabels:{color:labelColor||'#000'},tooltip:{callbacks:{label:c=>' '+c.label+': '+money(c.raw,0)}}}},plugins:[livePiePercentLabels]});
+  STATE.charts[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data:valid,backgroundColor:colors,borderWidth:0,spacing:3,borderRadius:5,hoverOffset:6,radius:'94%'}]},options:{responsive:true,maintainAspectRatio:false,animation:false,cutout:'66%',layout:{padding:6},plugins:{legend:{display:false},donutCenter:{label:donutCaption(id)},donutLabels:{display:true},tooltip:{callbacks:{label:c=>' '+c.label+': '+money(c.raw,0)}}}}});
+}
+/* Fills a legend container with the UA-style "name [share%]" rows. */
+function donutLegend(el,labels,values,colors,fmt){
+  if(!el||!window.__donut)return false;
+  el.classList.add('dl','dl-list');el.style.gridTemplateRows='';
+  el.innerHTML=window.__donut.donutLegendHTML(labels,values,colors,fmt);
+  return true;
 }
 function barChart(id,labels,series){
   destroyChart(id);const el=document.getElementById(id);if(!el)return;
@@ -548,7 +606,7 @@ function renderDates(data){
   });
   document.querySelectorAll('.h1,.l,h2,th').forEach(el=>{[...el.childNodes].filter(n=>n.nodeType===3).forEach(n=>{n.nodeValue=n.nodeValue.replace(/W4/g,'Current').replace(/W3/g,'Previous').replace(/\d+-Day/g,(m.trendDays||90)+'-Day').replace(/\d+d\b/g,(m.trendDays||90)+'d');});});
   const overview=slide('Total Monetization Overview'),trendHeading=overview?.querySelector('h2');
-  if(trendHeading)trendHeading.textContent='Combined Revenue by Week | Monday-Sunday totals inside the selected range';
+  if(trendHeading)trendHeading.textContent='Combined Revenue by Week';
 }
 
 function renderOverview(data){
@@ -565,12 +623,18 @@ function renderOverview(data){
   const weeklyAd=weekly.map(x=>(x.iOS.W_current.totad||0)+(x.Android.W_current.totad||0));
   const weeklyIap=weekly.map(x=>iapRevenue(x.iOS.W_current,x)+iapRevenue(x.Android.W_current,x));
   barChart('trendChart',barLabels.length?barLabels:[shortDate(data.meta.curStart)+'-'+shortDate(data.meta.curEnd)],[{label:'Ad Revenue',data:barLabels.length?weeklyAd:[(iw.totad||0)+(aw.totad||0)],color:'#4d9fff'},{label:'IAP Net',data:barLabels.length?weeklyIap:[iIap+aIap],color:'#00e5c3'}]);
-  /* White on this pair: the ring uses a dark platform colour and a translucent
-     tint of it, neither of which black reads against. */
-  doughnut('iosSplit',['Ad Revenue','IAP'],[iw.totad,iIap],['#4d9fff','rgba(77,159,255,.42)'],'#fff');
-  doughnut('andSplit',['Ad Revenue','IAP'],[aw.totad,aIap],['#00ad99','rgba(0,126,111,.72)'],'#fff');
-  const vals=[iw.totad/(iTot||1),iIap/(iTot||1),aw.totad/(aTot||1),aIap/(aTot||1)];
-  [...s.querySelectorAll('.legi .legv')].slice(0,4).forEach((e,i)=>e.textContent=pct(vals[i],0,true));
+  const iosCols=['#4d9fff','rgba(77,159,255,.42)'],andCols=['#00ad99','rgba(0,126,111,.72)'];
+  doughnut('iosSplit',['Ad Revenue','IAP'],[iw.totad,iIap],iosCols,'#fff');
+  doughnut('andSplit',['Ad Revenue','IAP'],[aw.totad,aIap],andCols,'#fff');
+  /* The split legends become the UA-style "name [share%]" rows, one list per
+     platform under its ring. (This used to rewrite the first four .legv on the
+     slide by position, which would hit other cards' legends.) */
+  const splitLegs=[...s.querySelectorAll('.split-leg')];
+  [[splitLegs[0],'iOS',[iw.totad,iIap],iosCols],[splitLegs[1],'Android',[aw.totad,aIap],andCols]].forEach(([leg,name,vals,cols])=>{
+    if(!leg||!window.__donut)return;
+    leg.classList.add('dl','dl-split');
+    leg.innerHTML='<div class="dl-head">'+name+'</div>'+window.__donut.donutLegendHTML(['Ad Revenue','IAP Revenue'],vals.map(v=>finite(v)?v:0),cols);
+  });
 }
 
 function showLiveError(err){
@@ -607,15 +671,14 @@ function renderPlacementShare(data,platform,s){
   destroyChart(id);
   const el=document.getElementById(id);
   if(el)STATE.charts[id]=new Chart(el,{type:'doughnut',
-    data:{labels:items.map(x=>x.placement),datasets:[{data:items.map(x=>x.impressions),backgroundColor:items.map((x,i)=>PLACEMENT_COLORS[i%PLACEMENT_COLORS.length]),borderColor:'#0b0c0f',borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,cutout:'55%',plugins:{legend:{display:false},
-      livePiePercentLabels:{color:'#000'},
-      tooltip:{callbacks:{label:c=>' '+c.label+': '+num(c.raw)+' imp ('+pct(c.raw/(total||1),1,true)+')'}}}},
-    /* This chart was built without the percent-label plugin, so its slices
-       never carried a value the way every other donut here does. */
-    plugins:[livePiePercentLabels]});
-  const legend=card.querySelector('.legi')?.parentElement;
-  if(legend)legend.innerHTML=items.map((x,i)=>'<div class="legi" style="margin-bottom:6px"><span class="legn">'+(i+1)+'</span><span class="dot" style="background:'+PLACEMENT_COLORS[i%PLACEMENT_COLORS.length]+'"></span><span style="font-size:10.5px">'+escapeHtml(x.placement)+'</span><span class="legv">'+pct(x.share,1,true)+'</span></div>').join('');
+    data:{labels:items.map(x=>x.placement),datasets:[{data:items.map(x=>x.impressions),backgroundColor:items.map((x,i)=>PLACEMENT_COLORS[i%PLACEMENT_COLORS.length]),borderWidth:0,spacing:3,borderRadius:5,hoverOffset:6,radius:'94%'}]},
+    /* Same donut as the UA Report; this one totals impressions, not dollars. */
+    options:{responsive:true,maintainAspectRatio:false,animation:false,cutout:'66%',layout:{padding:6},plugins:{legend:{display:false},
+      donutCenter:{label:'Impressions',format:v=>window.__donut?window.__donut.compactNumber(v):num(v)},donutLabels:{display:true},
+      tooltip:{callbacks:{label:c=>' '+c.label+': '+num(c.raw)+' imp ('+pct(c.raw/(total||1),1,true)+')'}}}}});
+  const legend=card.querySelector('.legi')?.parentElement||card.querySelector('.dl-list');
+  if(legend&&donutLegend(legend,items.map(x=>x.placement),items.map(x=>x.impressions),items.map((x,i)=>PLACEMENT_COLORS[i%PLACEMENT_COLORS.length]),window.__donut&&window.__donut.compactNumber)){}
+  else if(legend)legend.innerHTML=items.map((x,i)=>'<div class="legi" style="margin-bottom:6px"><span class="legn">'+(i+1)+'</span><span class="dot" style="background:'+PLACEMENT_COLORS[i%PLACEMENT_COLORS.length]+'"></span><span style="font-size:10.5px">'+escapeHtml(x.placement)+'</span><span class="legv">'+pct(x.share,1,true)+'</span></div>').join('');
   const note=[...card.querySelectorAll('div')].find(x=>clean(x.textContent).startsWith('Top placement:'));
   if(note){
     const top=items[0],second=items[1],color=platform==='iOS'?'var(--ios)':'var(--and)';
@@ -736,7 +799,7 @@ function renderIAP(data,platform){
   const name=platform==='iOS'?'iOS':'Android',pre=platform==='iOS'?'ios':'and',w=data[platform].W_current,p=data[platform].W_prev,products=Object.entries(w.products||{}).filter(x=>finite(x[1])&&x[1]>0).sort((a,b)=>b[1]-a[1]),prodTotal=products.reduce((a,x)=>a+x[1],0);
   const shareSlide=slide(name+' IAP Revenue Breakdown');doughnut(pre+'IapPie',products.map(x=>x[0]),products.map(x=>x[1]),products.map((x,i)=>COLORS[i%COLORS.length]));
   const shareHeading=shareSlide&&[...shareSlide.querySelectorAll('h2')].find(h=>clean(h.textContent).includes('Products by Revenue Share'));if(shareHeading)shareHeading.textContent='Products by Revenue Share (Current)';
-  const legend=shareSlide?.querySelector('.legend2');if(legend){legend.innerHTML=products.map((x,i)=>'<div class="legi2"><span class="lrank">'+(i+1)+'</span><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><span class="lname">'+escapeHtml(x[0])+'</span><span class="legv">'+pct(x[1]/(prodTotal||1),1,true)+'</span></div>').join('');legend.style.gridTemplateRows='repeat('+Math.max(1,Math.ceil(products.length/2))+',auto)';}
+  const legend=shareSlide?.querySelector('.legend2');if(legend&&donutLegend(legend,products.map(x=>x[0]),products.map(x=>x[1]),products.map((x,i)=>COLORS[i%COLORS.length]))){}else if(legend){legend.innerHTML=products.map((x,i)=>'<div class="legi2"><span class="lrank">'+(i+1)+'</span><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><span class="lname">'+escapeHtml(x[0])+'</span><span class="legv">'+pct(x[1]/(prodTotal||1),1,true)+'</span></div>').join('');legend.style.gridTemplateRows='repeat('+Math.max(1,Math.ceil(products.length/2))+',auto)';}
   const totalNote=[...(shareSlide?.querySelectorAll('.note')||[])][0];if(totalNote)totalNote.innerHTML='<b>Total product revenue (Current):</b> '+money(prodTotal)+' | '+deltaText(prodTotal,sum(p.products||{}),' WoW')+' | live values';
   lineChart(pre+'ArppuLine',data.trend?.[platform]?.iap?.labels||data.trend?.labels||[],[{label:'ARPPU',data:data.trend?.[platform]?.iap?.arppu,color:platform==='iOS'?'#4d9fff':'#00e5c3',fill:true}],v=>money(v,2));
   lineChart(pre+'PrateLine',data.trend?.[platform]?.iap?.labels||data.trend?.labels||[],[{label:'Purchase Rate',data:(data.trend?.[platform]?.iap?.prate||[]).map(v=>finite(v)?v*100:null),color:platform==='iOS'?'#4d9fff':'#00e5c3',fill:true}],v=>num(v,2)+'%');
@@ -817,7 +880,7 @@ function renderNetworks(data,platform){
   const ranked=names.filter(n=>(current[n]?.revenue||0)>0);doughnut(pre+'NetPie',ranked,ranked.map(n=>current[n].revenue),ranked.map((n,i)=>COLORS[i%COLORS.length]));
   const shareTotal=share&&[...share.querySelectorAll('div')].find(el=>{const directBold=[...el.children].find(child=>child.tagName==='B');return directBold&&clean(directBold.textContent).startsWith('Total Ad Network Rev (');});
   if(shareTotal)shareTotal.innerHTML='<b style="color:var(--t1)">Total Ad Network Rev (Current):</b> '+money(total)+' · '+ranked.length+' networks';
-  const legend=share?.querySelector('.legend2');if(legend)legend.innerHTML=ranked.map((n,i)=>'<div class="legi2"><span class="lrank">'+(i+1)+'</span><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><span class="lname">'+escapeHtml(n)+'</span><span class="legv">'+pct(current[n].revenue/(total||1),1,true)+'</span></div>').join('');
+  const legend=share?.querySelector('.legend2');if(legend&&donutLegend(legend,ranked,ranked.map(n=>current[n].revenue),ranked.map((n,i)=>COLORS[i%COLORS.length]))){}else if(legend)legend.innerHTML=ranked.map((n,i)=>'<div class="legi2"><span class="lrank">'+(i+1)+'</span><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><span class="lname">'+escapeHtml(n)+'</span><span class="legv">'+pct(current[n].revenue/(total||1),1,true)+'</span></div>').join('');
 }
 function validAnalyticsSeries(values,test){return (values||[]).map((value,index)=>finite(value)&&(!test||test(value,index))?value:null);}
 

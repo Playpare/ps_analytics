@@ -1,0 +1,127 @@
+/* ---------------------------------------------------------------------------
+ * report-type.css — the Negative Spend / Life Time type system for every
+ * other page (UA, Monetization, ASO and the hub's own sections).
+ *
+ * Fonts, sizes, weights, control shapes and chart heights ONLY. No colour is
+ * set anywhere in this file: each page keeps its own palette. Import it after
+ * the page's own stylesheet; `html body` lifts it over their !important rules.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  --type-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  /* the hub's own font variables point at the one family too */
+  --mono: var(--type-family);
+  --sans: var(--type-family);
+}
+/* :not(#_):not(#_) gives this two-id weight: the older report stylesheets pin
+   Poppins / DM Mono / Trebuchet with !important on class and even id
+   selectors (#reviews td.num …), which would otherwise outrank a plain `*`. */
+html body *:not(#_):not(#_), html body *:not(#_):not(#_)::before, html body *:not(#_):not(#_)::after {
+  font-family: var(--type-family) !important;
+}
+html body {
+  font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========================= reports (UA, Monetization, ASO) ========================= */
+
+/* top bar: tabs + buttons as 38px pills */
+html body .top .tabs { gap: 8px }
+html body .top .tabs button, html body .top .btn {
+  height: 38px; padding: 0 18px !important; border-radius: 999px !important;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important;
+}
+html body .top .tabs button.active, html body .top .btn.primary { font-weight: 600 !important }
+html body .status { font-size: 13px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+
+/* in-page toggles */
+html body .pill, html body .cohort-tog button, html body .mx-btn, html body .seg button {
+  font-size: 14px !important; font-weight: 500 !important; letter-spacing: 0 !important;
+}
+html body .pill { height: 36px; padding: 0 16px !important; border-radius: 999px !important; display: inline-flex; align-items: center }
+html body .pill.active, html body .cohort-tog button.on, html body .cohort-tog button.active { font-weight: 600 !important }
+html body .ctrl-label { font-size: 12px !important; font-weight: 600 !important; letter-spacing: .12em !important; text-transform: uppercase }
+html body .chan-filter, html body .ctrl-select { font-size: 14px !important; font-weight: 500 !important }
+
+/* date controls (the pill itself is the shared rounded popup) */
+html body .date-span { font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+html body .date-controls input[type=date] {
+  height: 38px; border-radius: 999px !important; padding: 0 14px !important;
+  font-size: 14px !important; font-weight: 600 !important;
+}
+html body .date-confirm {
+  height: 38px; padding: 0 18px !important; border-radius: 999px !important;
+  font-size: 14px !important; font-weight: 600 !important;
+}
+
+/* headings */
+html body .eyebrow { font-size: 13px !important; font-weight: 600 !important; letter-spacing: .12em !important; text-transform: uppercase }
+html body .h1 { font-size: 34px !important; font-weight: 700 !important; letter-spacing: -.01em !important; line-height: 1.15 }
+html body .subhead h2, html body .h2s { font-size: 24px !important; font-weight: 700 !important; letter-spacing: -.01em !important }
+html body .subhead p, html body .note { font-size: 15px !important; font-weight: 400 !important; letter-spacing: 0 !important }
+html body .card h2, html body .card-title, html body .card-head h2 {
+  font-size: 20px !important; font-weight: 700 !important; letter-spacing: -.01em !important; line-height: 1.35;
+}
+html body .card-sub { font-size: 15px !important; font-weight: 400 !important; letter-spacing: 0 !important }
+
+/* KPI cards */
+html body .kpi .l, html body .kpi-label {
+  font-size: 13px !important; font-weight: 500 !important; letter-spacing: .1em !important; text-transform: uppercase;
+}
+html body .kpi .v, html body .kpi-value {
+  font-size: clamp(24px, 2.2vw, 32px) !important; font-weight: 700 !important; letter-spacing: -.02em !important; line-height: 1.15;
+}
+html body .kpi .d, html body .kpi .cmp, html body .kpi-sub, html body .kpi-sub * {
+  font-size: 16px !important; font-weight: 600 !important; letter-spacing: 0 !important; line-height: 1.4;
+}
+
+/* tables */
+/* (the hub's spreadsheet mirror, table.mx, is dense on purpose and keeps its own sizes) */
+html body table:not(.mx) th {
+  font-size: 14px !important; font-weight: 500 !important; letter-spacing: 0 !important; text-transform: none !important;
+}
+html body table:not(.mx) td { font-size: 15px !important; font-weight: 400 !important; letter-spacing: 0 !important }
+html body table:not(.mx) td.num { font-weight: 600 !important; font-feature-settings: "tnum", "zero" }
+
+/* legends, footer */
+html body .legend, html body .legend * { font-size: 14px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+html body .sf, html body .sf * { font-size: 13px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+
+/* trend charts a bit bigger. Charts that already have a larger, more
+   specific height (pies, two-up charts, the day-by-day chart) keep it. */
+html body .chartbox       { height: 290px }
+html body .chartbox.tall  { height: 360px }
+html body .chartbox.xtall { height: 440px }
+
+/* ========================= hub game sections ========================= */
+html body .topbar-title { font-size: 20px; font-weight: 700; letter-spacing: -.01em }
+html body .sb-section { font-size: 11px; font-weight: 600; letter-spacing: .12em }
+html body .nav-item { font-size: 14px; font-weight: 500 }
+html body .nav-item.active { font-weight: 600 }
+html body .sb-game { font-size: 14px; font-weight: 700 }
+html body .sb-sub { font-size: 12px; font-weight: 500 }
+
+html body .card-hd .card-title { font-size: 19px !important; font-weight: 700 !important }
+html body .card-hd .card-title .card-sub { font-size: 14px !important; font-weight: 400 !important }
+html body .card-cta { font-size: 14px; font-weight: 600 }
+
+html body .kpi-label { letter-spacing: .1em !important }
+html body .kpi-val { font-size: clamp(20px, 1.9vw, 28px); font-weight: 700; letter-spacing: -.02em }
+html body .kpi-val.small { font-size: 22px }
+html body .kpi-delta { font-size: 12.5px; font-weight: 600 }
+
+html body .bar-lbl { font-size: 13.5px }
+html body .bar-num { font-size: 13.5px; font-weight: 600 }
+html body .tbl-head { font-size: 12px !important; font-weight: 600 !important; letter-spacing: .06em }
+html body .tbl-row { font-size: 14px }
+
+html body .cv-wrap        { height: 220px }
+html body .cv-wrap.tall   { height: 300px }
+html body .cv-wrap.short  { height: 160px }
+
+/* the small outlined tag beside a section heading (ASO "SAME WINDOW, SAME
+   DEFINITIONS" etc.) - was 9px, now readable */
+html body .h2s span.tag { font-size: 12px !important; font-weight: 600 !important; letter-spacing: .1em !important; padding: 5px 12px !important }
