@@ -1,265 +1,210 @@
 /**
- * UA Network Performance.
+ * UA Network Performance — the arithmetic.
  *
- * One question: an IAP number moved — which part of it moved, and on which
- * network?
+ * TOTALS, EXCEPT ROAS AND RETENTION
  *
- * IAP revenue is a product of four things, and the page is built around that
- * identity rather than around a list of available metrics:
+ * Every money and volume figure on this page is a PERIOD TOTAL: spend,
+ * installs, revenue, IAP revenue, ad revenue, all summed over the days in the
+ * window. Only ROAS and retention are cohort measures, because those two are
+ * meaningless as anything else — a return on spend has to follow the cohort
+ * that spend bought, and a retention rate has to follow the people it is a
+ * rate of.
  *
- *     IAP = Installs x Payer % x Purchases per payer x Average price
+ * The first version of this page was built the other way round, on the D7
+ * cohort split of IAP revenue, and it was wrong in two separate ways:
  *
- * Each factor points somewhere different. Installs is media buying. Payer %
- * is who the networks sent. Purchases per payer and average price are the
- * game and its pricing. A single "IAP down 18%" says none of that.
+ *   The denominators did not match. Payers were summed over the days whose
+ *   D7 cohort had matured; installs were summed over every day in the window.
+ *   With half the window too young to have a D7 figure, that halves payer %
+ *   on its own, for no reason visible anywhere on screen.
  *
- * ------------------------------------------------------------------
- * WHAT IS DELIBERATELY NOT HERE
+ *   The cohort payer figures themselves are not usable. Over fourteen days
+ *   the Channel Performance tab reported 42 D7 payers against 2.17 million
+ *   Google Ads installs — a payer rate of 0.002%, where a game of this kind
+ *   runs between 1% and 3%. A figure three orders of magnitude out is not a
+ *   small number; it is a number measuring something else, and the likeliest
+ *   cause is that the purchase event is not mapped to revenue in Adjust, in
+ *   which case the cohort revenue metrics return almost nothing however long
+ *   the backfill runs.
  *
- * The mockup this page comes from had eleven KPI tiles, seven charts and an
- * eighteen-column table. Several of those could not be built from measured
- * data, and a card that looks like a finding and is not one is worse than no
- * card:
- *
- *   IAP from new vs existing users - in the mockup this was `iap * 0.55`
- *     against a thirty-day window times a half, plus a random wobble. It
- *     needs event data keyed by install date, which Adjust's aggregate
- *     reports cannot answer. Left off rather than approximated.
- *
- *   D7 ROAS by network x country heatmap - needs `country` in the Adjust
- *     dimensions. That is a separate report definition and a separate tab,
- *     because adding country to the channel pull multiplies its row count by
- *     the number of countries. Until that exists there is no country data,
- *     so there is no country filter either - a filter with nothing behind it
- *     is a promise the page cannot keep.
- *
- *   Payback days, and the D0-D30 ROAS curve as 31 points - the mockup drew
- *     31 points from three measurements and a power function whose exponent
- *     was a constant invented in its sample data, then walked that invented
- *     curve until it crossed 100% and called the result payback. Eight
- *     measured ROAS points now exist, so the curve is drawn as the eight
- *     points it actually has.
- *
- *   Days to first purchase - read straight out of the mockup's sample data.
- *
- * ------------------------------------------------------------------
- * TWO PERIODS, TWO REQUESTS
- *
- * Every figure here is shown against the previous period of the same length,
- * because "payer % is 2.8%" is not a finding and "payer % fell by a fifth"
- * is. The channel rollup is aggregated server-side over the window it is
- * asked for, so the previous period is a second request rather than a local
- * slice - a period total cannot be un-summed.
+ * So the four-factor split is gone from this page. It needs payers, payers
+ * exist only as a cohort metric, and that metric is not currently reporting.
+ * It can come back when `paying_users_d7` reports a plausible rate — and the
+ * test suite holds a case that says what plausible means.
  */
 
 /* ====================================================================
-   THE FOUR FACTORS
-
-   Derived from sums, never read as stored rates. A stored rate cannot be
-   re-folded: filter to one platform and it is wrong, while sums are still
-   sums. The backend ships payers, purchases and cohort revenue as counts for
-   exactly this reason.
+   FOLDING
    ==================================================================== */
 
-/** null, not 0, when the denominator is missing or nothing has matured. */
+/** null, not 0, when the denominator is missing. */
 const ratio = (a, b) => (a == null || !b) ? null : a / b;
 
+const n = (v) => Number(v) || 0;
+
 /**
- * Fold a list of channel rows into one set of totals.
+ * Fold channel rows into one set of period totals.
  *
- * Counts are summed and a count that nobody reported stays null, so an
- * immature cohort reads as "not yet" rather than as zero payers. The two are
- * different statements and only one of them is ever true.
+ * Counts and money sum. The two rates fold by their own denominators:
+ * retention is install-weighted and ROAS is cost-weighted, because that is
+ * what each one is a rate OF. Weighting ROAS by installs would let a cheap,
+ * high-volume channel speak for money it never spent.
  */
 function fold(rows) {
-  const t = { installs: 0, spend: 0, adRevenue: 0, iapRevenue: 0, revenue: 0 };
-  let payers = null, purch = null, cohortIap = null, retWeighted = 0, retN = 0;
+  const t = { installs: 0, spend: 0, revenue: 0, adRevenue: 0, iapRevenue: 0 };
+  let retW = 0, retN = 0, roasW = 0, roasN = 0;
 
   rows.forEach((r) => {
-    t.installs   += Number(r.installs) || 0;
-    t.spend      += Number(r.spend != null ? r.spend : r.cost) || 0;
-    t.adRevenue  += Number(r.adRevenue) || 0;
-    t.iapRevenue += Number(r.iapRevenue) || 0;
-    t.revenue    += Number(r.revenue) || 0;
+    const spend = n(r.spend != null ? r.spend : r.cost);
+    t.installs   += n(r.installs);
+    t.spend      += spend;
+    t.revenue    += n(r.revenue);
+    t.adRevenue  += n(r.adRevenue);
+    t.iapRevenue += n(r.iapRevenue);
 
-    if (r.payersD7 != null)    payers    = (payers    || 0) + Number(r.payersD7);
-    if (r.purchD7 != null)     purch     = (purch     || 0) + Number(r.purchD7);
-    if (r.cohortIapD7 != null) cohortIap = (cohortIap || 0) + Number(r.cohortIapD7);
-
-    /* Retention is a rate, so it folds as an install-weighted average. */
-    if (r.d7 != null && r.installs) {
-      retWeighted += Number(r.d7) * Number(r.installs);
-      retN += Number(r.installs);
-    }
+    if (r.d7 != null && r.installs) { retW += n(r.d7) * n(r.installs); retN += n(r.installs); }
+    if (r.roasD7 != null && spend)  { roasW += n(r.roasD7) * spend;    roasN += spend; }
   });
 
-  t.payers = payers;
-  t.purchases = purch;
-  t.cohortIap = cohortIap;
   t.cpi = ratio(t.spend, t.installs);
-  t.retD7 = retN ? retWeighted / retN : null;
-
-  /* The four factors. */
-  t.payerPct = ratio(payers, t.installs);
-  t.purchPerPayer = ratio(purch, payers);
-  t.avgPrice = ratio(cohortIap, purch);
-
-  /* D7 ROAS from the same two sums the rest of the page uses, rather than the
-     stored rate, so every figure on the page divides the same numbers. */
-  t.roasD7 = ratio(t.cohortIap, t.spend);
+  /* Period return: the money that arrived in the window against the money
+     spent in it. Not a cohort figure and not labelled as one — it answers
+     "did this window pay for itself", which is a different question from
+     "will this cohort pay for itself". */
+  t.roas = ratio(t.revenue, t.spend);
+  t.arpi = ratio(t.revenue, t.installs);
+  /* Cohort D7 ROAS, kept as the cohort measure it is. */
+  t.roasD7 = roasN ? roasW / roasN : null;
+  t.retD7 = retN ? retW / retN : null;
   return t;
 }
 
-/**
- * The four-factor decomposition of a change in cohort IAP revenue.
- *
- * IAP = I x P x Q x A, so the log of the change is the sum of the logs of the
- * four ratios. Splitting the money change in proportion to those logs gives
- * four parts that add back to the whole, which is what makes the chart a
- * decomposition rather than four unrelated percentages side by side.
- *
- * Returns null when either period has nothing to compare — a decomposition of
- * an unknown is not a zero.
- */
-function decompose(cur, prev) {
-  const need = ['installs', 'payerPct', 'purchPerPayer', 'avgPrice'];
-  if (cur.cohortIap == null || prev.cohortIap == null
-      || !prev.cohortIap || !cur.cohortIap) return null;
-  if (need.some((k) => !cur[k] || !prev[k])) return null;
-
-  const total = cur.cohortIap - prev.cohortIap;
-  const lnTotal = Math.log(cur.cohortIap / prev.cohortIap);
-  /* Below this the ratio is 1 to within rounding and the split is noise
-     divided by noise. Report the money and no attribution. */
-  if (!isFinite(lnTotal) || Math.abs(lnTotal) < 1e-9) return null;
-
-  const labels = {
-    installs: 'Installs',
-    payerPct: 'Payer %',
-    purchPerPayer: 'Purchases / payer',
-    avgPrice: 'Average price'
-  };
-  return {
-    from: prev.cohortIap,
-    to: cur.cohortIap,
-    total,
-    parts: need.map((k) => ({
-      key: k,
-      label: labels[k],
-      ratio: cur[k] / prev[k],
-      effect: total * Math.log(cur[k] / prev[k]) / lnTotal
-    }))
-  };
-}
-
 /* ====================================================================
-   IS THE CHANGE REAL?
+   WHAT MOVED
 
-   Payer % is a small number. A channel with 200 installs a day has about six
-   payers; four the next day is a 33% "drop" and nothing happened. The
-   mockup's alerts fired at a flat 15% with no regard for how many payers
-   that was, which on a small channel means they fire most days.
+   Ranked by money, not by percentage. A list sorted by percentage puts the
+   smallest channels at the top, which is how an alert list teaches people to
+   stop reading it.
 
-   So a change in payer % is only reported when it clears the standard error
-   of the difference between two proportions at 95%. That is arithmetic, not
-   a threshold somebody chose, and it scales by itself: a big channel trips
-   it at a few per cent, a small one never trips it on a single day — which
-   is the correct answer for a small channel on a single day.
+   No significance test here, because none of these are proportions: spend,
+   installs and revenue are sums, and a sum is known exactly. What a reader
+   needs is the size of the move in money, and whether the channel is big
+   enough for that money to matter.
    ==================================================================== */
 
-function payerPctIsReal(cur, prev) {
-  const n1 = cur.installs, n2 = prev.installs;
-  const p1 = cur.payerPct, p2 = prev.payerPct;
-  if (!n1 || !n2 || p1 == null || p2 == null) return null;
-
-  const se = Math.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2);
-  if (!se) return null;
-  const z = (p1 - p2) / se;
-  return {
-    z,
-    real: Math.abs(z) >= 1.96,
-    /* The smallest relative move this many installs could have shown. Worth
-       printing: it turns "nothing to report" into "nothing this size could
-       have detected", which are different and only the second is useful. */
-    detectable: p2 ? 1.96 * se / p2 : null,
-    payers: cur.payers
-  };
-}
-
-/**
- * What to say about each network, and only what the numbers support.
- *
- * Ordered by how much money the network moved, because an alert list sorted
- * by percentage puts the smallest channels at the top.
- */
-function findings(cur, prev) {
-  const out = [];
+function findings(curRows, prevRows) {
   const prevBy = {};
-  prev.forEach((r) => { prevBy[r.channel] = r; });
+  prevRows.forEach((r) => { prevBy[r.channel] = r; });
 
-  cur.forEach((row) => {
+  const out = [];
+  const totalSpend = fold(curRows).spend || 1;
+
+  curRows.forEach((row) => {
     const p = prevBy[row.channel];
-    if (!p) return;
+    if (!p) {
+      const c = fold([row]);
+      if (c.spend / totalSpend >= 0.02) {
+        out.push({
+          tone: 'good', tag: 'NEW', money: c.spend,
+          head: row.channel + ': new this period',
+          body: money(c.spend) + ' spent, ' + num(c.installs) + ' installs, '
+              + 'at ' + money(c.cpi) + ' each. Nothing to compare it with yet.'
+        });
+      }
+      return;
+    }
     const c = fold([row]), q = fold([p]);
-    const sig = payerPctIsReal(c, q);
-    const moved = (c.cohortIap != null && q.cohortIap != null)
-      ? c.cohortIap - q.cohortIap : 0;
 
-    if (sig && sig.real) {
-      const dp = (c.payerPct - q.payerPct) / q.payerPct;
-      const worse = dp < 0;
+    /* A channel too small to matter is not worth a line, however it moved.
+       Two per cent of the window's spend is the cut: below that, the biggest
+       possible swing is still smaller than the rounding on the big channels. */
+    if (c.spend / totalSpend < 0.02 && q.spend / totalSpend < 0.02) return;
+
+    const dRev = c.revenue - q.revenue;
+    const dSpend = c.spend - q.spend;
+    const relRev = q.revenue ? dRev / q.revenue : null;
+    const relSpend = q.spend ? dSpend / q.spend : null;
+
+    /* Return moved and spend did not: the channel got better or worse at
+       turning the same money into revenue, which is the finding worth having.
+       Stated before the volume lines below, because it is the one that is
+       about the channel rather than about the budget. */
+    if (c.roas != null && q.roas != null && q.roas
+        && Math.abs(c.roas - q.roas) / q.roas >= 0.15
+        && (relSpend === null || Math.abs(relSpend) < 0.15)) {
+      const worse = c.roas < q.roas;
       out.push({
-        tone: worse ? 'bad' : 'good',
-        tag: 'PAYER %',
-        money: Math.abs(moved),
-        head: row.channel + ': payer % ' + (worse ? 'down ' : 'up ')
-              + Math.abs(dp * 100).toFixed(0) + '%',
-        body: 'From ' + pct(q.payerPct, 2) + ' to ' + pct(c.payerPct, 2)
-              + ' on ' + num(c.installs) + ' installs (' + num(c.payers)
-              + ' payers). Clears the noise floor of '
-              + pct(sig.detectable, 0) + ' at this volume.'
-              + (worse ? ' Payer % is who the network sent, so this points at'
-                       + ' targeting, bids or the optimisation event — not at'
-                       + ' the game.' : '')
+        tone: worse ? 'bad' : 'good', tag: 'RETURN', money: Math.abs(dRev),
+        head: row.channel + ': return on spend ' + (worse ? 'down ' : 'up ')
+            + Math.abs((c.roas - q.roas) / q.roas * 100).toFixed(0) + '%',
+        body: pct(q.roas, 0) + ' to ' + pct(c.roas, 0) + ' on roughly the same'
+            + ' spend (' + money(q.spend) + ' then ' + money(c.spend) + ').'
+            + ' Revenue moved ' + (dRev >= 0 ? '+' : '−') + money(Math.abs(dRev)) + '.'
       });
       return;
     }
 
-    /* Price and basket are the game's side of the identity, and they are
-       measured on payers rather than installs, so they get their own check
-       rather than borrowing the payer-% one. */
-    if (c.avgPrice != null && q.avgPrice != null && q.avgPrice) {
-      const da = (c.avgPrice - q.avgPrice) / q.avgPrice;
-      if (da < -0.10 && c.purchases >= 100) {
-        out.push({
-          tone: 'warn', tag: 'PRICE', money: Math.abs(moved),
-          head: row.channel + ': average price down ' + Math.abs(da * 100).toFixed(0) + '%',
-          body: 'Payer % held, so people are still buying and spending less:'
-                + ' ' + money(q.avgPrice) + ' to ' + money(c.avgPrice)
-                + ' across ' + num(c.purchases) + ' purchases. That is pricing,'
-                + ' offers or bundles rather than media.'
-        });
-        return;
-      }
+    if (relSpend !== null && Math.abs(relSpend) >= 0.20) {
+      const up = dSpend > 0;
+      out.push({
+        tone: 'warn', tag: up ? 'SPEND UP' : 'SPEND DOWN', money: Math.abs(dSpend),
+        head: row.channel + ': spend ' + (up ? 'up ' : 'down ')
+            + Math.abs(relSpend * 100).toFixed(0) + '%',
+        body: money(q.spend) + ' to ' + money(c.spend) + '. CPI '
+            + money(q.cpi) + ' to ' + money(c.cpi) + ', revenue '
+            + (relRev === null ? 'unknown' : (relRev >= 0 ? 'up ' : 'down ')
+               + Math.abs(relRev * 100).toFixed(0) + '%') + '.'
+      });
+      return;
     }
 
-    if (sig && !sig.real && sig.detectable != null) {
-      const dp = (c.payerPct - q.payerPct) / q.payerPct;
-      if (dp < -0.10) {
-        out.push({
-          tone: 'quiet', tag: 'TOO SMALL', money: Math.abs(moved),
-          head: row.channel + ': payer % looks down '
-                + Math.abs(dp * 100).toFixed(0) + '%, but it is not measurable',
-          body: num(c.installs) + ' installs could only show a change of '
-                + pct(sig.detectable, 0) + ' or more. Aggregate a longer period'
-                + ' before acting on this one.'
-        });
-      }
+    if (c.cpi != null && q.cpi != null && q.cpi
+        && Math.abs(c.cpi - q.cpi) / q.cpi >= 0.20) {
+      const up = c.cpi > q.cpi;
+      out.push({
+        tone: up ? 'warn' : 'good', tag: 'CPI', money: Math.abs(dSpend),
+        head: row.channel + ': CPI ' + (up ? 'up ' : 'down ')
+            + Math.abs((c.cpi - q.cpi) / q.cpi * 100).toFixed(0) + '%',
+        body: money(q.cpi) + ' to ' + money(c.cpi) + ' on '
+            + num(c.installs) + ' installs.'
+      });
     }
   });
 
   out.sort((a, b) => b.money - a.money);
   return out;
+}
+
+/* ====================================================================
+   IS THE COHORT SIDE REPORTING AT ALL?
+
+   The page draws two cohort cards and nothing else from cohort data, so
+   when those are empty it has to say which emptiness it is. A payer rate
+   three orders of magnitude below any real game is not a small number, it
+   is a broken measurement, and it should be named rather than plotted.
+   ==================================================================== */
+
+/** The lowest payer rate any real game runs at. Below this, suspect the feed. */
+const PLAUSIBLE_PAYER_RATE = 0.001;      // 0.1%
+
+/**
+ * What the cohort payer columns are saying, if anything.
+ *
+ * Returns null when nothing reported, which is the ordinary immature case,
+ * and a verdict when something reported a figure too small to be real.
+ */
+function cohortPayerCheck(rows) {
+  let payers = null, installs = 0;
+  rows.forEach((r) => {
+    if (r.payersD7 != null) {
+      payers = (payers || 0) + n(r.payersD7);
+      installs += n(r.installs);
+    }
+  });
+  if (payers === null || !installs) return null;
+  const rate = payers / installs;
+  if (rate >= PLAUSIBLE_PAYER_RATE) return { rate, payers, installs, plausible: true };
+  return { rate, payers, installs, plausible: false };
 }
 
 /* ====================================================================
@@ -287,11 +232,10 @@ function pct(v, dp) {
 }
 
 /**
- * The change, with its direction coloured by whether it is good.
+ * The change, coloured by whether it is good.
  *
- * `lowerIsBetter` exists because CPI and spend are the two figures on this
- * page where down is up. A single green-for-rising rule would paint a rising
- * CPI as good news.
+ * `lowerIsBetter` exists because CPI and spend are the figures where down is
+ * up. One green-for-rising rule would paint a rising CPI as good news.
  */
 function delta(cur, prev, lowerIsBetter) {
   if (cur == null || prev == null || !prev || !isFinite(cur) || !isFinite(prev)) {
@@ -309,6 +253,6 @@ const esc = (s) => String(s == null ? '' : s)
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export {
-  fold, decompose, payerPctIsReal, findings,
+  fold, findings, cohortPayerCheck, PLAUSIBLE_PAYER_RATE,
   money, num, pct, delta, esc, ratio, DASH
 };

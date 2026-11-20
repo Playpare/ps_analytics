@@ -105,10 +105,13 @@ select, .btn {
 .btn:hover, select:hover { border-color: var(--blue) }
 
 /* ── layout ────────────────────────────────────────────────────────── */
-.wrap { max-width: 1360px; margin: 0 auto; padding-block: 18px 44px; padding-inline: 20px }
+/* Full width, like every other report. The shell gives the frame its own
+   edges; a second max-width inside it puts a margin down both sides that no
+   other report has. 26px is the gutter the shell's own .content uses. */
+.wrap { padding-block: 20px 48px; padding-inline: 26px }
 .phead { margin-bottom: 14px }
-.phead h1 { font-size: 21px; font-weight: 600; margin: 0; text-wrap: balance }
-.sub { color: var(--t2); font-size: 12.5px; margin-top: 3px }
+.phead h1 { font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -.01em; text-wrap: balance }
+.sub { color: var(--t2); margin-top: 4px }
 
 section { margin-top: 14px }
 .two { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)) }
@@ -119,12 +122,21 @@ section { margin-top: 14px }
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--r); padding: 16px; min-width: 0;
 }
-.card h2 { margin: 0; font-size: 14.5px; font-weight: 600 }
-.q { color: var(--t2); font-size: 12px; margin: 3px 0 12px; max-width: 62ch }
-.note { color: var(--t2); font-size: 12px; margin: 10px 0 0 }
+/* No font-size here, and none anywhere else in this file for a heading, a
+   KPI, a table cell or a legend. report-type.css sets every one of those, and
+   it is what the other six reports are sized by - measured identically on all
+   of them: h2 20px, KPI label 13, KPI value 31.68, td 15, th 14.
+
+   The first version of this page set its own, smaller, and then zoomed the
+   whole thing by 1.15 to make up the difference. That is how a page ends up
+   at 17px where everything else is at 20, with its charts a third shorter. */
+.card h2 { margin: 0; font-weight: 600 }
+.q { color: var(--t2); margin: 3px 0 12px; max-width: 62ch }
+.note { color: var(--t2); margin: 10px 0 0 }
 .note b { color: var(--t1) }
 
-.chartbox { position: relative; height: 270px }
+/* height comes from report-type.css: .chartbox 290, .tall 360, .xtall 440 */
+.chartbox { position: relative }
 .empty {
   display: flex; align-items: center; justify-content: center;
   height: 100%; padding: 0 24px; text-align: center;
@@ -149,10 +161,10 @@ section { margin-top: 14px }
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--r); padding: 14px 16px;
 }
-.kpi .l { font-size: 11.5px; color: var(--t2) }
-.kpi .v { font-size: 22px; font-weight: 600; margin: 4px 0 2px; font-variant-numeric: tabular-nums }
-.kpi .s { font-size: 11px; color: var(--t3); margin-top: 3px }
-.d { font-size: 12px; font-variant-numeric: tabular-nums }
+.kpi .l { color: var(--t2) }
+.kpi .v { margin: 4px 0 2px; font-variant-numeric: tabular-nums }
+.kpi .s { color: var(--t3); margin-top: 3px }
+.d { font-variant-numeric: tabular-nums }
 .up { color: var(--green) }
 .down { color: var(--coral) }
 .flat { color: var(--t2) }
@@ -188,14 +200,11 @@ section { margin-top: 14px }
 .tablewrap { overflow-x: auto }
 table { border-collapse: collapse; width: 100%; font-size: 12.5px }
 th, td {
-  padding: 8px 10px; text-align: right;
+  padding: 9px 12px; text-align: right;
   border-bottom: 1px solid var(--border); white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-th {
-  color: var(--t2); font-weight: 500; font-size: 11.5px;
-  position: sticky; top: 0; background: var(--card);
-}
+th { color: var(--t2); position: sticky; top: 0; background: var(--card) }
 th.l, td.l { text-align: left; font-variant-numeric: normal }
 td.bad { background: var(--coralD) }
 .dot {
