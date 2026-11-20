@@ -32,75 +32,67 @@
 
   <main class="wrap">
     <div class="phead">
-      <h1>Which part of IAP moved?</h1>
+      <h1>Where the money went, and what came back</h1>
       <div class="sub" id="period">&nbsp;</div>
     </div>
 
     <div class="warn" id="srcWarn" hidden></div>
     <div class="fatal" id="fatal" hidden></div>
 
-    <!-- Six tiles. Each answers a question none of the others answer; the
-         revenue tiles that used to sit here are the chart two cards down. -->
     <div class="kpis" id="kpis"></div>
 
     <section class="two wide-left">
       <article class="card">
-        <h2>Why D7 IAP revenue changed</h2>
-        <p class="q">Installs &times; Payer % &times; Purchases per payer &times; Avg price</p>
-        <div class="chartbox"><canvas id="cWaterfall"></canvas></div>
-        <p class="note" id="wfNote"></p>
+        <h2>Spend and revenue, daily</h2>
+        <p class="q">Totals for each day &mdash; money spent, money that arrived</p>
+        <div class="legend">
+          <span><i style="background:var(--coral)"></i>Spend</span>
+          <span><i style="background:var(--blue)"></i>IAP revenue</span>
+          <span><i style="background:var(--teal)"></i>Ad revenue</span>
+        </div>
+        <div class="chartbox tall"><canvas id="cDaily"></canvas></div>
       </article>
       <article class="card">
-        <h2>What the numbers support</h2>
-        <p class="q">Only changes too large to be chance. Biggest money first.</p>
+        <h2>What moved</h2>
+        <p class="q">Biggest money first &middot; networks worth 2% of spend or more</p>
         <div class="findings" id="findings"></div>
       </article>
     </section>
 
     <section class="two">
       <article class="card">
-        <h2>Spend against what the cohort earned</h2>
-        <p class="q">Spend that day &middot; what that day's installs earned by D7</p>
-        <div class="legend">
-          <span><i style="background:var(--coral)"></i>Spend</span>
-          <span><i style="background:var(--blue)"></i>D7 IAP revenue</span>
-          <span><i style="background:var(--teal)"></i>Ad revenue</span>
-        </div>
-        <div class="chartbox"><canvas id="cDaily"></canvas></div>
-        <p class="note" id="dailyNote"></p>
-      </article>
-      <article class="card">
-        <h2>Payer % by install day</h2>
-        <p class="q">Bought by D7 &middot; all networks together</p>
-        <div class="chartbox"><canvas id="cPayer"></canvas></div>
-      </article>
-    </section>
-
-    <section class="two">
-      <article class="card">
-        <h2>ROAS by days since install</h2>
-        <p class="q">100% is break-even &middot; 8 measured points</p>
-        <div class="legend" id="lgRoas"></div>
-        <div class="chartbox"><canvas id="cRoas"></canvas></div>
-        <p class="note" id="roasNote"></p>
+        <h2>Return on spend, by network</h2>
+        <p class="q">Revenue &divide; spend, this window</p>
+        <div class="chartbox"><canvas id="cNetRoas"></canvas></div>
+        <p class="note" id="netRoasNote"></p>
       </article>
       <article class="card">
         <h2>Retention</h2>
-        <p class="q">Still active on day N</p>
+        <p class="q">Still active on day N &middot; cohort</p>
         <div class="legend" id="lgRet"></div>
         <div class="chartbox"><canvas id="cRet"></canvas></div>
       </article>
     </section>
 
     <section class="card">
+      <h2>ROAS by days since install</h2>
+      <p class="q">Cohort &middot; 100% is break-even</p>
+      <div class="legend" id="lgRoas"></div>
+      <div class="chartbox tall"><canvas id="cRoas"></canvas></div>
+      <p class="note" id="roasNote"></p>
+    </section>
+
+    <section class="card">
       <h2>By network</h2>
-      <p class="q">Payer % shaded only where the fall is measurable</p>
+      <p class="q">Totals for the window. The last two columns are cohort
+        measures &mdash; everything else is money and volume in the period.</p>
       <div class="tablewrap"><table id="tbl"></table></div>
     </section>
 
     <p class="foot">Adjust Report Service &middot; Channel Performance tab.
-      Country, store-net revenue and the new-against-existing split are not
-      here: none of the three is measured yet.</p>
+      Only ROAS and retention are cohort figures; every other number here is a
+      period total. Country and store-net revenue are not on this page because
+      neither is measured yet.</p>
   </main>
 
   <div id="loader" class="loader"><div class="loaderbox"><div class="spinner"></div><b>Loading Data</b><div class="pulse"></div></div></div>
