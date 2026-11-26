@@ -1,0 +1,219 @@
+/* ============================================================================
+   exec-pro.css - the Executive page in the hub's pro theme (dark mode):
+   same fonts, tiles, glow, card panels and colours as the Overview page.
+   Scoped under html.exec-pro, which exec-pro.js adds.
+   ========================================================================== */
+
+/* ---- page + fonts ---------------------------------------------------------- */
+html.exec-pro[data-theme="dark"],
+html.exec-pro[data-theme="dark"] body { background: #000 !important }
+html.exec-pro[data-theme="dark"] body,
+html.exec-pro[data-theme="dark"] body :is(button, select, input, table, th, td, .kpiVal, .kpiFootVal, .metVal, .gDetailVal, .presetBtn, .fsel, .tabBtn, .tbtn) {
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, Arial, sans-serif !important;
+}
+html.exec-pro[data-theme="dark"] .main { padding: 18px 24px 28px !important }
+
+/* ---- top bar: like the report headers (no glass, no dividing line) ---------- */
+html.exec-pro[data-theme="dark"] .topbar {
+  background: #000 !important; backdrop-filter: none !important; border-bottom: 0 !important; height: 62px !important;
+}
+html.exec-pro.exec-embedded :is(.topbar .brand, .topbar > .tsep, #logoutBtn, .rolePill, .uname) { display: none !important }
+html.exec-pro[data-theme="dark"] .tabBtn,
+html.exec-pro[data-theme="dark"] .tbtn {
+  height: 38px; padding: 0 18px !important; border-radius: 999px !important;
+  font-size: 15px !important; font-weight: 500 !important; display: inline-flex; align-items: center;
+}
+html.exec-pro[data-theme="dark"] .tbtn { border: 1px solid rgba(255, 255, 255, .14) !important; background: #111317 !important; color: #e3e9f4 !important }
+html.exec-pro[data-theme="dark"] .tbtn:hover { border-color: #00e5c3 !important }
+html.exec-pro[data-theme="dark"] .tabBtn.active { font-weight: 600 !important; color: #031018 !important; background: linear-gradient(135deg, #00e5c3, #4d9fff) !important }
+html.exec-pro[data-theme="dark"] .refreshInfo { font-size: 14px !important; color: #8b93a7 !important }
+
+/* ---- date bar: the UA Report's date dropdown, filters as pills ------------- */
+html.exec-pro[data-theme="dark"] .dateBar {
+  background: #000 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+  padding: 10px 0 14px !important; gap: 12px !important; top: 62px !important;
+}
+/* the original preset buttons stay in the page (the dropdown clicks them),
+   hidden while the theme is on */
+html.exec-pro .dateBar > .presetBtn[data-preset] { display: none !important }
+html.exec-pro .pro-preset { display: inline-flex }
+html.exec-pro .pro-preset .dd-btn { height: 40px !important; min-width: 170px; justify-content: space-between }
+html.exec-pro[data-theme="dark"] .dateBar .tsep { opacity: .25 }
+html.exec-pro[data-theme="dark"] .dateBar .dd.dd-plain .dd-btn { height: 40px !important; min-width: 170px }
+html.exec-pro[data-theme="dark"] .dateBar .u-style-012 { font-size: 13px !important; font-weight: 700 !important; color: #8b93a7 !important; text-transform: uppercase; letter-spacing: .08em }
+html.exec-pro[data-theme="dark"] .dateBar input.fsel {
+  height: 40px !important; padding: 0 14px !important; border-radius: 999px !important;
+  background: #1a1d24 !important; border: 1px solid rgba(255, 255, 255, .14) !important; color: #e8ecff !important; font-size: 14.5px !important;
+}
+/* platform buttons elsewhere on the page (All / Android / iOS / Amazon): UA tab pills */
+html.exec-pro[data-theme="dark"] .presetBtn {
+  height: 38px; padding: 0 18px !important; border-radius: 999px !important; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 15px !important; font-weight: 500 !important; color: #e3e9f4 !important;
+  border: 1px solid rgba(255, 255, 255, .14) !important; background: #111317 !important;
+}
+html.exec-pro[data-theme="dark"] .presetBtn:hover { border-color: #00e5c3 !important }
+html.exec-pro[data-theme="dark"] .presetBtn.active {
+  color: #031018 !important; font-weight: 600 !important; border-color: transparent !important;
+  background: linear-gradient(135deg, #00e5c3, #4d9fff) !important;
+}
+
+/* ---- panels ------------------------------------------------------------------ */
+html.exec-pro[data-theme="dark"] :is(.card, .projCard, .alertPanel):not(#_) {
+  border: 1px solid rgba(255, 255, 255, .07) !important; border-radius: 20px !important;
+  background: linear-gradient(180deg, #14161c 0%, #0e1015 100%) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 12px 34px rgba(0, 0, 0, .35) !important;
+  padding: 24px 26px !important;
+}
+html.exec-pro[data-theme="dark"] .cardHead {
+  font-size: 22px !important; font-weight: 700 !important; letter-spacing: -.01em !important;
+  text-transform: none !important; color: #f2f5fa !important; margin-bottom: 18px !important;
+}
+
+/* ---- KPI tiles: exactly the Overview's ---------------------------------------- */
+html.exec-pro .kRev { --kc: #34D399 } html.exec-pro .kSpd { --kc: #E879F9 }
+html.exec-pro .kPro { --kc: #4ADE80 } html.exec-pro .kRoi { --kc: #FBBF24 }
+html.exec-pro[data-theme="dark"] .g4 { gap: 18px !important }
+html.exec-pro[data-theme="dark"] :is(.kpi, .ltvKpi):not(#_) {
+  position: relative; overflow: hidden; display: flex; flex-direction: column;
+  min-height: 210px; padding: 20px 20px 70px 22px !important;
+  border: 1px solid rgba(255, 255, 255, .07) !important; border-radius: 18px !important;
+  background:
+    radial-gradient(120% 95% at 0% 0%, color-mix(in srgb, var(--kc, var(--lkc, #00e5ff)) 6%, transparent), transparent 60%),
+    linear-gradient(180deg, #15171d 0%, #0f1116 100%) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 10px 30px rgba(0, 0, 0, .35) !important;
+  transition: transform .18s ease, border-color .18s ease;
+}
+html.exec-pro[data-theme="dark"] :is(.kpi, .ltvKpi):hover {
+  transform: translateY(-2px); border-color: color-mix(in srgb, var(--kc, #00e5ff) 35%, transparent) !important;
+}
+html.exec-pro :is(.kpi, .ltvKpi)::before { display: none !important }
+html.exec-pro[data-theme="dark"] .kpiMain { display: block !important; min-height: 0 !important }
+
+/* label: sentence case with an icon chip */
+html.exec-pro[data-theme="dark"] .kpiLbl {
+  position: relative; display: flex !important; align-items: center; gap: 12px;
+  text-transform: none !important; letter-spacing: 0 !important;
+  font-size: 16px !important; font-weight: 600 !important; color: #dfe4ee !important;
+  margin-bottom: 16px !important; min-height: 32px;
+}
+html.exec-pro[data-theme="dark"] .kpiLbl::before {
+  content: ''; flex: none; width: 32px; height: 32px; border-radius: 9px;
+  background: color-mix(in srgb, var(--kc, #00e5ff) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kc, #00e5ff) 22%, transparent);
+}
+html.exec-pro[data-theme="dark"] .kpiLbl::after {
+  content: ''; position: absolute; left: 8px; top: 50%; width: 16px; height: 16px; margin-top: -8px;
+  background: var(--kc, #00e5ff); -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat;
+}
+/* value */
+html.exec-pro[data-theme="dark"] .kpiVal {
+  font-size: clamp(26px, 2.05vw, 38px) !important; font-weight: 700 !important; letter-spacing: -.03em !important;
+  line-height: 1.05 !important; margin-bottom: 12px !important; color: var(--kc, #00e5ff) !important;
+  text-shadow: none;
+}
+/* change line: coloured, no pill; previous value in quiet grey */
+html.exec-pro[data-theme="dark"] .kpiChg {
+  background: transparent !important; padding: 0 !important; border: 0 !important;
+  font-size: 14.5px !important; font-weight: 700 !important;
+}
+html.exec-pro[data-theme="dark"] .kpiPrev { font-size: 15px !important; font-weight: 500 !important; color: #bdc8d9 !important }
+/* Keep the daily average and target beside the KPI heading. */
+html.exec-pro[data-theme="dark"] .kpiFoot { border: 0 !important; margin: 0 !important; padding: 0 !important }
+html.exec-pro[data-theme="dark"] .kpiFootLbl { font-size: 13px !important; color: #bdc8d9 !important; letter-spacing: .06em !important }
+html.exec-pro[data-theme="dark"] .kpiFootVal { font-size: 15px !important; font-weight: 600 !important; color: #e8ecff !important }
+/* Leave a separate row under the sparkline for the previous period. */
+html.exec-pro[data-theme="dark"] .kpiSparkBox {
+  position: absolute !important; left: 0 !important; right: 0 !important; bottom: 64px !important;
+  width: auto !important; height: 68px !important; border-radius: 0 !important; z-index: 1;
+}
+html.exec-pro[data-theme="dark"] .kpiSparkBox canvas { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important }
+
+/* ---- small stat tiles inside cards ------------------------------------------ */
+html.exec-pro[data-theme="dark"] :is(.metItem, .gDetailItem, .qPill) {
+  border-radius: 14px !important; background: rgba(255, 255, 255, .028) !important; border: 1px solid rgba(255, 255, 255, .05) !important;
+}
+html.exec-pro[data-theme="dark"] :is(.metLbl, .gDetailLbl) { font-size: 14px !important; font-weight: 700 !important; letter-spacing: .05em !important; color: #bdc8d9 !important }
+html.exec-pro[data-theme="dark"] :is(.metVal, .gDetailVal) { font-size: 24px !important; font-weight: 700 !important; color: #f2f5fa !important }
+
+/* ---- tables: the hub's cyan header band, values white ------------------------ */
+html.exec-pro[data-theme="dark"] table thead th {
+  background: rgba(0, 229, 255, .07) !important; color: #00e5ff !important;
+  border-bottom: 2px solid rgba(0, 229, 255, .35) !important;
+  font-size: 13.5px !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: .05em !important;
+}
+html.exec-pro[data-theme="dark"] table tbody td { font-size: 15px !important; color: #e8ecff }
+
+/* ---- one font across the whole page (the "Game Analysis" heading was Syne,
+   the money figures and ranks DM Mono / Poppins, some set inline) ------------ */
+html.exec-pro body *:not(svg):not(svg *) {
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, Arial, sans-serif !important;
+}
+html.exec-pro .secTitle { font-size: 22px !important; font-weight: 700 !important; color: #f2f5fa !important; margin: 28px 0 16px !important }
+
+/* ---- KPI cards: taller, like the Overview's ---------------------------------- */
+html.exec-pro[data-theme="dark"] .kpi:not(#_):not(#_) { min-width: 0; min-height: 264px !important }
+html.exec-pro[data-theme="dark"] .kpiLbl { padding-right: min(118px, 46%); overflow-wrap: anywhere }
+
+/* ---- Quarter GP target gauge: bigger (canvas enlarged in index.html) --------- */
+html.exec-pro #gaugeQ { width: 390px; max-width: 100%; height: auto }
+html.exec-pro .gaugeTitle { font-size: 14px !important; letter-spacing: .06em !important; color: #b6c2d5 !important; margin-bottom: 12px !important }
+html.exec-pro .gaugeInfo .gPct { font-size: 34px !important; font-weight: 700 !important }
+html.exec-pro .gaugeInfo .gSub { font-size: 15px !important; color: #bdc8d9 !important }
+html.exec-pro .gaugeInfo .gAmt { font-size: 16px !important; font-weight: 600 !important }
+html.exec-pro .qPill { height: 36px; padding: 0 16px !important; border-radius: 999px !important; font-size: 14px !important }
+
+/* ---- ROI Ranking at the same zoom as Revenue & Profit by Game ----------------
+   (rows 16px tall padding, 17px names, a 32px bar, 18px values, 12px notes) */
+html.exec-pro .roi-ranking-card #roiRankTable td:not(#_) { padding: 16px 9px !important }
+html.exec-pro .roi-ranking-card #roiRankTable td:first-child:not(#_) { font-size: 14px !important; width: 30px !important; color: #bdc8d9 !important }
+html.exec-pro .roi-ranking-card #roiRankTable td:nth-child(2) > div:first-child { margin-bottom: 8px !important }
+html.exec-pro .roi-ranking-card #roiRankTable td:nth-child(2) span:not(.pill):first-child { font-size: 17px !important }
+html.exec-pro .roi-ranking-card #roiRankTable td:nth-child(2) > div:last-child { height: 32px !important; border-radius: 5px !important; background: rgba(122, 143, 173, .09) !important }
+html.exec-pro .roi-ranking-card #roiRankTable td:nth-child(2) > div:last-child > div { border-radius: 5px !important }
+html.exec-pro .roi-ranking-card #roiRankTable .pill:not(#_) { font-size: 18px !important; padding: 6px 14px !important }
+html.exec-pro .roi-ranking-card #roiRankTable td:last-child div:not(#_) { font-size: 13px !important; margin-top: 4px !important }
+
+/* ---- period change below the graph ---------------------------------------- */
+html.exec-pro[data-theme="dark"] .kpiBottom:not(#_):not(#_) {
+  position: absolute !important; left: 22px !important; right: 20px !important; bottom: 18px !important;
+  margin: 0 !important; z-index: 3 !important;
+}
+html.exec-pro[data-theme="dark"] .kpiMain:not(#_):not(#_) { min-height: 0 !important }
+
+/* ---- date dropdown in the top bar, left of Refresh -------------------------- */
+html.exec-pro .topRight .pro-preset { display: inline-flex; margin-right: 4px }
+html.exec-pro .topRight .pro-preset .dd-btn { height: 38px !important; min-width: 150px }
+
+/* ---- filters on the top bar's line; the lone Dashboard tab removed ---------- */
+html.exec-pro .topbar .tabNav { display: none !important }
+html.exec-pro.exec-embedded .topbar { padding-left: 24px !important }
+html.exec-pro[data-theme="dark"] .topbar #dateBar.pro-in-top:not(#_) {
+  position: static !important; top: auto !important; margin: 0 !important; padding: 0 !important;
+  flex: 1 1 auto; min-width: 0; flex-wrap: nowrap !important; background: transparent !important;
+}
+html.exec-pro .topbar #dateBar.pro-in-top .dd.dd-plain .dd-btn:not(#_):not(#_) { height: 38px !important; min-width: 0 }
+html.exec-pro .topbar #dateBar.pro-in-top input.fsel:not(#_):not(#_) { height: 38px !important }
+/* the right-hand group keeps its size; the filter row shrinks to fit beside it */
+html.exec-pro .topbar .topRight { flex: none !important; margin-left: 16px }
+html.exec-pro .topbar #dateBar.pro-in-top:not(#_):not(#_) { gap: 10px !important; overflow: visible !important }
+html.exec-pro .topbar #dateBar.pro-in-top input.fsel:not(#_):not(#_):not(#_) { width: 150px !important; min-width: 0; flex: 0 1 150px }
+html.exec-pro .topbar #dateBar.pro-in-top .dd { flex: 0 1 auto; min-width: 0 }
+html.exec-pro .topbar #dateBar.pro-in-top .dd .dd-btn { max-width: 100% }
+
+/* the "Platform:" label before the Game Analysis pills: the reports' filter
+   label (Life Time's PLATFORM / COUNTRY), not 11px body text */
+html.exec-pro[data-theme="dark"] .u-style-029:not(#_) {
+  font-size: 12px !important; font-weight: 600 !important; letter-spacing: .12em !important;
+  text-transform: uppercase; color: #8b93a7 !important; margin-right: 6px;
+}
+
+/* "Updated 2m ago" is not shown beside the date filter */
+html.exec-pro #refreshInfo { display: none !important }
+
+/* monthly table: ROI, Status and the daily average (with its "req" line)
+   read at a glance */
+html.exec-pro .mTable td:nth-child(5) { font-size: 15px !important }
+html.exec-pro .mTable td:nth-child(5) div { font-size: 13px !important; color: #c5cfe0 !important; margin-top: 3px !important }
+html.exec-pro .mTable td:nth-child(6),
+html.exec-pro .mTable td:nth-child(6) * { font-size: 14px !important; font-weight: 700 !important }
+html.exec-pro .mTable td:nth-child(7) .pill { font-size: 12.5px !important; font-weight: 700 !important; padding: 4px 11px !important }

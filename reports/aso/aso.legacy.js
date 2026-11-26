@@ -281,15 +281,6 @@ function initDateFilters(){
 /* ==========================================================================
    KPI CARD BUILDERS
    ========================================================================== */
-/* Up / down line for a rate where LOWER is better (crash, ANR): latest day
-   against the day before, green when it fell, amber when it rose. */
-function rateTrend(series,fmt){
-  const v=(series||[]).filter(x=>x!==null&&x!==undefined&&!isNaN(x));
-  if(v.length<2)return '';
-  const last=v[v.length-1], prev=v[v.length-2], diff=last-prev;
-  if(Math.abs(diff)<1e-9)return '<span class="tr flat">● no change vs day before</span>';
-  return '<span class="tr '+(diff>0?'up':'down')+'">'+(diff>0?'▲ ':'▼ ')+fmt(Math.abs(diff))+' vs day before</span>';
-}
 /* Arrow for any change. better: 'up' (higher is good), 'down' (lower is
    good) or null (neutral). Good moves are green, bad ones amber. */
 function moveArrow(diff,better,text){
@@ -298,98 +289,90 @@ function moveArrow(diff,better,text){
   const rising=diff>0, good=better===null?null:(better==='up'?rising:!rising);
   return '<span class="tr '+(good===null?'flat':good?'down':'up')+'">'+(rising?'▲ ':'▼ ')+text+'</span>';
 }
-/* Mean of the second half of a dated list against the first half. */
-function halfChange(values){
-  const v=(values||[]).filter(x=>x!==null&&x!==undefined&&!isNaN(x));
-  if(v.length<2)return null;
-  const h=Math.floor(v.length/2);
-  return mean(v.slice(v.length-h))-mean(v.slice(0,v.length-h));
+let priorASOPayload = null;
+let priorASOPending = false;
+function priorASORange(){
+  const range = activeDateRange(), days = rangeDayCount(range);
+  return days > 0 ? {start:addDays(range.start,-days),end:addDays(range.start,-1)} : null;
 }
-/* A star's share of all ratings in the second half of the days against the
-   first half, in percentage points. days: [{1:n,2:n,…,5:n}] oldest first. */
-function starShareChange(days,star){
-  const d=(days||[]).filter(x=>x&&[1,2,3,4,5].some(s=>(x[s]||0)>0));
-  if(d.length<2)return null;
-  const h=Math.floor(d.length/2), share=part=>{
-    const all=part.reduce((a,x)=>a+[1,2,3,4,5].reduce((b,s)=>b+(x[s]||0),0),0);
-    return all?part.reduce((a,x)=>a+(x[star]||0),0)/all*100:null;
-  };
-  const a=share(d.slice(0,d.length-h)), b=share(d.slice(d.length-h));
-  return a===null||b===null?null:b-a;
+function sameASOWindow(a,b){
+  return !!a && !!b && a.start === b.start && a.end === b.end;
 }
-const STAR_BETTER={5:'up',4:'up',3:null,2:'down',1:'down'};
-const ptsTxt=v=>nf(Math.abs(v),2)+' pts';
-const pctTxt=v=>nf(Math.abs(v),1)+'%';
-
-/* Splits dated rows into the earlier and later half of the days they cover,
-   so a card can say which way a figure moved inside the selected window.
-   Per-day averages are used for counts, so an odd number of days does not
-   tilt the comparison. */
-function halves(rows){
-  const days=[...new Set((rows||[]).map(r=>r&&r.date).filter(Boolean))].sort();
-  if(days.length<2)return null;
-  const h=Math.floor(days.length/2), late=new Set(days.slice(days.length-h));
-  const a=[],b=[];(rows||[]).forEach(r=>{if(r&&r.date)(late.has(r.date)?b:a).push(r)});
-  return {a,b,da:days.length-h,db:h};
+function priorASO(platform){
+  return sameASOWindow(priorASOPayload?.window,priorASORange()) ? priorASOPayload[platform] : null;
 }
-/* % change of a per-day total, second half vs first half */
-function perDayChange(H,val){
-  if(!H)return null;
-  const x=sum(H.a.map(val))/H.da, y=sum(H.b.map(val))/H.db;
-  return x?((y-x)/x*100):null;
+async function loadPriorASO(){
+  const range = priorASORange();
+  if(!range || !(A || I) || priorASOPending || sameASOWindow(priorASOPayload?.window,range)) return;
+  priorASOPending = true;
+  try {
+    const payload = await fetchPart('all',false,range);
+    if(!sameASOWindow(payload.window,range)) return;
+    priorASOPayload = payload;
+    if(sameASOWindow(payload.window,priorASORange())){
+      markDirty(['overview','android','ios']);
+      ensureRendered(ACTIVE);
+    }
+  } catch(e){
+    console.warn('[aso] previous period unavailable:',e.message);
+  } finally {
+    priorASOPending = false;
+    const selected = priorASORange();
+    if(selected?.start !== range.start || selected?.end !== range.end) loadPriorASO();
+  }
 }
-/* change of a ratio (num / den) in percentage points, second half vs first */
-function ratioChange(H,num,den){
-  if(!H)return null;
-  const r=part=>{const d=sum(part.map(den));return d?sum(part.map(num))/d*100:null};
-  const x=r(H.a), y=r(H.b);
-  return x===null||y===null?null:y-x;
+function vsMetric(cur,prev,format,better='up'){
+  if(!Number.isFinite(cur) || !Number.isFinite(prev)) return '';
+  const change = cur - prev;
+  if(!change) return 'No change vs ' + format(prev);
+  const pct = prev ? Math.abs(change / prev * 100).toFixed(1)+'%' : (change > 0 ? 'up' : 'down');
+  return moveArrow(change,better,pct) + ' vs ' + format(prev);
 }
-const VS_HALF=' vs first half';
-
-/* How a platform's written reviews moved, second half of the window vs first. */
-function reviewMoves(RV){
-  const H=halves(RV.all||[]);
-  const avgOf=part=>{const r=part.filter(x=>x.rating);return r.length?mean(r.map(x=>x.rating)):null};
-  const avg=H?(()=>{const x=avgOf(H.a),y=avgOf(H.b);return x===null||y===null?null:y-x})():null;
-  return {H,avg,
-    vol:perDayChange(H,()=>1),
-    pos:ratioChange(H,r=>(r.rating||0)>=4?1:0,()=>1),
-    neg:ratioChange(H,r=>(r.rating||0)>0&&r.rating<=2?1:0,()=>1)};
+function pairPrevious(current,previous,format,better){
+  return ['Android','iOS'].map((platform,i)=>{
+    const trend = vsMetric(current[i],previous[i],format,better);
+    return trend ? '<span class="tr-pl">'+platform+'</span> '+trend : '';
+  }).filter(Boolean).join('<span class="tr-gap"> · </span>');
 }
-/* Store conversion rate move (Play: acquisitions / visitors, App Store:
-   converters / impressions), in points. */
-function convMove(C,ios){
-  return ratioChange(halves(C.rows||[]),ios?r=>r.converters||0:r=>r.acquisition||0,ios?r=>r.impressions||0:r=>r.visitors||0);
+const STAR_BETTER = {5:'up',4:'up',3:null,2:'down',1:'down'};
+function priorStarShare(platform,star){
+  if(platform==='ios'){
+    const prior = priorReviews(platform), count = prior?.counts?.withText;
+    return count && prior.negativeSharePct != null ? (prior.distribution[star]||0)/count*100 : null;
+  }
+  const rows = priorASO(platform)?.ratings?.perDay || [];
+  const total = sum(rows.map(row=>[1,2,3,4,5].reduce((n,s)=>n+(row['star'+s]||0),0)));
+  return total ? sum(rows.map(row=>row['star'+star]||0))/total*100 : null;
 }
-/* Two arrows side by side for the Android vs IOS comparison cards. */
-function pairArrows(a,b,better,fmt){
-  const one=(name,v)=>v===null||v===undefined||isNaN(v)?'':'<span class="tr-pl">'+name+'</span>'+moveArrow(v,better,fmt(v));
-  const parts=[one('Android',a),one('IOS',b)].filter(Boolean);
-  /* kept to one line: "vs first half" is on hover rather than spelled out */
-  return parts.length?'<span class="tr-pair" title="second half of the period'+VS_HALF+'">'+parts.join('<span class="tr-gap">·</span>')+'</span>':'';
+function priorReviews(platform){
+  const block = priorASO(platform);
+  return block?.reviews ? scopedReviews(block.reviews,()=>true) : null;
+}
+function priorRating(platform){
+  return mean((priorASO(platform)?.ratings?.series||[]).map(r=>r.rating));
 }
 
-/* The four Reviews cards (Android and IOS share them). Each one's line under
-   the value is an arrow for how it moved, second half of the window against
-   the first: green when that is good, amber when it is not. */
-function reviewCards(RV,negT){
-  const M=reviewMoves(RV), H=M.H, avgMove=M.avg, posMove=M.pos, negMove=M.neg;
+function reviewCards(RV,negT,prior){
   /* 'Uncategorised' is not a complaint - it is this dashboard's own keyword
      list falling short - so the top complaint is the top NAMED theme. */
   const t=topNamedTheme(negT);
   const has=(r,k)=>r.primary===k||(r.themes||[]).indexOf(k)>=0;
-  const topMove=t.top?perDayChange(H,r=>(r.rating||0)>0&&r.rating<=2&&has(r,t.top.key)?1:0):null;
+  const count = rows => rows?.filter(r=>r.rating>0 && r.rating<=2 && has(r,t.top.key)).length;
+  const topMove = t.top ? vsMetric(count(RV.all),count(prior?.all),n0,'down') : '';
+  const avgSeries=dailyReviewSeries(RV,r=>r.rating||null,'avg');
+  const posSeries=dailyReviewSeries(RV,r=>(r.rating||0)>=4?1:0,'share');
+  const negSeries=dailyReviewSeries(RV,r=>(r.rating||0)>0&&r.rating<=2?1:0,'share');
+  const topSeries=dailyReviewSeries(RV,r=>t.top&&(r.rating||0)>0&&r.rating<=2&&has(r,t.top.key)?1:0,'sum');
   return [
-    kpiSingle({label:'Average Rating · Written',accent:'teal',value:n2(RV.averageRatingWithText),
-      sub:avgMove===null?'':moveArrow(avgMove,'up',nf(Math.abs(avgMove),2)+VS_HALF)}),
-    kpiSingle({label:'Positive Share',accent:'green',value:pc(RV.positiveSharePct,1),
-      sub:posMove===null?'':moveArrow(posMove,'up',ptsTxt(posMove)+VS_HALF)}),
-    kpiSingle({label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
-      sub:negMove===null?'':moveArrow(negMove,'down',ptsTxt(negMove)+VS_HALF)}),
-    kpiSingle({label:'Top Complaint',accent:'amber',
+    kpiSingle({dates:avgSeries.dates,series:avgSeries.values,label:'Average Rating · Written',accent:'teal',value:n2(RV.averageRatingWithText),
+      sub:vsMetric(RV.averageRatingWithText,prior?.averageRatingWithText,n2)}),
+    kpiSingle({dates:posSeries.dates,series:posSeries.values,label:'Positive Share',accent:'green',value:pc(RV.positiveSharePct,1),
+      sub:vsMetric(RV.positiveSharePct,prior?.positiveSharePct,v=>pc(v,1))}),
+    kpiSingle({dates:negSeries.dates,series:negSeries.values,label:'Negative Share',accent:'coral',tone:(RV.negativeSharePct>35?'neg':''),value:pc(RV.negativeSharePct,1),
+      sub:vsMetric(RV.negativeSharePct,prior?.negativeSharePct,v=>pc(v,1),'down')}),
+    kpiSingle({dates:topSeries.dates,series:topSeries.values,label:'Top Complaint',accent:'amber',
       value:t.top?esc(t.top.label):'—',
-      sub:t.top?(topMove===null?'':moveArrow(topMove,'down',pctTxt(topMove)+' per day'+VS_HALF))
+      sub:t.top?topMove
         :(t.uncategorised?'no 1★–2★ review matched a theme':'—')})];
 }
 /* Green tick when a count of bad days is zero, amber ▲ when it is not. */
@@ -397,8 +380,38 @@ function badDays(n,what){
   return n?'<span class="tr up">▲ '+n+' day'+(n===1?'':'s')+' '+what+'</span>'
           :'<span class="tr down">✓ never '+what+'</span>';
 }
+/* Daily series for a card's wave. Only the report theme reads data-spark
+   (src/shared/report-pro.js); without it the attribute is inert. */
+function sparkAttr(s,d){
+  const v=[],ds=[];
+  (s||[]).forEach((x,i)=>{ if(x===null||x===undefined||x==='')return; x=Number(x); if(isFinite(x)){ v.push(+x.toPrecision(6)); ds.push((d&&d[i])||''); } });
+  return v.length>1?' data-spark="'+v.join(',')+'"'+(d?' data-spark-dates="'+ds.join(',')+'"':''):'';
+}
+/* the sorted dates byDay() sums over, so a series and its dates line up */
+function dayKeys(rows){
+  const m={};(rows||[]).forEach(r=>{if(r&&r.date)m[r.date]=1});
+  return Object.keys(m).sort();
+}
+/* rows of {date, ...} summed per day, oldest first */
+function byDay(rows,f){
+  const m={};(rows||[]).forEach(r=>{if(r&&r.date)m[r.date]=(m[r.date]||0)+(+f(r)||0)});
+  return Object.keys(m).sort().map(k=>m[k]);
+}
+function dailyReviewSeries(RV,f,mode){
+  const groups={};(RV.all||[]).forEach(r=>{if(!r||!r.date)return;(groups[r.date]||(groups[r.date]=[])).push(r)});
+  const dates=Object.keys(groups).sort(),values=dates.map(d=>{const vals=groups[d].map(f).filter(v=>v!==null&&v!==undefined&&Number.isFinite(+v)).map(Number);if(!vals.length)return null;if(mode==='sum')return sum(vals);if(mode==='share')return mean(vals)*100;return mean(vals)});
+  return{dates,values};
+}
+function mergeSeries(a,b,mode='avg'){
+  const m={};[a,b].forEach(s=>(s.dates||[]).forEach((d,i)=>{const v=s.values[i];if(v!==null&&v!==undefined&&Number.isFinite(+v))(m[d]||(m[d]=[])).push(+v)}));
+  const dates=Object.keys(m).sort();return{dates,values:dates.map(d=>mode==='sum'?sum(m[d]):mean(m[d]))};
+}
+function conversionSeries(C,ios){
+  const dates=dayKeys(C.rows||[]),numv=byDay(C.rows||[],ios?r=>r.converters||0:r=>r.acquisition||0),den=byDay(C.rows||[],ios?r=>r.impressions||0:r=>r.visitors||0);
+  return{dates,values:numv.map((v,i)=>den[i]?v/den[i]*100:null)};
+}
 function kpiSingle(o){
-  return '<div class="kpi a-'+o.accent+'"><div class="l">'+o.label+'</div>'+
+  return '<div class="kpi a-'+o.accent+'"'+sparkAttr(o.series,o.dates)+'><div class="l">'+o.label+'</div>'+
     '<div class="v'+(o.tone?' '+o.tone:'')+'">'+o.value+'</div>'+
     (o.sub?'<div class="d mut">'+o.sub+'</div>':'')+(o.note?'<div class="p">'+o.note+'</div>':'')+'</div>';
 }
@@ -409,7 +422,7 @@ function kpiDelta(o){
     const c=chg(o.prev,o.curr), good=(o.lower? c<=0 : c>=0);
     d='<div class="d'+(good?'':' neg')+'">'+arrow(c)+' vs prev day</div>';
   }else if(o.sub){ d='<div class="d mut">'+o.sub+'</div>'; }
-  return '<div class="kpi a-'+o.accent+'"><div class="l">'+o.label+'</div>'+
+  return '<div class="kpi a-'+o.accent+'"'+sparkAttr(o.series,o.dates)+'><div class="l">'+o.label+'</div>'+
     '<div class="v'+(o.tone?' '+o.tone:'')+'">'+o.value+'</div>'+d+
     (o.note?'<div class="p">'+o.note+'</div>':'')+'</div>';
 }
@@ -426,7 +439,7 @@ function kpiCompare(o){
   const has=v=>v!==null&&v!==undefined&&!isNaN(v);
   let aWin=false,bWin=false;
   if(has(a)&&has(b)&&a!==b){ const aBetter=o.lower? a<b : a>b; aWin=aBetter; bWin=!aBetter; }
-  return '<div class="kpi a-'+o.accent+'"><div class="l">'+o.label+'</div>'+
+  return '<div class="kpi a-'+o.accent+'"'+sparkAttr(o.series,o.dates)+'><div class="l">'+o.label+'</div>'+
     '<div class="duo">'+
       '<div class="wcol"><span class="wl"><i style="background:'+COLORS.green+'"></i>Android</span>'+
         '<span class="wv big'+(aWin?' win':'')+'">'+(has(a)?f(a):'—')+'</span></div>'+
@@ -634,8 +647,8 @@ function rangeBar(host,range,tailNote){
 }
 
 const inWindow=o=>o&&dateAllowed(o.date||'');
-function scopedStability(raw,ios){
-  const S=Object.assign({},raw||{}),series=(S.series||[]).filter(inWindow),vals=series.map(x=>ios?x.crashes:x.crashRate),latest=series.at(-1)||null;
+function scopedStability(raw,ios,include=inWindow){
+  const S=Object.assign({},raw||{}),series=(S.series||[]).filter(include),vals=series.map(x=>ios?x.crashes:x.crashRate),latest=series.at(-1)||null;
   S.series=series;S.latest=latest;S.previous=series.length>1?series.at(-2):null;
   if(ios){
     /* COUNTS AND THE RATE ARE BOTH SCOPED, and they are different questions.
@@ -768,8 +781,8 @@ function scopedRatings(raw){
   R.changePts=series.length>1?series.at(-1).rating-series[0].rating:null;
   return R;
 }
-function scopedReviews(raw){
-  const RV=Object.assign({},raw||{}),volume=(RV.volumeByDate||[]).filter(inWindow),all=(RV.all||[]).filter(inWindow);
+function scopedReviews(raw,include=inWindow){
+  const RV=Object.assign({},raw||{}),volume=(RV.volumeByDate||[]).filter(include),all=(RV.all||[]).filter(include);
   RV.volumeByDate=volume;
   const count=sum(volume.map(x=>x.count)),weighted=sum(volume.map(x=>(x.count||0)*(x.avgRating||0)));
   RV.counts=Object.assign({},RV.counts||{},{withText:count});RV.averageRatingWithText=count?weighted/count:null;
@@ -801,8 +814,8 @@ function scopedReviews(raw){
   }
   return RV;
 }
-function scopedConversions(raw,ios){
-  const C=Object.assign({},raw||{}),rows=(C.rows||[]).filter(inWindow),by={};
+function scopedConversions(raw,ios,include=inWindow){
+  const C=Object.assign({},raw||{}),rows=(C.rows||[]).filter(include),by={};
   rows.forEach(r=>{const k=r.source||'(unattributed)',g=by[k]||(by[k]=ios?{source:k,impressions:0,pageViews:0,converters:0}:{source:k,visitors:0,acquisition:0});if(ios){g.impressions+=r.impressions||0;g.pageViews+=r.pageViews||0;g.converters+=r.converters||0}else{g.visitors+=r.visitors||0;g.acquisition+=r.acquisition||0}});
   const sources=Object.values(by);
   sources.forEach(g=>{if(ios){g.conversionRate=g.impressions?g.converters/g.impressions*100:null;g.viewRate=g.impressions?g.pageViews/g.impressions*100:null;g.pageRate=g.pageViews?g.converters/g.pageViews*100:null}else g.conversionRate=g.visitors?g.acquisition/g.visitors*100:null});
@@ -820,6 +833,7 @@ function scopedConversions(raw,ios){
 function renderAndroid(){
   if(!A)return;
   const S=scopedStability(A.stability,false), R=scopedRatings(A.ratings), RV=scopedReviews(A.reviews), C=scopedConversions(A.conversions,false);
+  const priorStability=scopedStability(priorASO('android')?.stability,false,()=>true);
   ADATES=collectDates(A);
   const D=ADATES;
 
@@ -834,17 +848,17 @@ function renderAndroid(){
   const avg=S.averages||{}, peak=S.peak||{}, over=S.daysOverThreshold||{};
 
   row('anRow2',[
-    kpiSingle({label:'Average Crash Rate',accent:'coral',value:p2(avg.crashRate),
-      sub:rateTrend(crash,p2),
+    kpiSingle({dates:D,series:crash,label:'Average Crash Rate',accent:'coral',value:p2(avg.crashRate),
+      sub:vsMetric(avg.crashRate,priorStability.averages.crashRate,p2,'down'),
       note:'daily mean across the selected period · '+statusPill((S.status||{}).crash)}),
-    kpiSingle({label:'Average ANR Rate',accent:'amber',value:p2(avg.anrRate),
-      sub:rateTrend(anr,p2),
+    kpiSingle({dates:D,series:anr,label:'Average ANR Rate',accent:'amber',value:p2(avg.anrRate),
+      sub:vsMetric(avg.anrRate,priorStability.averages.anrRate,p2,'down'),
       note:'daily mean across the selected period · '+statusPill((S.status||{}).anr)}),
-    kpiSingle({label:'Peak Crash Rate',accent:'coral',value:p2(peak.crashRate),
-      sub:badDays(over.crash||0,'above 1.09%'),
+    kpiSingle({dates:D,series:crash,label:'Peak Crash Rate',accent:'coral',value:p2(peak.crashRate),
+      sub:vsMetric(peak.crashRate,priorStability.peak.crashRate,p2,'down') || badDays(over.crash||0,'above 1.09%'),
       note:over.crash?over.crash+' day(s) above 1.09%':'never above threshold'}),
-    kpiSingle({label:'Peak ANR Rate',accent:'amber',value:p2(peak.anrRate),
-      sub:badDays(over.anr||0,'above 0.47%'),
+    kpiSingle({dates:D,series:anr,label:'Peak ANR Rate',accent:'amber',value:p2(peak.anrRate),
+      sub:vsMetric(peak.anrRate,priorStability.peak.anrRate,p2,'down') || badDays(over.anr||0,'above 0.47%'),
       note:over.anr?over.anr+' day(s) above 0.47%':'never above threshold'})]);
 
   lineX('anCrash',D,[
@@ -888,12 +902,13 @@ function renderAndroid(){
   const latestRating=R.current&&R.current.rating!=null?R.current:null;
 
   row('anRatingKpis',[
-    kpiSingle({label:'Average Rating',accent:'green',value:n3(periodRating),
-      sub:(()=>{const c=halfChange(ratingDays.map(x=>x.rating));return c===null?'':moveArrow(c,'up',nf(Math.abs(c),3)+' vs first half')})(),
+    kpiSingle({dates:ratingDays.map(x=>x.date),series:ratingDays.map(x=>x.rating),label:'Average Rating',accent:'green',value:n3(periodRating),
+      sub:vsMetric(periodRating,priorRating('android'),n3),
       note:'daily mean across the selected period · not the store’s default rating'}),
     kpiSingle({label:'Latest Daily Rating',accent:'teal',
+      dates:ratingDays.map(x=>x.date),series:ratingDays.map(x=>x.rating),
       value:latestRating?n3(latestRating.rating):'—',
-      sub:latestRating?(ratingDays.length>1?moveArrow(ratingDays[ratingDays.length-1].rating-ratingDays[ratingDays.length-2].rating,'up',nf(Math.abs(ratingDays[ratingDays.length-1].rating-ratingDays[ratingDays.length-2].rating),3)+' vs day before'):''):'no rated day in this period',
+      sub:latestRating?vsMetric(latestRating.rating,priorASO('android')?.ratings?.series?.at(-1)?.rating,n3):'no rated day in this period',
       note:'the newest day the sheet holds'}),
     kpiSingle({label:'Change Across Period',accent:'blue',
       value:R.changePts==null?'—':(R.changePts>0?'+':'')+n3(R.changePts),
@@ -910,13 +925,11 @@ function renderAndroid(){
   const starHost=$('anRow3');
   if(totalRatings>0){
     if(starHost)starHost.className='kpi-row five';
-    const anStarDays=ratingRows.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)))
-      .map(r=>({1:r.star1||0,2:r.star2||0,3:r.star3||0,4:r.star4||0,5:r.star5||0}));
     row('anRow3',[5,4,3,2,1].map(star=>{
-      const c=starShareChange(anStarDays,star);
+      const previous = priorStarShare('android',star);
       return kpiSingle({
         label:star+'★ Share',accent:ratingColors[star],value:pc(ratingShare(star),2),
-        sub:c===null?'':moveArrow(c,STAR_BETTER[star],ptsTxt(c)+' vs first half')
+        sub:vsMetric(ratingShare(star),previous,v=>pc(v,2),STAR_BETTER[star])
       });
     }));
   }else{
@@ -931,7 +944,7 @@ function renderAndroid(){
   const cnt=RV.counts||{}, themes=RV.themes||[], negT=RV.negativeThemes||[], posT=RV.positiveThemes||[];
   const volume=align(RV.volumeByDate,'count',D), volAvg=align(RV.volumeByDate,'avgRating',D);
 
-  row('anRow4',reviewCards(RV,negT));
+  row('anRow4',reviewCards(RV,negT,priorReviews('android')));
 
   mixedX('anReviewVol',D,[
     {type:'bar',label:'Reviews',data:volume,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
@@ -962,22 +975,19 @@ function renderAndroid(){
   /* ---------------- CONVERSION ---------------- */
   const tot=C.totals||{}, rec=C.recent||{}, best=C.bestSource;
 
-  /* Each card's line is an arrow for how it moved, second half of the window
-     against the first (green = good, amber = not). */
-  const cH=halves(C.rows||[]);
-  const cvrMove=ratioChange(cH,r=>r.acquisition||0,r=>r.visitors||0);
-  const visMove=perDayChange(cH,r=>r.visitors||0), acqMove=perDayChange(cH,r=>r.acquisition||0);
-  const bestMove=best?ratioChange(halves((C.rows||[]).filter(r=>r.source===best.source)),r=>r.acquisition||0,r=>r.visitors||0):null;
+  const previousConversions=scopedConversions(priorASO('android')?.conversions,false,()=>true);
+  const prior=previousConversions.rows.length ? previousConversions.totals : {};
+  const priorSource=previousConversions.bySource.find(s=>s.source===best?.source);
   row('anRow5',[
-    kpiSingle({label:'Conversion Rate',accent:'pink',value:pc(rec.conversionRate,2),
-      sub:cvrMove===null?'':moveArrow(cvrMove,'up',ptsTxt(cvrMove)+VS_HALF)}),
-    kpiSingle({label:'Store Visitors',accent:'blue',value:cp(tot.visitors),
-      sub:visMove===null?'':moveArrow(visMove,'up',pctTxt(visMove)+' per day'+VS_HALF)}),
-    kpiSingle({label:'Acquisitions',accent:'green',value:cp(tot.acquisition),
-      sub:acqMove===null?'':moveArrow(acqMove,'up',pctTxt(acqMove)+' per day'+VS_HALF)}),
+    kpiSingle({dates:dayKeys(C.rows),series:(()=>{const a=byDay(C.rows,r=>r.acquisition),v=byDay(C.rows,r=>r.visitors);return a.map((x,i)=>v[i]?x/v[i]*100:null)})(),label:'Conversion Rate',accent:'pink',value:pc(rec.conversionRate,2),
+      sub:vsMetric(tot.conversionRate,prior.conversionRate,v=>pc(v,2))}),
+    kpiSingle({dates:dayKeys(C.rows),series:byDay(C.rows,r=>r.visitors),label:'Store Visitors',accent:'blue',value:cp(tot.visitors),
+      sub:vsMetric(tot.visitors,prior.visitors,cp)}),
+    kpiSingle({dates:dayKeys(C.rows),series:byDay(C.rows,r=>r.acquisition),label:'Acquisitions',accent:'green',value:cp(tot.acquisition),
+      sub:vsMetric(tot.acquisition,prior.acquisition,cp)}),
     kpiSingle({label:'Best Converting Source',accent:'teal',
       value:best?('<span style="font-size:19px">'+esc(best.source)+'</span>'):'—',
-      sub:best?(bestMove===null?pc(best.conversionRate,2)+' CVR':moveArrow(bestMove,'up',pc(best.conversionRate,2)+' CVR · '+ptsTxt(bestMove)+VS_HALF)):'—'})]);
+      sub:best?(vsMetric(best.conversionRate,priorSource?.conversionRate,v=>pc(v,2))||pc(best.conversionRate,2)+' CVR'):'—'})]);
 
   drawConversionCharts(C);
 
@@ -1106,6 +1116,7 @@ function drawConversionCharts(C){
 function renderIos(){
   if(!I)return;
   const S=scopedStability(I.stability,true), R=scopedRatings(I.ratings), RV=scopedReviews(I.reviews), C=scopedConversions(I.conversions,true);
+  const priorStability=scopedStability(priorASO('ios')?.stability,true,()=>true);
   IDATES=collectDates(I);
   const D=IDATES;
 
@@ -1129,17 +1140,17 @@ function renderIos(){
   const avgRate=avg.crashRate, periodRate=avg.periodCrashRate;
 
   row('ioRow2',[
-    kpiSingle({label:'Average Crash Rate',accent:'coral',value:p3(avgRate),
-      sub:rateTrend(crashRates,p3)||(periodRate==null?'':'period rate '+p3(periodRate)),
+    kpiSingle({dates:D,series:crashRates,label:'Average Crash Rate',accent:'coral',value:p3(avgRate),
+      sub:vsMetric(avgRate,priorStability.averages.crashRate,p3,'down')||(periodRate==null?'':'period rate '+p3(periodRate)),
       note:'daily mean · crashes over sessions, opted-in devices only'}),
-    kpiSingle({label:'Peak Crash Rate',accent:'coral',value:p3(peak.crashRate),
-      sub:badDays(S.daysAboveAverage||0,'25%+ above average'),
+    kpiSingle({dates:D,series:crashRates,label:'Peak Crash Rate',accent:'coral',value:p3(peak.crashRate),
+      sub:vsMetric(peak.crashRate,priorStability.peak.crashRate,p3,'down') || badDays(S.daysAboveAverage||0,'25%+ above average'),
       note:(S.daysAboveAverage||0)+' day(s) more than 25% above average'}),
     /* The count is kept, and deliberately. It is what these cards held until
        now, and it is the only figure that shows a Crashes/Sessions column
        swapped at the source - the stored rate reads the same either way. */
-    kpiSingle({label:'Total Crashes',accent:'blue',value:cp(tot.crashes),
-      sub:(()=>{const c=perDayChange(halves(S.series),r=>r.crashes||0);return c===null?'':moveArrow(c,'down',pctTxt(c)+' per day'+VS_HALF)})(),
+    kpiSingle({dates:(S.series||[]).map(r=>r.date),series:(S.series||[]).map(r=>r.crashes),label:'Total Crashes',accent:'blue',value:cp(tot.crashes),
+      sub:vsMetric(tot.crashes,priorStability.series.length ? priorStability.totals.crashes : null,cp,'down'),
       note:'sum across the selected period'}),
     kpiSingle({label:'Days With Crash Data',accent:'amber',value:n0(S.series.length),
       /* coverage, not a trend: green when every selected day has data,
@@ -1185,12 +1196,13 @@ function renderIos(){
   const ioGap=ratingGap((I.ratings||{}).series,ioRatingDays);
 
   row('ioRatingKpis',[
-    kpiSingle({label:'Average Rating',accent:'green',value:n3(ioPeriodRating),
-      sub:ioRatingDays.length?(()=>{const c=halfChange(ioRatingDays.map(x=>x.rating));return c===null?'':moveArrow(c,'up',nf(Math.abs(c),3)+' vs first half')})():(ioGap?ioGap.sub:''),
+    kpiSingle({dates:ioRatingDays.map(x=>x.date),series:ioRatingDays.map(x=>x.rating),label:'Average Rating',accent:'green',value:n3(ioPeriodRating),
+      sub:ioRatingDays.length?vsMetric(ioPeriodRating,priorRating('ios'),n3):(ioGap?ioGap.sub:''),
       note:ioGap?ioGap.note:'daily mean across the selected period · one storefront, not a world average'}),
     kpiSingle({label:'Latest Daily Rating',accent:'teal',
+      dates:ioRatingDays.map(x=>x.date),series:ioRatingDays.map(x=>x.rating),
       value:ioLatest?n3(ioLatest.rating):'—',
-      sub:ioLatest?(ioRatingDays.length>1?moveArrow(ioRatingDays[ioRatingDays.length-1].rating-ioRatingDays[ioRatingDays.length-2].rating,'up',nf(Math.abs(ioRatingDays[ioRatingDays.length-1].rating-ioRatingDays[ioRatingDays.length-2].rating),3)+' vs day before'):''):(ioGap?ioGap.sub:'no rated day in this period'),
+      sub:ioLatest?vsMetric(ioLatest.rating,priorASO('ios')?.ratings?.series?.at(-1)?.rating,n3):(ioGap?ioGap.sub:'no rated day in this period'),
       note:'the newest day the sheet holds'}),
     kpiSingle({label:'Change Across Period',accent:'blue',
       value:R.changePts==null?'—':(R.changePts>0?'+':'')+n3(R.changePts),
@@ -1204,15 +1216,11 @@ function renderIos(){
   const ioStarHost=$('ioRow3');
   if(tw>0){
     if(ioStarHost)ioStarHost.className='kpi-row five';
-    /* per-day star counts from the written reviews, oldest first */
-    const ioByDay={};
-    (RV.all||[]).forEach(r=>{const s=Math.round(r.rating||0);if(s>=1&&s<=5&&r.date){const d=ioByDay[r.date]||(ioByDay[r.date]={});d[s]=(d[s]||0)+1;}});
-    const ioStarDays=Object.keys(ioByDay).sort().map(k=>ioByDay[k]);
     row('ioRow3',[5,4,3,2,1].map(star=>{
-      const c=starShareChange(ioStarDays,star);
+      const previous = priorStarShare('ios',star);
       return kpiSingle({
         label:star+'★ Share',accent:ratingColors[star],value:pc(share(star),2),
-        sub:c===null?'':moveArrow(c,STAR_BETTER[star],ptsTxt(c)+' vs first half')
+        sub:vsMetric(share(star),previous,v=>pc(v,2),STAR_BETTER[star])
       });
     }));
   }else{
@@ -1241,7 +1249,7 @@ function renderIos(){
   const cnt=RV.counts||{}, themes=RV.themes||[], negT=RV.negativeThemes||[], posT=RV.positiveThemes||[];
   const volume=align(RV.volumeByDate,'count',D), volAvg=align(RV.volumeByDate,'avgRating',D);
 
-  row('ioRow4',reviewCards(RV,negT));
+  row('ioRow4',reviewCards(RV,negT,priorReviews('ios')));
 
   mixedX('ioReviewVol',D,[
     {type:'bar',label:'Reviews',data:volume,backgroundColor:'rgba(77,159,255,.55)',borderRadius:4,yAxisID:'y',order:2},
@@ -1256,22 +1264,19 @@ function renderIos(){
   /* ---------------- CONVERSION ---------------- */
   const cTot=C.totals||{}, rec=C.recent||{}, best=C.bestSource;
 
-  /* Each card's line is an arrow for how it moved, second half of the window
-     against the first (green = good, amber = not). */
-  const cH=halves(C.rows||[]);
-  const cvrMove=ratioChange(cH,r=>r.converters||0,r=>r.impressions||0);
-  const impMove=perDayChange(cH,r=>r.impressions||0), conMove=perDayChange(cH,r=>r.converters||0);
-  const bestMove=best?ratioChange(halves((C.rows||[]).filter(r=>r.source===best.source)),r=>r.converters||0,r=>r.impressions||0):null;
+  const previousConversions=scopedConversions(priorASO('ios')?.conversions,true,()=>true);
+  const prior=previousConversions.rows.length ? previousConversions.totals : {};
+  const priorSource=previousConversions.bySource.find(s=>s.source===best?.source);
   row('ioRow5',[
-    kpiSingle({label:'Conversion Rate',accent:'pink',value:pc(cTot.conversionRate,2),
-      sub:cvrMove===null?'':moveArrow(cvrMove,'up',ptsTxt(cvrMove)+VS_HALF)}),
-    kpiSingle({label:'Impressions',accent:'blue',value:cp(cTot.impressions),
-      sub:impMove===null?'':moveArrow(impMove,'up',pctTxt(impMove)+' per day'+VS_HALF)}),
-    kpiSingle({label:'Converters',accent:'green',value:cp(cTot.converters),
-      sub:conMove===null?'':moveArrow(conMove,'up',pctTxt(conMove)+' per day'+VS_HALF)}),
+    kpiSingle({dates:dayKeys(C.rows),series:(()=>{const a=byDay(C.rows,r=>r.converters),v=byDay(C.rows,r=>r.impressions);return a.map((x,i)=>v[i]?x/v[i]*100:null)})(),label:'Conversion Rate',accent:'pink',value:pc(cTot.conversionRate,2),
+      sub:vsMetric(cTot.conversionRate,prior.conversionRate,v=>pc(v,2))}),
+    kpiSingle({dates:dayKeys(C.rows),series:byDay(C.rows,r=>r.impressions),label:'Impressions',accent:'blue',value:cp(cTot.impressions),
+      sub:vsMetric(cTot.impressions,prior.impressions,cp)}),
+    kpiSingle({dates:dayKeys(C.rows),series:byDay(C.rows,r=>r.converters),label:'Converters',accent:'green',value:cp(cTot.converters),
+      sub:vsMetric(cTot.converters,prior.converters,cp)}),
     kpiSingle({label:'Best Converting Source',accent:'teal',
       value:best?('<span style="font-size:19px">'+esc(best.source)+'</span>'):'—',
-      sub:best?(bestMove===null?pc(best.conversionRate,2)+' CVR':moveArrow(bestMove,'up',pc(best.conversionRate,2)+' CVR · '+ptsTxt(bestMove)+VS_HALF)):'—'})]);
+      sub:best?(vsMetric(best.conversionRate,priorSource?.conversionRate,v=>pc(v,2))||pc(best.conversionRate,2)+' CVR'):'—'})]);
 
   drawIosConversionCharts(C);
 
@@ -1374,30 +1379,37 @@ function renderOverview(){
   banner('ovWarnings',LAST_META.warnings||[]);
 
   const aCvr=(AC.totals||{}).conversionRate, iCvr=(IC.totals||{}).conversionRate;
-  /* the line under each pair of values is one arrow per platform: how that
-     figure moved in the second half of the window against the first */
-  const aM=reviewMoves(AR), iM=reviewMoves(IR);
+  /* Show a separate previous-window comparison for each platform. */
+  const prevAR=priorReviews('android'), prevIR=priorReviews('ios');
+  const ratingSeries=mergeSeries(dailyReviewSeries(AR,r=>r.rating||null,'avg'),dailyReviewSeries(IR,r=>r.rating||null,'avg'));
+  const reviewSeries=mergeSeries(dailyReviewSeries(AR,()=>1,'sum'),dailyReviewSeries(IR,()=>1,'sum'),'sum');
+  const negativeSeries=mergeSeries(dailyReviewSeries(AR,r=>(r.rating||0)>0&&r.rating<=2?1:0,'share'),dailyReviewSeries(IR,r=>(r.rating||0)>0&&r.rating<=2?1:0,'share'));
+  const storeSeries=mergeSeries(conversionSeries(AC,false),conversionSeries(IC,true));
 
   row('ovRow1',[
     kpiCompare({label:'Average Rating · Written',accent:'teal',
       a:AR.averageRatingWithText,b:IR.averageRatingWithText,fmt:n2,lower:false,
-      sub:pairArrows(aM.avg,iM.avg,'up',v=>nf(Math.abs(v),2)),
+      dates:ratingSeries.dates,series:ratingSeries.values,
+      sub:pairPrevious([AR.averageRatingWithText,IR.averageRatingWithText],[prevAR?.averageRatingWithText,prevIR?.averageRatingWithText],n2,'up'),
       note:'mean star rating of reviews that carry text'}),
 
     kpiCompare({label:'Written Reviews',accent:'blue',
       a:(AR.counts||{}).withText,b:(IR.counts||{}).withText,fmt:cp,lower:false,
+      dates:reviewSeries.dates,series:reviewSeries.values,
       /* more reviews is neither good nor bad on its own, so these arrows are neutral */
-      sub:pairArrows(aM.vol,iM.vol,null,v=>pctTxt(v)+' /day'),
+      sub:pairPrevious([AR.counts?.withText,IR.counts?.withText],[prevAR?.counts?.withText,prevIR?.counts?.withText],cp,null),
       note:'one row per review, both stores'}),
 
     kpiCompare({label:'Negative Share',accent:'coral',
       a:AR.negativeSharePct,b:IR.negativeSharePct,fmt:v=>pc(v,1),lower:true,
-      sub:pairArrows(aM.neg,iM.neg,'down',ptsTxt),
+      dates:negativeSeries.dates,series:negativeSeries.values,
+      sub:pairPrevious([AR.negativeSharePct,IR.negativeSharePct],[prevAR?.negativeSharePct,prevIR?.negativeSharePct],v=>pc(v,1),'down'),
       note:'lower is better · share of each platform\u2019s own written reviews'}),
 
     kpiCompare({label:'Store Conversion Rate',accent:'pink',
       a:aCvr,b:iCvr,fmt:v=>pc(v,2),lower:false,
-      sub:pairArrows(convMove(AC,false),convMove(IC,true),'up',ptsTxt),
+      dates:storeSeries.dates,series:storeSeries.values,
+      sub:pairPrevious([aCvr,iCvr],['android','ios'].map(p=>scopedConversions(priorASO(p)?.conversions,p==='ios',()=>true).totals.conversionRate),v=>pc(v,2),'up'),
       note:'different denominators: Play counts listing visitors, App Store counts impressions'})]);
 
   /* ---- chart 1: star mix, as a share so volume does not decide the shape ---- */
@@ -1684,12 +1696,8 @@ let ACTIVE='overview';
 function markDirty(names){
   (names||Object.keys(VIEWS)).forEach(n=>{if(VIEWS[n])VIEWS[n].dirty=true});
 }
-window.__themeRerender=function(){
-  Chart.defaults.color=cssVar('--t2','#a6b8d4');
-  Chart.defaults.borderColor=cssVar('--border','rgba(255,255,255,.08)');
-  destroyAll();markDirty();ensureRendered(ACTIVE);prefetchViews();
-};
 function ensureRendered(name){
+  loadPriorASO();
   const v=VIEWS[name];
   if(!v||!v.dirty)return;
   try{ v.render(); v.dirty=false; }

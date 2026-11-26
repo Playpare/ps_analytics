@@ -1,0 +1,173 @@
+/* ---------------------------------------------------------------------------
+ * design.css — Negative Spend on the shared design system (DESIGN.md).
+ *
+ * negative-spend.css predates the system and carries its own palette
+ * (--card, --t1, --coral …). Rather than rewrite 600 lines of it, every one
+ * of those names is pointed at a system token here, on <body>, so the legacy
+ * rules and the new ones paint from one palette. Imported after
+ * negative-spend.css.
+ * ------------------------------------------------------------------------- */
+
+html body {
+  --card:    var(--sur);
+  --card2:   var(--sur2);
+  --border:  var(--bor);
+  --borderB: var(--bor);
+  --t1:      var(--text);
+  --t2:      var(--mut);
+  --t3:      var(--mut);
+  --blue:    var(--acc);
+  --green:   var(--grn);
+  --amber:   var(--amb);
+  --coral:   var(--red);
+  --pink:    var(--pur);
+  --grad:    var(--brand-gradient);
+  --r:       14px;
+  --sh:      var(--card-shadow);
+}
+/* --bg and --teal share their names with the system tokens, so they cannot be
+   aliased (a var() pointing at itself is invalid). Restated per theme. */
+html body       { --bg: #000; --teal: #00e5c3 }
+/* Secondary text a step brighter than the system --mut on this page, so
+   captions, sub-lines and labels read clearly on the near-black surface. */
+html[data-theme="dark"] body { --mut: #e6eaf7 }
+
+html, body { background: var(--bg); color: var(--text) }
+
+/* ---------- scrollbars (§4) ---------- */
+html, body, .modal-body, .tablewrap { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) var(--bg) }
+html::-webkit-scrollbar-track, body::-webkit-scrollbar-track { background: var(--bg); border-left: 0 }
+html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb); border: 3px solid var(--bg); border-radius: 999px;
+}
+html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-h) }
+
+/* ---------- top bar (§5.2) ---------- */
+.top {
+  background: color-mix(in srgb, var(--sur) 94%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--bor);
+  gap: 10px;
+}
+/* Platform dropdown + Campaign settings: same face as the page's segmented
+   control (15px, medium), on the card surface with a hairline border. The
+   ids beat the legacy !important rules in negative-spend.css. */
+html body .top #platformFilterBtn, html body .top #mapBtn {
+  height: 38px !important; min-height: 38px; display: inline-flex; align-items: center; gap: 8px;
+  background: var(--sur) !important; border: 1px solid var(--bor) !important; color: var(--text) !important;
+  border-radius: 999px !important; font-family: var(--type-family) !important;
+  font-size: 15px !important; font-weight: 500 !important; line-height: 1 !important;
+  transition: color .15s, border-color .15s, background .15s;
+}
+html body .top #platformFilterBtn { padding: 0 38px 0 18px !important; min-width: 140px }
+html body .top #mapBtn { padding: 0 18px !important }
+html body .top #platformFilterBtn::after { border-color: var(--mut) !important; right: 16px }
+html body .top #platformFilterBtn:hover, html body .top #mapBtn:hover,
+html body .top .platform-drop:focus-within #platformFilterBtn {
+  border-color: var(--acc) !important; background: var(--row-hover) !important;
+}
+.top .btn.primary { background: var(--brand-gradient); color: var(--on-grad); border-color: transparent }
+
+.platform-drop-menu {
+  background: var(--sur) !important; border: 1px solid var(--bor) !important;
+  border-radius: 10px !important; box-shadow: var(--card-shadow) !important;
+}
+.platform-drop-menu button { color: var(--mut) !important; font-size: 15px !important; font-weight: 500 !important; padding: 9px 12px !important }
+.platform-drop-menu button:hover { background: var(--tint-info) !important; color: var(--text) !important }
+.platform-drop-menu button.active { color: var(--acc) !important; background: var(--tint-info) !important }
+
+/* date pill: the one live control in the bar takes the gradient */
+html body .top .date-controls select.date {
+  width: auto !important; min-width: 160px; height: 38px !important; min-height: 38px !important;
+  line-height: 38px !important; padding: 0 38px 0 18px !important; border-radius: 999px !important;
+  color: var(--on-grad) !important; font-family: var(--type-family) !important;
+  font-size: 15px !important; font-weight: 600 !important;
+}
+html body .date-span {
+  color: var(--mut) !important; font-family: var(--type-family) !important;
+  font-size: 15px !important; font-weight: 500 !important;
+  font-variant-numeric: tabular-nums; margin-right: 4px;
+}
+.date-confirm {
+  background: var(--brand-gradient); color: var(--on-grad); border: 0; font-weight: 700;
+}
+.date-controls select.plat { background-color: var(--sur2); border-color: var(--bor); color: var(--text) }
+.date-controls select.plat:hover, .date-controls select.plat:focus { border-color: var(--acc) }
+select option { background: var(--sur); color: var(--text) }
+/* The date dropdown's list takes the pill's colour instead of black. A native
+   option cannot paint a gradient, so it uses the gradient's midpoint. */
+html body .top .date-controls select.date option {
+  background: #27c2e1 !important; color: #001014 !important; font-weight: 600;
+}
+html body .top .date-controls select.date option:checked { background: #00e5c3 !important }
+.status { color: var(--mut); font-size: 12px; font-weight: 700 }
+.status.error { color: var(--red) }
+
+/* ---------- slide body ---------- */
+.sb { padding: 22px 26px 30px }
+.eyebrow { margin-bottom: 2px; font-weight: 600 !important; font-size: 13px !important; letter-spacing: .12em !important }
+.h1 { margin: 6px 0 18px }
+/* footer: product name, a build chip, a muted note, brand on the right */
+.sf {
+  height: auto !important; min-height: 52px; padding: 12px 26px !important; gap: 16px; flex-wrap: wrap;
+  background: var(--sur); border-top: 1px solid var(--bor); color: var(--mut);
+}
+.sf .sf-left { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0 }
+.sf .sf-name { color: var(--text); font-size: 14px !important; font-weight: 600 !important }
+.sf .sf-build {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px;
+  background: var(--tint-brand); border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
+  color: var(--teal); font-size: 12px !important; font-weight: 600 !important;
+}
+.sf .sf-note { color: var(--mut); font-size: 13px !important; font-weight: 400 !important }
+.sf .sf-brand { color: var(--mut); font-size: 13px !important; font-weight: 500 !important; white-space: nowrap }
+
+.card {
+  background: var(--sur); border: 1px solid var(--bor); border-radius: 14px; box-shadow: var(--card-shadow);
+}
+
+/* ---------- loader / empty (§6.9) ---------- */
+.loader { background: var(--backdrop); backdrop-filter: blur(8px) }
+.spinner { border-color: var(--bor); border-top-color: var(--teal); border-right-color: var(--acc) }
+.empty {
+  background: var(--sur2); border: 1px dashed var(--bor); border-radius: 10px;
+  color: var(--mut); font-size: 14px; font-weight: 600; line-height: 1.7; margin: 14px 18px;
+}
+
+/* ---------- modal (campaign settings) ---------- */
+.modal { background: var(--backdrop) }
+.modal-card { background: var(--sur); border: 1px solid var(--bor); border-radius: 14px; box-shadow: var(--card-shadow) }
+.modal-head h2 { font-size: 20px; font-weight: 700 }
+
+/* ---------- focus (§10) ---------- */
+:where(button, select, input, [tabindex], tr.grow):focus-visible {
+  outline: 2px solid var(--acc); outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top .btn, .top #platformFilterBtn { transition: none }
+}
+
+/* Campaign settings removed from the top bar (the element stays, hidden,
+   because the report still wires a handler to it). */
+html body .top #mapBtn { display: none !important }
+
+/* The report control row matches the pure-black report canvas. */
+html[data-theme="dark"] body .top{background:#000;backdrop-filter:none}
+
+/* date filter popup: src/shared/styles/date-popup.css */
+
+/* ---- platform: individual buttons, styled like the UA Report's tabs -------- */
+html body .top .plat-tabs { display: inline-flex; gap: 8px; align-items: center }
+html body .top .plat-tabs button:not(#_) {
+  height: 38px; padding: 0 18px; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center;
+  border: 1px solid var(--bor, rgba(255, 255, 255, .14)); background: var(--sur, #111317); color: #e3e9f4;
+  font: 500 15px "Segoe UI", "Segoe UI Variable", system-ui, Arial, sans-serif; letter-spacing: 0;
+  transition: border-color .15s, filter .15s;
+}
+html body .top .plat-tabs button:not(#_):hover { border-color: #00e5c3 }
+html body .top .plat-tabs button.active:not(#_) {
+  color: #031018; border-color: transparent; font-weight: 600;
+  background: var(--brand-gradient, linear-gradient(135deg, #00e5c3, #4d9fff));
+}

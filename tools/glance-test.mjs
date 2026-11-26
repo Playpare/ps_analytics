@@ -153,7 +153,7 @@ await page.waitForTimeout(700);
    campaign/margin filters and leave the page stuck on Android. */
 const platTitles = [];
 for (const p of ['ios', 'all', 'android']) {
-  await page.click('#platformFilterBtn');
+  /* platform is three buttons now (was a dropdown): click the one wanted */
   await page.click(`#platformDropMenu [data-platform=${p}]`);
   await page.waitForTimeout(600);
   platTitles.push(await page.textContent('#pageTitle'));
@@ -176,7 +176,7 @@ const ok = (cond, label, detail) => { if (!cond) fail.push(label + (detail ? ' â
  * the two stylesheets against each other costs nothing and ends the class.
  * ------------------------------------------------------------------------- */
 {
-  const NS = resolve(ROOT, 'reports/negative-spend');
+  const NS = resolve(ROOT, 'design/reports/negative-spend');
   const classesIn = (f) => new Set(
     [...readFileSync(resolve(NS, f), 'utf8').matchAll(/\.([a-zA-Z][\w-]*)(?=[\s,{:.>)\[])/g)]
       .map((m) => m[1]));
@@ -393,19 +393,9 @@ ok(!tableShape.payback, 'payback card removed');
 await page.setViewportSize({ width: 1400, height: 1400 });
 await page.evaluate(() => window.scrollTo(0, 0));
 await page.waitForTimeout(400);
-await page.screenshot({ path: resolve(ROOT, 'design/glance-live.png'), fullPage: false });
+await page.screenshot({ path: resolve(ROOT, 'dist/glance-live.png'), fullPage: false });
 
-/* And the light theme, which shares every token name with dark. */
-await page.evaluate(() => { localStorage.setItem('mss3d_theme', 'light'); });
-await page.reload({ waitUntil: 'load' });
-await page.waitForTimeout(2500);
-await page.evaluate(() => {
-  const r = [...document.querySelectorAll('#perfTable tr.grow')].find((t) => t.dataset.k?.startsWith('n:'));
-  if (r) r.click();
-});
-await page.waitForTimeout(400);
-await page.screenshot({ path: resolve(ROOT, 'design/glance-live-light.png'), fullPage: false });
-await page.evaluate(() => { localStorage.removeItem('mss3d_theme'); });
+
 
 await browser.close();
 server.kill();

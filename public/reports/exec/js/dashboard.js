@@ -16,14 +16,6 @@ function switchTab(name, btn) {
 }
 
 
-function toggleTheme() {
-  isLight=!isLight;
-  document.body.classList.toggle('lt',isLight);
-  g('themeBtn').textContent = isLight?'🌙 Dark':'☀ Light';
-  Object.values(charts).forEach(c=>{ if(c) c.update(); });
-  renderProjected(); // re-render gauges with correct params
-}
-
 /*DATA LOADING*/
 async function loadData(forceRefresh=false) {
   showLoader(true, forceRefresh ? 'Refreshing data…' : 'Loading data…');
@@ -295,7 +287,7 @@ function populateFilterDropdowns() {
 }
 function setOpts(id,arr){
   const el=g(id), cur=el.value;
-  const label = id==='fGame' ? '🎮 All Games' : id==='fPlat' ? '📱 All Platforms' : 'All';
+  const label = id==='fGame' ? 'All Games' : id==='fPlat' ? 'All Platforms' : 'All';
   el.innerHTML='<option value="">'+label+'</option>'+arr.map(o=>`<option value="${escapeAttr(o)}">${escapeHTML(o)}</option>`).join('');
   if(arr.includes(cur)) el.value=cur;
 }

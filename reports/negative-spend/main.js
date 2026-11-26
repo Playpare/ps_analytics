@@ -5,16 +5,14 @@
  * passes it the endpoint as ?api=. It reads the same sessionStorage token as
  * everything else, so it needs no sign-in of its own.
  *
- * Like till-date, it shipped light-theme rules without the script that applies
- * them — see the note in reports/till-date/main.js.
+ * Every stylesheet it uses lives in design/ (see design/README.md).
  */
 
-import '../../src/shared/styles/theme-tokens.css';
-import '../../src/shared/styles/motion.css';
-import './negative-spend.css';
-import './design.css';
+import '../../design/shared/theme-tokens.css';
+import '../../design/shared/motion.css';
+import '../../design/reports/negative-spend/negative-spend.css';
+import '../../design/reports/negative-spend/design.css';
 
-import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';
 
 import './negative-spend.legacy.js';
@@ -26,4 +24,9 @@ import './negative-spend.legacy.js';
 import './glance.js';
 
 /* Last, so the one font stack and the type scale win (DESIGN.md §11). */
-import '../../src/shared/styles/typography.css';
+import '../../design/shared/typography.css';
+/* the dashboard design, shared by all the reports */
+import '../../design/shared/report-pro.js';
+/* one loading screen for every page: the Pulse logo + a Loading bar */
+import '../../design/shared/ps-loader.css';
+import '../shared/ps-open.js';

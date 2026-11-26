@@ -1,0 +1,90 @@
+/* ---------------------------------------------------------------------------
+ * design.css — Monetization page, zoomed in.
+ *
+ * This report is a deck of slides whose text sizes are written inline
+ * throughout its markup (10px, 10.5px, 11px …), so the whole slide body is
+ * scaled uniformly instead of chasing every size. The slide header (title bar
+ * with the date) and footer stay at their normal size. `zoom` keeps the
+ * content fitting the page width - it lays out narrower and draws larger.
+ * Charts render at a matching higher pixel ratio (see main.js) so they stay
+ * sharp. No colours are changed here.
+ * ------------------------------------------------------------------------- */
+:root { --mon-zoom: 1.15 }
+html body .slide > .sb { zoom: var(--mon-zoom) }
+
+/* donut legends: the share values a step bigger and clearer */
+html body .dl.dl-list .dl-chip:not(#_), html body .dl.dl-split .dl-chip:not(#_) {
+  min-width: 60px; height: 28px; padding: 0 11px; border-radius: 8px;
+  font-size: 15.5px !important; font-weight: 800 !important;
+}
+html body .dl.dl-list .dl-lb:not(#_), html body .dl.dl-split .dl-lb:not(#_) {
+  font-size: 16px !important; font-weight: 600 !important;
+}
+html body .dl.dl-list .dl-item:not(#_), html body .dl.dl-split .dl-item:not(#_) { padding: 7px 4px }
+
+/* ---------- top bar: same buttons and type as the other pages ----------
+   Monetization Report / Analytics tabs, the platform dropdown and Refresh are
+   38px pills at 15px (medium; the active tab and Refresh semibold). The
+   status text and the date range read at the same size as Negative Spend /
+   Life Time. Shapes and type only - the page's colours are untouched. */
+html body #tabnav { min-height: 60px; gap: 10px }
+html body #tabnav .navbtn:not(#_), html body #tabnav #btn-report, html body #tabnav #btn-analytics,
+html body #tabnav #btn-platform, html body #tabnav #weeklyRefresh {
+  height: 38px !important; min-height: 38px !important; padding: 0 18px !important;
+  border-radius: 999px !important; display: inline-flex !important; align-items: center; gap: 6px;
+  font-family: var(--type-family, "Segoe UI", system-ui, sans-serif) !important;
+  font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important; line-height: 1 !important;
+}
+html body #tabnav .navbtn.active:not(#_), html body #tabnav #weeklyRefresh.navbtn:not(#_) { font-weight: 600 !important }
+html body #tabnav #btn-platform { min-width: 150px; justify-content: space-between }
+/* the platform dropdown: the same gradient pill as every other dropdown
+   (design/shared/date-popup.css), not an outlined tab */
+html body #tabnav :is(#btn-platform, #weeklyPlatformBtn):not(#_):not(#_) {
+  background: var(--brand-gradient, var(--grad, linear-gradient(135deg, #00e5c3, #4d9fff))) !important;
+  color: var(--on-grad, #001014) !important; border: 0 !important; font-weight: 600 !important;
+  box-shadow: 0 4px 14px rgba(0, 229, 195, .18) !important;
+}
+html body #tabnav :is(#btn-platform, #weeklyPlatformBtn):not(#_):not(#_):hover { filter: brightness(1.06); box-shadow: 0 6px 20px rgba(77, 159, 255, .28) !important }
+html body #tabnav :is(#btn-platform, #weeklyPlatformBtn):not(#_):not(#_) * { color: inherit !important }
+/* its chevron is drawn with borders: dark ink on the gradient, like the others */
+html body #tabnav #weeklyPlatformBtn:not(#_):not(#_)::after { border-color: currentColor !important }
+html body #tabnav .navmenu button:not(#_) {
+  font-size: 15px !important; font-weight: 500 !important; padding: 9px 14px !important; border-radius: 8px !important;
+}
+html body #tabnav #weeklyLiveStatus:not(#_) { font-size: 13px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+html body #weeklyDateHost .date-span:not(#_) { font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+html body #weeklyDateHost .date-controls input[type=date]:not(#_),
+html body #weeklyDateHost .date-confirm:not(#_) {
+  height: 38px !important; min-height: 38px !important; border-radius: 999px !important;
+  font-size: 14px !important; font-weight: 600 !important;
+}
+
+/* Navigation and date rows match the pure-black report canvas. */
+html[data-theme="dark"] body #tabnav,
+html[data-theme="dark"] body #weeklyFilterBar{background:#000;backdrop-filter:none}
+
+/* Visually remove repeated platform context without deleting the elements:
+   the platform switcher reads their text to decide which slides to show. */
+.eyebrow.copy-hidden{display:none!important}
+
+/* IAP trend cards reserve real space for the chart axes instead of letting a
+   100%-height chart extend below its heading and outside the card. */
+.card:has(#iosArppuLine),.card:has(#iosPrateLine),
+.card:has(#andArppuLine),.card:has(#andPrateLine){
+  display:flex!important;flex-direction:column;overflow:hidden
+}
+.card:has(#iosArppuLine) .chart-box,.card:has(#iosPrateLine) .chart-box,
+.card:has(#andArppuLine) .chart-box,.card:has(#andPrateLine) .chart-box{
+  flex:1;min-height:0;height:auto!important
+}
+
+/* Give the 2×2 engagement charts clear gutters in both directions. The row
+   sizes to its cards: a fixed 245px basis was shorter than the cards, so they
+   overflowed into the 18px gutter below and the rows nearly touched. */
+div:has(> .card #iosPlaytimeD0),div:has(> .card #iosSessLen),
+div:has(> .card #andPlaytimeD0),div:has(> .card #andSessLen){
+  column-gap:18px!important;flex:0 0 auto!important;min-height:245px!important
+}
+div:has(> .card #iosPlaytimeD0),div:has(> .card #andPlaytimeD0){
+  margin-bottom:18px
+}

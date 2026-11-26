@@ -1,39 +1,10 @@
 import { defineConfig, loadEnv } from 'vite';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const at = (...p) => resolve(root, ...p);
-
-/**
- * Inlines src/shared/theme-boot.js into every document's <head>, replacing the
- * <!--THEME_BOOT--> marker the migration left there.
- *
- * It cannot be a normal import. Module scripts are deferred, so a theme
- * applied from src/shared/theme.js lands one frame after the first paint and
- * anyone on the light theme sees a flash of black first. It cannot be a hand
- * written inline script either, because then it would be six copies again -
- * which is the state this whole repository exists to get out of. One source
- * file, substituted at build time, is the way to have both.
- */
-function themeBoot() {
-  const src = readFileSync(at('src/shared/theme-boot.js'), 'utf8');
-  // Strip the explanatory header; the HTML gets the code, the file keeps the why.
-  const code = src.replace(/^\/\*[\s\S]*?\*\/\s*/, '').trim();
-  return {
-    name: 'ps-theme-boot',
-    transformIndexHtml: {
-      order: 'pre',
-      handler: (html) =>
-        html.replace(
-          '<!--THEME_BOOT-->',
-          `<script>${code}</script>`
-        ),
-    },
-  };
-}
 
 /** Short, stable, and different on every deploy — used to bust HTML caches. */
 function buildId() {
@@ -62,8 +33,6 @@ export default defineConfig(({ mode }) => {
   return {
     base: env.VITE_BASE || './',
 
-    plugins: [themeBoot()],
-
     define: {
       'import.meta.env.VITE_BUILD_ID': JSON.stringify(env.VITE_BUILD_ID || buildId()),
     },
@@ -81,18 +50,14 @@ export default defineConfig(({ mode }) => {
           // two front doors to the same system.
           shell: at('index.html'),
           ua: at('reports/ua/index.html'),
-          /* UA Network Performance. Reads the game backend rather than
-             the UA one, because the channel rollup it is built on lives in
-             that payload as ua.channels / ua.channelDaily. */
           uanetwork: at('reports/ua-network/index.html'),
           weekly: at('reports/weekly/index.html'),
           tilldate: at('reports/till-date/index.html'),
           aso: at('reports/aso/index.html'),
           negative: at('reports/negative-spend/index.html'),
-          /* The Executive Dashboard, which used to be its own repository and
-             its own deployment with its own sign-in. It keeps its own Apps
-             Script backend and its own refined table - only the front door
-             moved. */
+          /* Executive and Creative, laid out as in the ps_analytics repo: the
+             pages here, their plain scripts under public/reports/ (copied to
+             the build as-is), each keeping its own Apps Script backend. */
           exec: at('reports/exec/index.html'),
           creative: at('reports/creative/index.html'),
         },

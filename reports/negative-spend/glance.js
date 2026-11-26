@@ -27,7 +27,7 @@
  * are three filters over that one list.
  */
 
-import './glance.css';
+import '../../design/reports/negative-spend/glance.css';
 import { enhanceDate } from '../../src/shared/date-popup.js';
 
 const B = () => window.__nsBridge;
@@ -148,8 +148,20 @@ function renderHead(m) {
   const margin = rev > 0 ? gp / rev : null;
   const camps = m.rows.length, nets = m.networks.length;
 
+  /* Daily totals behind each card. Only the report theme reads data-spark
+     (src/shared/report-pro.js draws them as the card's wave); without it the
+     attribute is inert. */
+  const n = (m.days || []).length;
+  const daySum = (k) => Array.from({ length: n }, (_, i) =>
+    m.rows.reduce((s, c) => s + (+((c[k] || [])[i]) || 0), 0));
+  const spendD = daySum('_cost'), revD = daySum('_rev');
+  const gpD = revD.map((v, i) => v - spendD[i]);
+  const sparkAttr = (arr) => arr.length > 1
+    ? ` data-spark="${arr.map((v) => Math.round(v)).join(',')}" data-spark-dates="${(m.days || []).join(',')}"` : '';
+  const sparks = { 'k-spend': sparkAttr(spendD), 'k-rev': sparkAttr(revD), 'k-gp': sparkAttr(gpD) };
+
   const card = (cls, title, amt, sub) =>
-    `<article class="act ${cls}">
+    `<article class="act ${cls}"${sparks[cls.split(' ')[0]] || ''}>
        <div class="hd">${title}</div>
        <div class="amt">${amt}</div>
        <div class="g-why">${sub}</div>

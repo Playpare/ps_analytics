@@ -1,0 +1,256 @@
+/* ============================================================================
+   report-pro.css - the dashboard design for the reports, matching the hub
+   (game-analytics/pro-theme.css). Dark mode. Scoped under html.report-pro,
+   which src/shared/report-pro.js adds.
+   ========================================================================== */
+
+/* the selector prefix used throughout: theme on, dark mode */
+/* html.report-pro[data-theme="dark"] body */
+
+/* ---- page ---------------------------------------------------------------- */
+html.report-pro[data-theme="dark"],
+html.report-pro[data-theme="dark"] body { background: #000 !important }
+
+/* ---- panels: every report's card ----------------------------------------- */
+html.report-pro[data-theme="dark"] body :is(.card, #glanceHead, .modal-card):not(#_):not(#_):not(#_) {
+  border: 1px solid rgba(255, 255, 255, .07) !important;
+  border-radius: 20px !important;
+  background: linear-gradient(180deg, #14161c 0%, #0e1015 100%) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 12px 34px rgba(0, 0, 0, .35) !important;
+}
+html.report-pro[data-theme="dark"] body :is(.card h2, .card-title, .card-head h2):not(#_):not(#_):not(#_) {
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif !important;
+  font-weight: 700 !important; letter-spacing: -.01em !important; color: #f2f5fa !important;
+}
+
+/* ---- KPI tiles: .kpi (UA, Monetization, ASO) and .kpi-card (Life Time) ---- */
+/* the hub's six accents, cycled across each row so the reports read like the
+   hub's KPI rows */
+html.report-pro body :is(.kpi, .kpi-card):nth-child(6n+1) { --kc: #00e5ff }
+html.report-pro body :is(.kpi, .kpi-card):nth-child(6n+2) { --kc: #ff3db4 }
+html.report-pro body :is(.kpi, .kpi-card):nth-child(6n+3) { --kc: #4d9fff }
+html.report-pro body :is(.kpi, .kpi-card):nth-child(6n+4) { --kc: #00c47a }
+html.report-pro body :is(.kpi, .kpi-card):nth-child(6n+5) { --kc: #ffb800 }
+html.report-pro body :is(.kpi, .kpi-card):nth-child(6n+6) { --kc: #ff4d6d }
+
+html.report-pro[data-theme="dark"] body :is(.kpi, .kpi-card):not(#_):not(#_):not(#_):not(#_) {
+  position: relative; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .07) !important;
+  border-left: 1px solid rgba(255, 255, 255, .07) !important;
+  border-top: 1px solid rgba(255, 255, 255, .07) !important;
+  border-radius: 18px !important;
+  padding: 20px 20px 18px 22px !important;
+  background:
+    radial-gradient(120% 95% at 0% 0%, color-mix(in srgb, var(--kc) 6%, transparent), transparent 60%),
+    linear-gradient(180deg, #15171d 0%, #0f1116 100%) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 10px 30px rgba(0, 0, 0, .35) !important;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+html.report-pro[data-theme="dark"] body :is(.kpi, .kpi-card):hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--kc) 35%, transparent) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 16px 40px rgba(0, 0, 0, .45) !important;
+}
+html.report-pro body :is(.kpi, .kpi-card)::before { display: none !important }
+
+/* label: sentence case with an icon chip */
+html.report-pro[data-theme="dark"] body :is(.kpi > .l, .kpi-card > .kpi-label):not(#_):not(#_):not(#_):not(#_) {
+  position: relative; display: flex !important; align-items: center; gap: 12px;
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif !important;
+  text-transform: none !important; letter-spacing: 0 !important;
+  font-size: 16px !important; font-weight: 600 !important; color: #dfe4ee !important;
+  margin-bottom: 14px !important; min-height: 32px;
+}
+html.report-pro[data-theme="dark"] body :is(.kpi > .l, .kpi-card > .kpi-label)::before {
+  content: ''; flex: none; width: 32px; height: 32px; border-radius: 9px;
+  background: color-mix(in srgb, var(--kc) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kc) 22%, transparent);
+}
+html.report-pro[data-theme="dark"] body :is(.kpi > .l, .kpi-card > .kpi-label)::after {
+  content: ''; position: absolute; left: 8px; top: 50%; width: 16px; height: 16px; margin-top: -8px;
+  background: var(--kc);
+  -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat;
+}
+
+/* value: big, tight, the tile's colour */
+html.report-pro[data-theme="dark"] body :is(.kpi > .v, .kpi-card > .kpi-value):not(#_):not(#_):not(#_):not(#_) {
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif !important;
+  font-size: clamp(26px, 2.05vw, 38px) !important; font-weight: 700 !important;
+  letter-spacing: -.03em !important; line-height: 1.05 !important; margin: 0 0 12px !important;
+  color: var(--kc) !important;
+  text-shadow: none;
+}
+/* red / green values keep their meaning */
+html.report-pro[data-theme="dark"] body .kpi > .v.neg:not(#_):not(#_):not(#_):not(#_):not(#_) { color: #ff4d6d !important }
+html.report-pro[data-theme="dark"] body .kpi > .v.pos:not(#_):not(#_):not(#_):not(#_):not(#_) { color: #00c47a !important }
+
+/* the line under the value: quiet grey like the hub's comparisons;
+   only a real up / down move keeps its green / red */
+html.report-pro[data-theme="dark"] body :is(.kpi > .d, .kpi-card > .kpi-sub):not(#_):not(#_):not(#_) {
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif !important;
+  font-size: 14.5px !important; font-weight: 500 !important; color: #8b93a7 !important;
+}
+html.report-pro[data-theme="dark"] body .kpi > .d:is(.delta-up, .pos):not(#_):not(#_):not(#_):not(#_) { color: #00c47a !important; font-weight: 700 !important }
+html.report-pro[data-theme="dark"] body .kpi > .d:is(.delta-down, .neg):not(#_):not(#_):not(#_):not(#_) { color: #ff4d6d !important; font-weight: 700 !important }
+
+/* same tile size as the hub's KPI cards */
+html.report-pro[data-theme="dark"] body :is(.kpi, .kpi-card):not(#_):not(#_):not(#_):not(#_):not(#_) {
+  min-height: 150px; display: flex; flex-direction: column; justify-content: flex-start;
+}
+
+html.report-pro[data-theme="dark"] body :is(.kpi-row, .kpis):not(#_):not(#_) { gap: 18px !important }
+
+/* ---- Negative Spend headline cards (.act: .hd label, .amt value) ---------- */
+html.report-pro body .act:nth-child(3n+1) { --kc: #00e5ff }
+html.report-pro body .act:nth-child(3n+2) { --kc: #ff3db4 }
+html.report-pro body .act:nth-child(3n+3) { --kc: #00c47a }
+html.report-pro body .act.neg { --kc: #ff4d6d }
+html.report-pro[data-theme="dark"] body .act:not(#_):not(#_):not(#_) {
+  position: relative; overflow: hidden; min-height: 150px;
+  border: 1px solid rgba(255, 255, 255, .07) !important; border-top: 1px solid rgba(255, 255, 255, .07) !important;
+  border-radius: 18px !important; padding: 20px 20px 18px 22px !important;
+  background:
+    radial-gradient(120% 95% at 0% 0%, color-mix(in srgb, var(--kc) 6%, transparent), transparent 60%),
+    linear-gradient(180deg, #15171d 0%, #0f1116 100%) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 10px 30px rgba(0, 0, 0, .35) !important;
+  transition: transform .18s ease, border-color .18s ease;
+}
+html.report-pro[data-theme="dark"] body .act:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--kc) 35%, transparent) !important }
+html.report-pro[data-theme="dark"] body .act > .hd:not(#_):not(#_):not(#_) {
+  position: relative; display: flex !important; align-items: center; gap: 12px;
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif !important;
+  text-transform: none !important; letter-spacing: 0 !important;
+  font-size: 16px !important; font-weight: 600 !important; color: #dfe4ee !important;
+  margin-bottom: 14px !important; min-height: 32px;
+}
+html.report-pro[data-theme="dark"] body .act > .hd::before {
+  content: ''; flex: none; width: 32px; height: 32px; border-radius: 9px;
+  background: color-mix(in srgb, var(--kc) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kc) 22%, transparent);
+}
+html.report-pro[data-theme="dark"] body .act > .hd::after {
+  content: ''; position: absolute; left: 8px; top: 50%; width: 16px; height: 16px; margin-top: -8px;
+  background: var(--kc); -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat;
+}
+html.report-pro[data-theme="dark"] body .act > .amt:not(#_):not(#_):not(#_) {
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif !important;
+  font-size: clamp(26px, 2.05vw, 38px) !important; font-weight: 700 !important; letter-spacing: -.03em !important;
+  line-height: 1.05 !important; margin: 0 0 12px !important; color: var(--kc) !important;
+  text-shadow: none;
+}
+html.report-pro[data-theme="dark"] body .act > .g-why:not(#_):not(#_):not(#_) {
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif !important;
+  font-size: 14.5px !important; font-weight: 500 !important; color: #8b93a7 !important;
+}
+html.report-pro[data-theme="dark"] body .act > .g-why b { color: #dfe4ee !important }
+html.report-pro[data-theme="dark"] body .act > .g-why .sub2 { display: block; margin-top: 4px; font-size: 13px; color: #6f778a }
+
+/* ---- the wave graph along the bottom (drawn by report-pro.js) ------------- */
+html.report-pro[data-theme="dark"] body :is(.kpi, .kpi-card, .act).pro-spark-on:not(#_):not(#_):not(#_):not(#_):not(#_):not(#_) {
+  min-height: 196px; padding-bottom: 70px !important;
+}
+html.report-pro body .pro-spark { display: none }
+html.report-pro[data-theme="dark"] body .pro-spark {
+  display: block; position: absolute; left: 0; right: 0; bottom: 0; height: 58px; pointer-events: none;
+  border-radius: 0 0 18px 18px; overflow: hidden;
+}
+html.report-pro body .pro-spark svg { display: block; width: 100%; height: 100% }
+
+/* ---- delta line: coloured arrow + %, the rest quiet grey ------------------ */
+html.report-pro[data-theme="dark"] body .kpi > .d .pro-dv { font-weight: 700 }
+html.report-pro[data-theme="dark"] body .kpi > .d .pro-mut:not(#_):not(#_) { color: #8b93a7 !important; font-weight: 500 !important }
+
+/* ---- header: one line, no dividing lines --------------------------------- */
+html.report-pro[data-theme="dark"] body :is(.top, #tabnav, .sh):not(#_):not(#_) {
+  border-bottom: 0 !important; box-shadow: none !important;
+}
+/* One line in every report: the second row (.pro-row: date filter, ASO's
+   tabs, Life Time's toggles) is lifted onto the top bar (.pro-top). The top
+   bar turns see-through and passes clicks through, except on its own tabs
+   and buttons; the lifted row keeps clear of them using the room
+   report-pro.js measures (--pro-lw left, --pro-cw right, --pro-th height). */
+html.report-pro[data-theme="dark"] body:has(.pro-row) .pro-top:not(#_):not(#_) {
+  background: transparent !important; pointer-events: none; z-index: 1000 !important;
+}
+html.report-pro[data-theme="dark"] body:has(.pro-row) .pro-top > * { pointer-events: auto }
+html.report-pro[data-theme="dark"] body .pro-row:not(#_):not(#_):not(#_) {
+  margin-top: calc(-1 * var(--pro-th, 58px)) !important; height: var(--pro-th, 58px) !important;
+  min-height: 0 !important; top: 0 !important; background: #000 !important;
+  border-bottom: 0 !important; box-shadow: none !important;
+  padding-left: calc(var(--pro-lw, 0px) + 24px) !important;
+  padding-right: calc(var(--pro-cw, 260px) + 24px) !important;
+  align-items: center !important; flex-wrap: nowrap !important; overflow: visible;
+}
+
+/* ---- delta colours after the split, and ASO's small note line ------------ */
+html.report-pro[data-theme="dark"] body .kpi > .d:is(.delta-up, .up) .pro-dv { color: #00c47a !important }
+html.report-pro[data-theme="dark"] body .kpi > .d:is(.delta-down, .down, .dn) .pro-dv { color: #ff4d6d !important }
+html.report-pro[data-theme="dark"] body .kpi > .p:not(#_):not(#_):not(#_) {
+  font-family: "Segoe UI", system-ui, sans-serif !important; font-size: 13px !important; color: #6f778a !important; margin-top: 6px !important;
+}
+
+/* the lifted row's controls keep their natural size (Life Time's Yes / No
+   toggles were squeezed into a column) */
+html.report-pro[data-theme="dark"] body .pro-row > *,
+html.report-pro[data-theme="dark"] body .pro-row > * > * { flex-shrink: 0 !important; white-space: nowrap !important }
+html.report-pro[data-theme="dark"] body .pro-row :is(.seg, .pills, .toggle, [class*="tog"]) { flex-direction: row !important; flex-wrap: nowrap !important }
+/* a long status message ("Load failed — ...") never pushes into the row */
+html.report-pro[data-theme="dark"] body .pro-top .status:not(#_):not(#_) {
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Monetization's change line: "<span class=up|down>+4.6% WoW</span> vs ...":
+   the hub's arrow added, only that part coloured, the rest quiet grey */
+html.report-pro[data-theme="dark"] body .kpi > .d > span.up:not(#_):not(#_) { color: #00c47a !important; font-weight: 700 }
+html.report-pro[data-theme="dark"] body .kpi > .d > span.down:not(#_):not(#_) { color: #ff4d6d !important; font-weight: 700 }
+html.report-pro[data-theme="dark"] body .kpi > .d > span.up::before { content: '▲ ' }
+html.report-pro[data-theme="dark"] body .kpi > .d > span.down::before { content: '▼ ' }
+html.report-pro[data-theme="dark"] body .kpi > .d > span:not(.up):not(.down):not(#_):not(#_) {
+  color: #8b93a7 !important; font-family: "Segoe UI", system-ui, sans-serif !important;
+}
+
+/* ---- cards: the hub Overview's measurements (game-analytics/pro-theme.css)
+   title 22px / 700, panel padding 24px 26px, 18px between cards.
+   Monetization zooms its slide body (--mon-zoom, weekly/design.css), so the
+   sizes are divided by it to land at the same on-screen size as the hub. ---- */
+html.report-pro[data-theme="dark"] body :is(.card > h2, .card-head h2, .card-title):not(#_):not(#_):not(#_):not(#_) {
+  font-size: calc(22px / var(--mon-zoom, 1)) !important; font-weight: 700 !important; letter-spacing: -.01em !important; color: #f2f5fa !important;
+}
+/* (#perfCard, Negative Spend's performance table, is edge-to-edge on purpose) */
+html.report-pro[data-theme="dark"] body .card:not(#perfCard):not(#_):not(#_) {
+  padding: calc(24px / var(--mon-zoom, 1)) calc(26px / var(--mon-zoom, 1)) !important;
+}
+html.report-pro[data-theme="dark"] body :is(.two, .row2, .grid-main, .page-pies, .grid2, .grid3):not(#_):not(#_) { gap: calc(18px / var(--mon-zoom, 1)) !important }
+
+/* ---- top-bar tabs: one pill size in every report (ASO's were 11px) -------- */
+html.report-pro body :is(.top, .sh) > .tabs > button:not(#_):not(#_):not(#_),
+html.report-pro body :is(.top, .sh) > .tabs > .tabdrop > button:not(#_):not(#_):not(#_),
+html.report-pro body .top .tabs > button:not(#_):not(#_):not(#_),
+html.report-pro body .top .tabs > .tabdrop > button:not(#_):not(#_):not(#_) {
+  height: 38px !important; padding: 0 18px !important; border-radius: 999px !important;
+  display: inline-flex !important; align-items: center; gap: 6px;
+  font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important; line-height: 1 !important;
+}
+html.report-pro body :is(.top, .sh) .tabs > button.active:not(#_):not(#_):not(#_) { font-weight: 600 !important }
+
+/* Refresh: the same 38px / 15px pill in every report (UA and ASO had 13.5px;
+   UA's button is #connectBtn) */
+html.report-pro body .top :is(#refreshBtn, #connectBtn):not(#_):not(#_) {
+  height: 38px !important; padding: 0 18px !important; border-radius: 999px !important;
+  display: inline-flex !important; align-items: center; gap: 6px;
+  font-size: 15px !important; font-weight: 600 !important; letter-spacing: 0 !important;
+}
+
+/* ---- hover on the card graph: exactly the hub's (point + tooltip) --------- */
+html.report-pro[data-theme="dark"] body .pro-spark { pointer-events: auto !important }
+html.report-pro body .pro-spark .pro-dot {
+  position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%;
+  background: var(--kc); border: 1.5px solid #fff; box-sizing: content-box;
+  opacity: 0; pointer-events: none;
+}
+html.report-pro #proSparkTip {
+  position: fixed; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity .08s;
+  background: rgba(7, 11, 20, 0.97); border-radius: 8px; padding: 8px 12px;
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #E8ECFF;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); white-space: nowrap;
+}

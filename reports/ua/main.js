@@ -8,16 +8,20 @@
  * guarantee survives bundling.
  */
 
-import '../../src/shared/styles/motion.css';
-import './ua.css';
+import '../../design/shared/motion.css';
+import '../../design/reports/ua/ua.css';
 /* dashboard-wide fonts, sizes and chart scale - colours untouched */
-import '../../src/shared/styles/report-type.css';
+import '../../design/shared/report-type.css';
 
-import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';
-import '../../src/shared/chart-type.js';
+import '../../design/shared/chart-type.js';
 import '../../src/shared/donut.js';
 import '../../src/shared/date-popup.js';
 import '../../src/shared/snapshot.js';
 
 import './ua.legacy.js';
+/* the dashboard design, shared by all the reports */
+import '../../design/shared/report-pro.js';
+/* one loading screen for every page: the Pulse logo + a Loading bar */
+import '../../design/shared/ps-loader.css';
+import '../shared/ps-open.js';

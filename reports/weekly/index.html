@@ -1,13 +1,9 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>MSS3D · Monetization Report</title>
 
-  <!--THEME_BOOT-->
-  <!-- The same cube the shell shows while this document loads, so the
-       wait looks like one thing instead of two. See the file. -->
-  <link rel="stylesheet" href="../shared/ps-loader.css">
 </head><body><div id="tabnav"><span class="brand"><span class="brandgr">playspare</span> · Monetization Report</span><button id="btn-report" class="navbtn active" type="button">Monetization Report</button><button id="btn-analytics" class="navbtn" type="button">Analytics</button><div class="navdrop" id="platform-nav"><button id="btn-platform" class="navbtn" data-toggle type="button">Platform ▾</button><div class="navmenu"><button data-platform="overview">Overview</button><button data-platform="ios">iOS</button><button data-platform="android">Android</button></div></div><div id="weeklyRefreshArea"><span id="weeklyLiveStatus">Loading...</span><button id="weeklyRefresh" class="navbtn" type="button">↻ Refresh</button></div></div><div id="weeklyFilterBar" class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Weekly</span></div><div id="weeklyDateHost"></div></div><div id="tab-report" class="tabview">
 <div class="slide">
 <div class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Executive Summary</span></div>
@@ -16,9 +12,9 @@
 <div class="eyebrow">Combined Game Performance · iOS + Android</div>
 <div class="h1">Total Monetization Overview</div>
 <div class="kpis">
-  <div class="kpi" style="border-top:3px solid var(--teal)"><div class="l">Combined Revenue (W4)</div><div class="v" style="color:var(--t1)">$312,024</div><div class="d up">▲ +1.2% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $308,289 (W3)</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">iOS Revenue (W4)</div><div class="v" style="color:var(--ios)">$196,416</div><div class="d up">▲ +0.7% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $195,134 (W3)</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Android Revenue (W4)</div><div class="v" style="color:var(--and)">$115,608</div><div class="d up">▲ +2.2% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $113,155 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--teal)"><div class="l">Combined Revenue (W4)</div><div class="v" style="color:var(--t1)">$312,024</div><div class="d up">▲ +1.2% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $308,289 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">iOS Revenue (W4)</div><div class="v" style="color:var(--ios)">$196,416</div><div class="d up">▲ +0.7% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $195,134 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Android Revenue (W4)</div><div class="v" style="color:var(--and)">$115,608</div><div class="d up">▲ +2.2% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $113,155 (W3)</span></div></div>
   <div class="kpi" style="border-top:3px solid var(--greenb)"><div class="l">Revenue Streams</div><div class="v" style="color:var(--greenb);font-size:21px">Ad + IAP</div><div class="d up">Both active & healthy</div></div>
 </div>
 <div class="row2">
@@ -32,12 +28,12 @@
     </div>
     <div style="display:flex;justify-content:center;gap:24px;margin-top:6px">
       <div class="split-leg" style="display:flex;flex-direction:column;gap:4px">
-        <div style="font-size:9px;color:var(--t3);font-family:'DM Mono';text-transform:uppercase;letter-spacing:.05em">iOS</div>
+        <div style="font-size:9px;color:var(--t3);font-family:'Segoe UI';text-transform:uppercase;letter-spacing:.05em">iOS</div>
         <div class="legi" style="font-size:10px"><span class="dot" style="background:#4d9fff"></span>Ad Revenue<span class="legv">57%</span></div>
         <div class="legi" style="font-size:10px"><span class="dot" style="background:rgba(77,159,255,.4)"></span>IAP Revenue<span class="legv">43%</span></div>
       </div>
       <div class="split-leg" style="display:flex;flex-direction:column;gap:4px">
-        <div style="font-size:9px;color:var(--t3);font-family:'DM Mono';text-transform:uppercase;letter-spacing:.05em">Android</div>
+        <div style="font-size:9px;color:var(--t3);font-family:'Segoe UI';text-transform:uppercase;letter-spacing:.05em">Android</div>
         <div class="legi" style="font-size:10px"><span class="dot" style="background:#00e5c3"></span>Ad Revenue<span class="legv">75%</span></div>
         <div class="legi" style="font-size:10px"><span class="dot" style="background:rgba(0,229,195,.4)"></span>IAP Revenue<span class="legv">25%</span></div>
       </div>
@@ -56,9 +52,9 @@
 <div class="h1">iOS Total Ad Revenue Overview</div>
 <div class="kpis">
   <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Total Ad Revenue (W4)</div><div class="v" style="color:var(--ios)">$111,618</div><div class="d up">incl. Immersive + Failover</div></div>
-  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">ARPDAU</div><div class="v" style="color:var(--t1)">$0.0678</div><div class="d down">-8.6% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $0.0742 (W3)</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Ad Viewer Rate</div><div class="v" style="color:var(--t1)">55.9%</div><div class="d down">▼ -3.0% <span style="color:var(--t3);font-family:'DM Mono'">vs 57.7% (W3) · blended</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Imp / DAU</div><div class="v" style="color:var(--t1)">69.7</div><div class="d down">▼ -8.5% <span style="color:var(--t3);font-family:'DM Mono'">vs 76.2 (W3) · all formats</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">ARPDAU</div><div class="v" style="color:var(--t1)">$0.0678</div><div class="d down">-8.6% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $0.0742 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Ad Viewer Rate</div><div class="v" style="color:var(--t1)">55.9%</div><div class="d down">▼ -3.0% <span style="color:var(--t3);font-family:'Segoe UI'">vs 57.7% (W3) · blended</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Imp / DAU</div><div class="v" style="color:var(--t1)">69.7</div><div class="d down">▼ -8.5% <span style="color:var(--t3);font-family:'Segoe UI'">vs 76.2 (W3) · all formats</span></div></div>
 </div>
 <div class="row2 ad-format-wide no-placement" style="flex:none;height:400px">
   <div class="card"><h2>Ad Revenue by Format (W4)</h2><div style="margin-top:8px"><div class="src-row">
@@ -99,7 +95,7 @@
 <div class="eyebrow" style="color:var(--ios)">Platform: iOS · Immersive Network Comparison · Gadsme vs Anzu</div>
 <div class="h1">iOS Immersive Ads — Network Comparison</div>
 <div class="kpis">
-  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Total Immersive Rev (W4)</div><div class="v" style="color:var(--ios)">$1,789</div><div class="d down">▼ -11.5% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $2,021 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Total Immersive Rev (W4)</div><div class="v" style="color:var(--ios)">$1,789</div><div class="d down">▼ -11.5% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $2,021 (W3)</span></div></div>
   <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Blended eCPM</div><div class="v" style="color:var(--t1)">$0.201</div><div class="d" style="color:var(--slate)">rev ÷ imps × 1000</div></div>
   <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Blended Fill Rate</div><div class="v" style="color:var(--t1)">1.53%</div><div class="d" style="color:var(--slate)">impression-weighted</div></div>
 </div>
@@ -125,9 +121,9 @@
 <div class="h1">iOS Rewarded Ads — Performance Snapshot</div>
 <div class="kpis">
   <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Revenue (W4)</div><div class="v" style="color:var(--rew)">$34,632</div><div class="d down">-1.2% vs $35,035 W3</div></div>
-  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$10.66</div><div class="d down">vs $28.42 bench <span style="color:var(--t3);font-family:'DM Mono'">(Mini Relaxing) · ▲ +0.4% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">31.1%</div><div class="d down">vs 40% bench <span style="color:var(--t3);font-family:'DM Mono'">· ▼ -2.5% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">2.09</div><div class="d down">▼ -7.6% W3 <span style="color:var(--t3);font-family:'DM Mono'">vs 2.26 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$10.66</div><div class="d down">vs $28.42 bench <span style="color:var(--t3);font-family:'Segoe UI'">(Mini Relaxing) · ▲ +0.4% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">31.1%</div><div class="d down">vs 40% bench <span style="color:var(--t3);font-family:'Segoe UI'">· ▼ -2.5% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">2.09</div><div class="d down">▼ -7.6% W3 <span style="color:var(--t3);font-family:'Segoe UI'">vs 2.26 (W3)</span></div></div>
 </div>
 <div class="row2" style="flex:1;min-height:0;grid-template-columns:1fr">
   <div class="card" style="display:flex;flex-direction:column"><h2>Benchmark & Week-over-Week Comparison</h2>
@@ -160,9 +156,9 @@
 <div class="h1">iOS Interstitial Ads — Performance Snapshot</div>
 <div class="kpis">
   <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Revenue (W4)</div><div class="v" style="color:var(--intr)">$59,242</div><div class="d down">-1.8% vs $60,338 W3</div></div>
-  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$6.87</div><div class="d down">vs $23.76 bench <span style="color:var(--t3);font-family:'DM Mono'">(Mini Relaxing / Annoying Uncle / Kick & Break) · ▼ -6.2% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">65.2%</div><div class="d down">vs 70% bench <span style="color:var(--t3);font-family:'DM Mono'">· ▼ -0.2% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">5.55</div><div class="d down">▼ -2.5% W3 <span style="color:var(--t3);font-family:'DM Mono'">vs 5.69 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$6.87</div><div class="d down">vs $23.76 bench <span style="color:var(--t3);font-family:'Segoe UI'">(Mini Relaxing / Annoying Uncle / Kick & Break) · ▼ -6.2% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">65.2%</div><div class="d down">vs 70% bench <span style="color:var(--t3);font-family:'Segoe UI'">· ▼ -0.2% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">5.55</div><div class="d down">▼ -2.5% W3 <span style="color:var(--t3);font-family:'Segoe UI'">vs 5.69 (W3)</span></div></div>
 </div>
 <div class="row2" style="flex:1;min-height:0;grid-template-columns:1fr">
   <div class="card" style="display:flex;flex-direction:column"><h2>Benchmark & Week-over-Week Comparison</h2>
@@ -195,9 +191,9 @@
 <div class="h1">iOS Banner Ads — Performance Snapshot</div>
 <div class="kpis">
   <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Revenue (W4)</div><div class="v" style="color:var(--bann)">$11,741</div><div class="d down">-6.2% vs $12,522 W3</div></div>
-  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$0.122</div><div class="d down">vs $0.53 bench <span style="color:var(--t3);font-family:'DM Mono'">(Mini Relaxing / Annoying Uncle / Kick & Break) · ▼ -3.9% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">71.4%</div><div class="d down">vs 80% bench <span style="color:var(--t3);font-family:'DM Mono'">· ▼ -5.6% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">62.08</div><div class="d down">▼ -9.1% W3 <span style="color:var(--t3);font-family:'DM Mono'">vs 68.28 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$0.122</div><div class="d down">vs $0.53 bench <span style="color:var(--t3);font-family:'Segoe UI'">(Mini Relaxing / Annoying Uncle / Kick & Break) · ▼ -3.9% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">71.4%</div><div class="d down">vs 80% bench <span style="color:var(--t3);font-family:'Segoe UI'">· ▼ -5.6% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">62.08</div><div class="d down">▼ -9.1% W3 <span style="color:var(--t3);font-family:'Segoe UI'">vs 68.28 (W3)</span></div></div>
 </div>
 <div class="row2" style="flex:1;min-height:0;grid-template-columns:1fr">
   <div class="card" style="display:flex;flex-direction:column"><h2>Benchmark & Week-over-Week Comparison</h2>
@@ -263,9 +259,9 @@
 <div class="eyebrow" style="color:var(--ios)">Platform: iOS · In-App Purchase Detail (Sales · gross)</div>
 <div class="h1">iOS IAP — Full Products & Economics</div>
 <div class="kpis">
-  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">IAP Sales (W4)</div><div class="v" style="color:var(--ios)">$130,781</div><div class="d up">▲ +5.1% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $124,435 (W3)</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">ARPPU (W4)</div><div class="v" style="color:var(--t1)">$8.66</div><div class="d down">-3.4% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $8.96 (W3)</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Paying Users (W4)</div><div class="v" style="color:var(--t1)">2,160</div><div class="d up">▲ +8.7% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs 1,988 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">IAP Sales (W4)</div><div class="v" style="color:var(--ios)">$130,781</div><div class="d up">▲ +5.1% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $124,435 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">ARPPU (W4)</div><div class="v" style="color:var(--t1)">$8.66</div><div class="d down">-3.4% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $8.96 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Paying Users (W4)</div><div class="v" style="color:var(--t1)">2,160</div><div class="d up">▲ +8.7% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs 1,988 (W3)</span></div></div>
   <div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Purchase Rate (W4)</div><div class="v" style="color:var(--t1)">0.821%</div><div class="d down">▼ vs 1.155% W3</div></div>
 </div>
 <div class="row-23" style="flex:1;min-height:0">
@@ -336,9 +332,9 @@
 <div class="h1">Android Total Ad Revenue Overview</div>
 <div class="kpis">
   <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Total Ad Revenue (W4)</div><div class="v" style="color:var(--and)">$86,859</div><div class="d up">incl. Immersive + Failover</div></div>
-  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">ARPDAU</div><div class="v" style="color:var(--t1)">$0.0115</div><div class="d down">-9.5% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $0.0127 (W3)</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Ad Viewer Rate</div><div class="v" style="color:var(--t1)">44.9%</div><div class="d down">▼ -1.1% <span style="color:var(--t3);font-family:'DM Mono'">vs 45.4% (W3) · blended</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Imp / DAU</div><div class="v" style="color:var(--t1)">24.5</div><div class="d down">▼ -8.8% <span style="color:var(--t3);font-family:'DM Mono'">vs 26.9 (W3) · all formats</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">ARPDAU</div><div class="v" style="color:var(--t1)">$0.0115</div><div class="d down">-9.5% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $0.0127 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Ad Viewer Rate</div><div class="v" style="color:var(--t1)">44.9%</div><div class="d down">▼ -1.1% <span style="color:var(--t3);font-family:'Segoe UI'">vs 45.4% (W3) · blended</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Imp / DAU</div><div class="v" style="color:var(--t1)">24.5</div><div class="d down">▼ -8.8% <span style="color:var(--t3);font-family:'Segoe UI'">vs 26.9 (W3) · all formats</span></div></div>
 </div>
 <div class="row2 ad-format-wide no-placement" style="flex:none;height:400px">
   <div class="card"><h2>Ad Revenue by Format (W4)</h2><div style="margin-top:8px"><div class="src-row">
@@ -379,7 +375,7 @@
 <div class="eyebrow" style="color:var(--and)">Platform: Android · Immersive Network Comparison · Gadsme vs Anzu</div>
 <div class="h1">Android Immersive Ads — Network Comparison</div>
 <div class="kpis">
-  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Total Immersive Rev (W4)</div><div class="v" style="color:var(--and)">$4,669</div><div class="d down">▼ -0.1% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $4,675 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Total Immersive Rev (W4)</div><div class="v" style="color:var(--and)">$4,669</div><div class="d down">▼ -0.1% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $4,675 (W3)</span></div></div>
   <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Blended eCPM</div><div class="v" style="color:var(--t1)">$0.138</div><div class="d" style="color:var(--slate)">rev ÷ imps × 1000</div></div>
   <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Blended Fill Rate</div><div class="v" style="color:var(--t1)">2.43%</div><div class="d" style="color:var(--slate)">impression-weighted</div></div>
   <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">AdMob Failover</div><div class="v" style="color:var(--t1)">7.3%</div><div class="d" style="var(--green)">✓ within 10% target</div></div>
@@ -394,7 +390,7 @@
       <tr><td class="fmt-name">eCPM</td><td class="num b" style="color:var(--t1)">$0.121</td><td class="num b" style="color:var(--green)">$0.245</td><td class="num" style="font-size:9.5px;color:var(--t2)">Anzu</td></tr>
     </tbody></table>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-family:'DM Mono';font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">AdMob Failover (W4)</div>
+      <div style="font-family:'Segoe UI';font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">AdMob Failover (W4)</div>
       <div style="font-size:10.5px;color:var(--t2)">$7,154 revenue · 15.3M impressions · eCPM $0.467 · <span style="color:var(--green);font-weight:600">7.3% of impressions (within 10% target)</span> <span style="color:var(--t3)">— source: AdMob export Jul 09 (replaces stale workbook sheet)</span></div>
     </div>
   </div>
@@ -410,9 +406,9 @@
 <div class="h1">Android Rewarded Ads — Performance Snapshot</div>
 <div class="kpis">
   <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Revenue (W4)</div><div class="v" style="color:var(--rew)">$21,578</div><div class="d up">▲ +0.4% vs $21,499 W3</div></div>
-  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$2.54</div><div class="d down">vs $4.06 bench <span style="color:var(--t3);font-family:'DM Mono'">(Mini Relaxing) · ▼ -6.8% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">22.1%</div><div class="d down">vs 40% bench <span style="color:var(--t3);font-family:'DM Mono'">· ▼ -0.7% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">1.30</div><div class="d down">▼ -4.3% W3 <span style="color:var(--t3);font-family:'DM Mono'">vs 1.35 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$2.54</div><div class="d down">vs $4.06 bench <span style="color:var(--t3);font-family:'Segoe UI'">(Mini Relaxing) · ▼ -6.8% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">22.1%</div><div class="d down">vs 40% bench <span style="color:var(--t3);font-family:'Segoe UI'">· ▼ -0.7% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--rew)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">1.30</div><div class="d down">▼ -4.3% W3 <span style="color:var(--t3);font-family:'Segoe UI'">vs 1.35 (W3)</span></div></div>
 </div>
 <div class="row2" style="flex:1;min-height:0;grid-template-columns:1fr">
   <div class="card" style="display:flex;flex-direction:column"><h2>Benchmark & Week-over-Week Comparison</h2>
@@ -445,9 +441,9 @@
 <div class="h1">Android Interstitial Ads — Performance Snapshot</div>
 <div class="kpis">
   <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Revenue (W4)</div><div class="v" style="color:var(--intr)">$42,111</div><div class="d up">▲ +5.7% vs $39,824 W3</div></div>
-  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$1.85</div><div class="d down">vs $4.37 bench <span style="color:var(--t3);font-family:'DM Mono'">(Mini Relaxing / Annoying Uncle / Kick & Break) · ▼ -4.0% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">55.5%</div><div class="d down">vs 70% bench <span style="color:var(--t3);font-family:'DM Mono'">· ▼ -0.6% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">3.48</div><div class="d down">▼ -2.2% W3 <span style="color:var(--t3);font-family:'DM Mono'">vs 3.56 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$1.85</div><div class="d down">vs $4.37 bench <span style="color:var(--t3);font-family:'Segoe UI'">(Mini Relaxing / Annoying Uncle / Kick & Break) · ▼ -4.0% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">55.5%</div><div class="d down">vs 70% bench <span style="color:var(--t3);font-family:'Segoe UI'">· ▼ -0.6% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--intr)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">3.48</div><div class="d down">▼ -2.2% W3 <span style="color:var(--t3);font-family:'Segoe UI'">vs 3.56 (W3)</span></div></div>
 </div>
 <div class="row2" style="flex:1;min-height:0;grid-template-columns:1fr">
   <div class="card" style="display:flex;flex-direction:column"><h2>Benchmark & Week-over-Week Comparison</h2>
@@ -480,9 +476,9 @@
 <div class="h1">Android Banner Ads — Performance Snapshot</div>
 <div class="kpis">
   <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Revenue (W4)</div><div class="v" style="color:var(--bann)">$11,348</div><div class="d down">-8.2% vs $12,362 W3</div></div>
-  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$0.088</div><div class="d down">vs $0.41 bench <span style="color:var(--t3);font-family:'DM Mono'">(Mini Relaxing / Annoying Uncle / Kick & Break) · ▼ -9.6% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">57.0%</div><div class="d down">vs 80% bench <span style="color:var(--t3);font-family:'DM Mono'">· ▼ -1.8% W3</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">19.75</div><div class="d down">▼ -10.2% W3 <span style="color:var(--t3);font-family:'DM Mono'">vs 21.99 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">eCPM (W4)</div><div class="v" style="color:var(--t1)">$0.088</div><div class="d down">vs $0.41 bench <span style="color:var(--t3);font-family:'Segoe UI'">(Mini Relaxing / Annoying Uncle / Kick & Break) · ▼ -9.6% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Viewer Rate (W4)</div><div class="v" style="color:var(--t1)">57.0%</div><div class="d down">vs 80% bench <span style="color:var(--t3);font-family:'Segoe UI'">· ▼ -1.8% W3</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--bann)"><div class="l">Imp / DAU (W4)</div><div class="v" style="color:var(--t1)">19.75</div><div class="d down">▼ -10.2% W3 <span style="color:var(--t3);font-family:'Segoe UI'">vs 21.99 (W3)</span></div></div>
 </div>
 <div class="row2" style="flex:1;min-height:0;grid-template-columns:1fr">
   <div class="card" style="display:flex;flex-direction:column"><h2>Benchmark & Week-over-Week Comparison</h2>
@@ -548,9 +544,9 @@
 <div class="eyebrow" style="color:var(--and)">Platform: Android · In-App Purchase Detail (Sales gross · revenue net of 35%)</div>
 <div class="h1">Android IAP — Full Products & Economics</div>
 <div class="kpis">
-  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">IAP Sales (W4)</div><div class="v">$44,229</div><div class="d up">▲ +5.6% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $41,877 (W3) · net $28,749</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">ARPPU (W4)</div><div class="v" style="color:var(--t1)">$7.82</div><div class="d up">▲ +2.8% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs $7.61 (W3)</span></div></div>
-  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Paying Buyers (W4)</div><div class="v" style="color:var(--t1)">786</div><div class="d down">-0.2% WoW <span style="color:var(--t3);font-family:'DM Mono'">vs 787 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">IAP Sales (W4)</div><div class="v">$44,229</div><div class="d up">▲ +5.6% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $41,877 (W3) · net $28,749</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">ARPPU (W4)</div><div class="v" style="color:var(--t1)">$7.82</div><div class="d up">▲ +2.8% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs $7.61 (W3)</span></div></div>
+  <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Paying Buyers (W4)</div><div class="v" style="color:var(--t1)">786</div><div class="d down">-0.2% WoW <span style="color:var(--t3);font-family:'Segoe UI'">vs 787 (W3)</span></div></div>
   <div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Purchase Rate (W4)</div><div class="v" style="color:var(--t1)">0.040%</div><div class="d up">▲ vs 0.051% W3</div></div>
 </div>
 <div class="row-23" style="flex:1;min-height:0">
@@ -616,7 +612,7 @@
 </div>
 </div><div id="tab-analytics" class="tabview hidden"><div class="slide"><div class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · iOS Player Analytics</span></div><div class="date">Jun 29–Jul 05, 2026 (W4)</div></div>
 <div class="sb"><div class="eyebrow">Platform: iOS · Engagement &amp; Retention</div><div class="h1">iOS Player Analytics Overview</div>
-<div class="kpis"><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">DAU (W4 avg)</div><div class="v">238,122</div><div class="d up">▲ +8.9% <span style="color:var(--t3);font-family:'DM Mono'">vs 218,566 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">New Installs / Day</div><div class="v">42,995</div><div class="d up">▲ +4.4% <span style="color:var(--t3);font-family:'DM Mono'">vs 41,201 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Sessions / User</div><div class="v">4.71</div><div class="d down">▼ -4.2% <span style="color:var(--t3);font-family:'DM Mono'">vs 4.92 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Playtime / User (s)</div><div class="v">1,727</div><div class="d down">▼ -3.4% <span style="color:var(--t3);font-family:'DM Mono'">vs 1,787 (W3)</span></div></div></div><div class="kpis"><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">D1 Retention</div><div class="v">41.8%</div><div class="d up">▲ +0.7% <span style="color:var(--t3);font-family:'DM Mono'">vs 41.5% (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">D7 Retention</div><div class="v">11.4%</div><div class="d up">▲ +2.8% <span style="color:var(--t3);font-family:'DM Mono'">vs 11.1% (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Data Window</div><div class="v" style="font-size:19px">Apr 07 – Jul 06</div><div class="d" style="color:var(--t3)">rolling 90 days</div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Reporting Week</div><div class="v" style="font-size:19px">W4</div><div class="d" style="color:var(--t3)">Jun 29 – Jul 05</div></div></div>
+<div class="kpis"><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">DAU (W4 avg)</div><div class="v">238,122</div><div class="d up">▲ +8.9% <span style="color:var(--t3);font-family:'Segoe UI'">vs 218,566 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">New Installs / Day</div><div class="v">42,995</div><div class="d up">▲ +4.4% <span style="color:var(--t3);font-family:'Segoe UI'">vs 41,201 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Sessions / User</div><div class="v">4.71</div><div class="d down">▼ -4.2% <span style="color:var(--t3);font-family:'Segoe UI'">vs 4.92 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Playtime / User (s)</div><div class="v">1,727</div><div class="d down">▼ -3.4% <span style="color:var(--t3);font-family:'Segoe UI'">vs 1,787 (W3)</span></div></div></div><div class="kpis"><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">D1 Retention</div><div class="v">41.8%</div><div class="d up">▲ +0.7% <span style="color:var(--t3);font-family:'Segoe UI'">vs 41.5% (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">D7 Retention</div><div class="v">11.4%</div><div class="d up">▲ +2.8% <span style="color:var(--t3);font-family:'Segoe UI'">vs 11.1% (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Data Window</div><div class="v" style="font-size:19px">Apr 07 – Jul 06</div><div class="d" style="color:var(--t3)">rolling 90 days</div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Reporting Week</div><div class="v" style="font-size:19px">W4</div><div class="d" style="color:var(--t3)">Jun 29 – Jul 05</div></div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0">
 <div class="card"><h2>DAU <span style="font-size:9px;color:var(--t3);font-weight:400">· daily, 90d</span></h2><div class="chart-box" style="height:150px"><canvas id="iosAnDau"></canvas></div></div>
 <div class="card"><h2>New Installs <span style="font-size:9px;color:var(--t3);font-weight:400">· daily, 90d</span></h2><div class="chart-box" style="height:150px"><canvas id="iosAnInstall"></canvas></div></div>
@@ -624,7 +620,7 @@
 <div class="card"><h2>D1 Retention <span style="font-size:9px;color:var(--t3);font-weight:400">· daily</span></h2><div class="chart-box" style="height:150px"><canvas id="iosAnRet"></canvas></div></div>
 </div></div><div class="sf"><div>Slide A1 · iOS Player Analytics</div><div>Playspare · Game District</div></div></div><div class="slide"><div class="sh"><div class="brand"><span class="brandgr">playspare</span> <span style="color:var(--t3);font-weight:500;font-size:13px">· MSS3D · Android Player Analytics</span></div><div class="date">Jun 29–Jul 05, 2026 (W4)</div></div>
 <div class="sb"><div class="eyebrow">Platform: Android · Engagement &amp; Retention</div><div class="h1">Android Player Analytics Overview</div>
-<div class="kpis"><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">DAU (W4 avg)</div><div class="v">1,034,467</div><div class="d up">▲ +12.7% <span style="color:var(--t3);font-family:'DM Mono'">vs 917,907 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">New Installs / Day</div><div class="v">349,295</div><div class="d up">▲ +18.6% <span style="color:var(--t3);font-family:'DM Mono'">vs 294,634 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Sessions / User</div><div class="v">3.40</div><div class="d down">▼ -1.9% <span style="color:var(--t3);font-family:'DM Mono'">vs 3.47 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Playtime / User (s)</div><div class="v">1,166</div><div class="d down">▼ -1.4% <span style="color:var(--t3);font-family:'DM Mono'">vs 1,182 (W3)</span></div></div></div><div class="kpis"><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">D1 Retention</div><div class="v">31.1%</div><div class="d down">▼ -1.8% <span style="color:var(--t3);font-family:'DM Mono'">vs 31.7% (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">D7 Retention</div><div class="v">5.7%</div><div class="d down">▼ -3.7% <span style="color:var(--t3);font-family:'DM Mono'">vs 5.9% (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Data Window</div><div class="v" style="font-size:19px">Apr 07 – Jul 06</div><div class="d" style="color:var(--t3)">rolling 90 days</div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Reporting Week</div><div class="v" style="font-size:19px">W4</div><div class="d" style="color:var(--t3)">Jun 29 – Jul 05</div></div></div>
+<div class="kpis"><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">DAU (W4 avg)</div><div class="v">1,034,467</div><div class="d up">▲ +12.7% <span style="color:var(--t3);font-family:'Segoe UI'">vs 917,907 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">New Installs / Day</div><div class="v">349,295</div><div class="d up">▲ +18.6% <span style="color:var(--t3);font-family:'Segoe UI'">vs 294,634 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Sessions / User</div><div class="v">3.40</div><div class="d down">▼ -1.9% <span style="color:var(--t3);font-family:'Segoe UI'">vs 3.47 (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Playtime / User (s)</div><div class="v">1,166</div><div class="d down">▼ -1.4% <span style="color:var(--t3);font-family:'Segoe UI'">vs 1,182 (W3)</span></div></div></div><div class="kpis"><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">D1 Retention</div><div class="v">31.1%</div><div class="d down">▼ -1.8% <span style="color:var(--t3);font-family:'Segoe UI'">vs 31.7% (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">D7 Retention</div><div class="v">5.7%</div><div class="d down">▼ -3.7% <span style="color:var(--t3);font-family:'Segoe UI'">vs 5.9% (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Data Window</div><div class="v" style="font-size:19px">Apr 07 – Jul 06</div><div class="d" style="color:var(--t3)">rolling 90 days</div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Reporting Week</div><div class="v" style="font-size:19px">W4</div><div class="d" style="color:var(--t3)">Jun 29 – Jul 05</div></div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0">
 <div class="card"><h2>DAU <span style="font-size:9px;color:var(--t3);font-weight:400">· daily, 90d</span></h2><div class="chart-box" style="height:150px"><canvas id="andAnDau"></canvas></div></div>
 <div class="card"><h2>New Installs <span style="font-size:9px;color:var(--t3);font-weight:400">· daily, 90d</span></h2><div class="chart-box" style="height:150px"><canvas id="andAnInstall"></canvas></div></div>
@@ -636,8 +632,8 @@
 <div class="sb">
 <div class="eyebrow">Platform: iOS · Playtime · Session · Progression · FTUE</div>
 <div class="h1">iOS Engagement Depth &amp; Onboarding</div>
-<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Playtime D0 (W4)</div><div class="v">1697s</div><div class="d down">▼ -3.5% <span style="color:var(--t3);font-family:'DM Mono'">vs 1759s (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Playtime Avg (W4)</div><div class="v">1727s</div><div class="d down">▼ -3.4% <span style="color:var(--t3);font-family:'DM Mono'">vs 1787s (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Session Length D0 (W4)</div><div class="v">416s</div><div class="d down">▼ -0.7% <span style="color:var(--t3);font-family:'DM Mono'">vs 419s (W3)</span></div></div></div>
-<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Reach Shop Lvl 10 (14d)</div><div class="v">11.8%</div><div class="d down">▼ -0.5% <span style="color:var(--t3);font-family:'DM Mono'">vs 12% (prev)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Reach Day 10 (14d)</div><div class="v">11.4%</div><div class="d down">▼ -3.0% <span style="color:var(--t3);font-family:'DM Mono'">vs 12% (prev)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">FTUE @10 min Engaged</div><div class="v">40.1%</div><div class="d down">▼ -3.5% <span style="color:var(--t3);font-family:'DM Mono'">vs 41.6% (W3)</span></div></div></div>
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Playtime D0 (W4)</div><div class="v">1697s</div><div class="d down">▼ -3.5% <span style="color:var(--t3);font-family:'Segoe UI'">vs 1759s (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Playtime Avg (W4)</div><div class="v">1727s</div><div class="d down">▼ -3.4% <span style="color:var(--t3);font-family:'Segoe UI'">vs 1787s (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Session Length D0 (W4)</div><div class="v">416s</div><div class="d down">▼ -0.7% <span style="color:var(--t3);font-family:'Segoe UI'">vs 419s (W3)</span></div></div></div>
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Reach Shop Lvl 10 (14d)</div><div class="v">11.8%</div><div class="d down">▼ -0.5% <span style="color:var(--t3);font-family:'Segoe UI'">vs 12% (prev)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">Reach Day 10 (14d)</div><div class="v">11.4%</div><div class="d down">▼ -3.0% <span style="color:var(--t3);font-family:'Segoe UI'">vs 12% (prev)</span></div></div><div class="kpi" style="border-top:3px solid var(--ios)"><div class="l">FTUE @10 min Engaged</div><div class="v">40.1%</div><div class="d down">▼ -3.5% <span style="color:var(--t3);font-family:'Segoe UI'">vs 41.6% (W3)</span></div></div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0">
   <div class="card"><h2>Playtime D0 <span style="font-size:9px;color:var(--t3);font-weight:400">· seconds · dashed = trend</span></h2><div class="chart-box" style="height:190px"><canvas id="iosPlaytimeD0"></canvas></div></div>
   <div class="card"><h2>Playtime Avg <span style="font-size:9px;color:var(--t3);font-weight:400">· seconds, daily average · dashed = trend</span></h2><div class="chart-box" style="height:190px"><canvas id="iosPlaytimeAvg"></canvas></div></div>
@@ -654,8 +650,8 @@
 <div class="sb">
 <div class="eyebrow">Platform: Android · Playtime · Session · Progression · FTUE</div>
 <div class="h1">Android Engagement Depth &amp; Onboarding</div>
-<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Playtime D0 (W4)</div><div class="v">1049s</div><div class="d down">▼ -2.6% <span style="color:var(--t3);font-family:'DM Mono'">vs 1077s (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Playtime Avg (W4)</div><div class="v">1166s</div><div class="d down">▼ -1.4% <span style="color:var(--t3);font-family:'DM Mono'">vs 1182s (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Session Length D0 (W4)</div><div class="v">383s</div><div class="d down">▼ -0.6% <span style="color:var(--t3);font-family:'DM Mono'">vs 386s (W3)</span></div></div></div>
-<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Reach Shop Lvl 10 (14d)</div><div class="v">4.4%</div><div class="d down">▼ -1.8% <span style="color:var(--t3);font-family:'DM Mono'">vs 4% (prev)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Reach Day 10 (14d)</div><div class="v">4.8%</div><div class="d down">▼ -3.6% <span style="color:var(--t3);font-family:'DM Mono'">vs 5% (prev)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">FTUE @10 min Engaged</div><div class="v">24.4%</div><div class="d down">▼ -4.1% <span style="color:var(--t3);font-family:'DM Mono'">vs 25.4% (W3)</span></div></div></div>
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Playtime D0 (W4)</div><div class="v">1049s</div><div class="d down">▼ -2.6% <span style="color:var(--t3);font-family:'Segoe UI'">vs 1077s (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Playtime Avg (W4)</div><div class="v">1166s</div><div class="d down">▼ -1.4% <span style="color:var(--t3);font-family:'Segoe UI'">vs 1182s (W3)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Session Length D0 (W4)</div><div class="v">383s</div><div class="d down">▼ -0.6% <span style="color:var(--t3);font-family:'Segoe UI'">vs 386s (W3)</span></div></div></div>
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Reach Shop Lvl 10 (14d)</div><div class="v">4.4%</div><div class="d down">▼ -1.8% <span style="color:var(--t3);font-family:'Segoe UI'">vs 4% (prev)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">Reach Day 10 (14d)</div><div class="v">4.8%</div><div class="d down">▼ -3.6% <span style="color:var(--t3);font-family:'Segoe UI'">vs 5% (prev)</span></div></div><div class="kpi" style="border-top:3px solid var(--and)"><div class="l">FTUE @10 min Engaged</div><div class="v">24.4%</div><div class="d down">▼ -4.1% <span style="color:var(--t3);font-family:'Segoe UI'">vs 25.4% (W3)</span></div></div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0">
   <div class="card"><h2>Playtime D0 <span style="font-size:9px;color:var(--t3);font-weight:400">· seconds · dashed = trend</span></h2><div class="chart-box" style="height:190px"><canvas id="andPlaytimeD0"></canvas></div></div>
   <div class="card"><h2>Playtime Avg <span style="font-size:9px;color:var(--t3);font-weight:400">· seconds, daily average · dashed = trend</span></h2><div class="chart-box" style="height:190px"><canvas id="andPlaytimeAvg"></canvas></div></div>

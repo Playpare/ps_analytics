@@ -7,7 +7,7 @@
  * opt in with `options.plugins.donutCenter = { label, format }`.
  */
 import Chart from './chart.js';
-import './styles/donut.css';
+import '../../design/shared/donut.css';
 
 const FAMILY = "'Segoe UI', 'Segoe UI Variable', system-ui, Arial, sans-serif";
 
