@@ -5,60 +5,6 @@ Chart.defaults.font.size=14.5;
 Chart.defaults.font.weight='500';
 Chart.defaults.color='#dce3ef';
 Chart.defaults.plugins.legend.labels.font={family:"'Segoe UI', system-ui, Arial, sans-serif",size:15.5,weight:'500'};
-/* ---- shared theme, synced across the hub and every report ----
-   The choice is written to localStorage, which same-origin documents share.
-   A `storage` event fires in every OTHER document when one of them writes,
-   which is how a click in one iframe reaches the rest.
-
-   Charts read their colours from CSS variables at build time, so they have to
-   be rebuilt on a change. That rebuild is expensive and blocks the main thread,
-   so it is deliberately pushed behind a paint: the CSS flip lands on the next
-   frame, and the redraw happens after. A report that is currently hidden (its
-   iframe is display:none, so its document has no width) stays marked dirty and
-   redraws when it is shown again — otherwise three reports would rebuild at
-   once on a thread they all share. */
-(function(){
-  var KEY = 'mss3d_theme';
-  var dirty = false;
-
-  function paint(mode){
-    var light = (mode === 'light');
-    if (document.body) document.body.classList.toggle('lt', light);
-    document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
-    var btn = document.getElementById('themeBtn');
-    if (btn) btn.innerHTML = light ? '\u{1F319} Dark' : '\u2600 Light';
-  }
-
-  function flush(){
-    if (!dirty) return;
-    if (typeof window.__themeRerender !== 'function') { dirty = false; return; }
-    // A hidden iframe has no layout; leave it dirty until it is shown.
-    if (!document.documentElement.clientWidth) return;
-    dirty = false;
-    try { window.__themeRerender(); } catch (e) {}
-  }
-
-  function apply(mode, initial){
-    paint(mode);
-    if (initial) return;                       // first paint: nothing built yet
-    dirty = true;
-    // rAF gets us past the paint, the timeout past the frame's own work.
-    requestAnimationFrame(function(){ setTimeout(flush, 0); });
-  }
-
-  window.getTheme = function(){ try { return localStorage.getItem(KEY) || 'dark'; } catch(e){ return 'dark'; } };
-  window.setTheme = function(mode){ try { localStorage.setItem(KEY, mode); } catch(e){} apply(mode); };
-  window.toggleThemeGlobal = function(){ window.setTheme(window.getTheme() === 'light' ? 'dark' : 'light'); };
-
-  window.addEventListener('storage', function(ev){ if (ev.key === KEY) apply(ev.newValue || 'dark'); });
-  window.addEventListener('resize', flush);    // fires when a hidden iframe is shown
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ apply(window.getTheme(), true); });
-  } else {
-    apply(window.getTheme(), true);
-  }
-})();
 
 /* --- from till_date_report.html · block 9985646a84 --- */
 /* ---- API client: URL arrives via ?api= from the hub, token via sessionStorage ---- */
@@ -525,6 +471,14 @@ function purRateFilter(v,btn){
   renderPurRate();
 }
 
+/* Daily series for a KPI card's wave. Only the report theme reads data-spark
+   (src/shared/report-pro.js); without it the attribute is inert. */
+function SP(a,d){
+  const v=[],ds=[];
+  (a||[]).forEach((x,i)=>{ x=Number(x); if(x!==null&&isFinite(x)){ v.push(+x.toPrecision(6)); ds.push((d&&d[i])||''); } });
+  return v.length>1 ? ' data-spark="'+v.join(',')+'"'+(d?' data-spark-dates="'+ds.join(',')+'"':'') : '';
+}
+
 function renderIAP(){
   const isUSiOS = iapPlat==='us_ios', isUSAnd = iapPlat==='us_android';
   const effPlat = isUSiOS ? 'ios' : isUSAnd ? 'android' : iapPlat;
@@ -548,10 +502,10 @@ function renderIAP(){
     const iPay=ios.reduce((s,r)=>s+(r.paying_users||0),0);
     const aPay=and.reduce((s,r)=>s+(r.buyers||0),0);
     el.innerHTML=`
-      <div class="kpi-card"><div class="kpi-label">Total IAP Revenue</div><div class="kpi-value">${fmtMoney(iRev+aRev)}</div><div class="kpi-sub">iOS + Android</div></div>
-      <div class="kpi-card"><div class="kpi-label">iOS Total Revenue</div><div class="kpi-value">${fmtMoney(iRev)}</div><div class="kpi-sub">${ios.length} days</div></div>
-      <div class="kpi-card"><div class="kpi-label">Android Total Revenue</div><div class="kpi-value">${fmtMoney(aRev)}</div><div class="kpi-sub">${and.length} days</div></div>
-      <div class="kpi-card"><div class="kpi-label">Total Paying Users</div><div class="kpi-value">${fmtNum(iPay+aPay)}</div><div class="kpi-sub">iOS + Android</div></div>`;
+      <div class="kpi-card"${SP(dates.map(d=>((iMap[d]||{}).proceeds||0)+((aMap[d]||{}).proceeds||0)),dates)}><div class="kpi-label">Total IAP Revenue</div><div class="kpi-value">${fmtMoney(iRev+aRev)}</div><div class="kpi-sub">iOS + Android</div></div>
+      <div class="kpi-card"${SP(ios.map(r=>r.proceeds),ios.map(r=>r.date))}><div class="kpi-label">iOS Total Revenue</div><div class="kpi-value">${fmtMoney(iRev)}</div><div class="kpi-sub">${ios.length} days</div></div>
+      <div class="kpi-card"${SP(and.map(r=>r.proceeds),and.map(r=>r.date))}><div class="kpi-label">Android Total Revenue</div><div class="kpi-value">${fmtMoney(aRev)}</div><div class="kpi-sub">${and.length} days</div></div>
+      <div class="kpi-card"${SP(dates.map(d=>((iMap[d]||{}).paying_users||0)+((aMap[d]||{}).buyers||0)),dates)}><div class="kpi-label">Total Paying Users</div><div class="kpi-value">${fmtNum(iPay+aPay)}</div><div class="kpi-sub">iOS + Android</div></div>`;
   } else if(effPlat==='ios'){
     const iRev=ios.reduce((s,r)=>s+(r.proceeds||0),0);
     const iPurch=ios.reduce((s,r)=>s+(r.purchases||0),0);
@@ -559,10 +513,10 @@ function renderIAP(){
     const avgPR=ios.reduce((s,r)=>s+(r.purchase_rate||0),0)/ios.length*100;
     const lbl=isUSiOS?'US iOS':'iOS';
     el.innerHTML=`
-      <div class="kpi-card"><div class="kpi-label">${lbl} Total Revenue</div><div class="kpi-value">${fmtMoney(iRev)}</div><div class="kpi-sub">${ios.length} days</div></div>
-      <div class="kpi-card"><div class="kpi-label">${lbl} Total Purchases</div><div class="kpi-value">${fmtNum(iPurch)}</div><div class="kpi-sub">transactions</div></div>
-      <div class="kpi-card"><div class="kpi-label">${lbl} Avg ARPPU</div><div class="kpi-value">$${avgAR.toFixed(2)}</div><div class="kpi-sub">per paying user/day</div></div>
-      <div class="kpi-card"><div class="kpi-label">${lbl} Avg Purchase Rate</div><div class="kpi-value">${avgPR.toFixed(2)}%</div><div class="kpi-sub">payers / active users</div></div>`;
+      <div class="kpi-card"${SP(ios.map(r=>r.proceeds),ios.map(r=>r.date))}><div class="kpi-label">${lbl} Total Revenue</div><div class="kpi-value">${fmtMoney(iRev)}</div><div class="kpi-sub">${ios.length} days</div></div>
+      <div class="kpi-card"${SP(ios.map(r=>r.purchases),ios.map(r=>r.date))}><div class="kpi-label">${lbl} Total Purchases</div><div class="kpi-value">${fmtNum(iPurch)}</div><div class="kpi-sub">transactions</div></div>
+      <div class="kpi-card"${SP((effPlat==='ios'?ios:and).map(r=>r.arppu),(effPlat==='ios'?ios:and).map(r=>r.date))}><div class="kpi-label">${lbl} Avg ARPPU</div><div class="kpi-value">$${avgAR.toFixed(2)}</div><div class="kpi-sub">per paying user/day</div></div>
+      <div class="kpi-card"${SP(ios.map(r=>r.purchase_rate),ios.map(r=>r.date))}><div class="kpi-label">${lbl} Avg Purchase Rate</div><div class="kpi-value">${avgPR.toFixed(2)}%</div><div class="kpi-sub">payers / active users</div></div>`;
   } else {
     const aRev=and.reduce((s,r)=>s+(r.proceeds||0),0);
     const aBuyers=and.reduce((s,r)=>s+(r.buyers||0),0);
@@ -570,10 +524,10 @@ function renderIAP(){
     const avgPR=and.reduce((s,r)=>s+(r.purchase_rate||0),0)/and.length*1000;
     const lbl=isUSAnd?'US Android':'Android';
     el.innerHTML=`
-      <div class="kpi-card"><div class="kpi-label">${lbl} Total Revenue</div><div class="kpi-value">${fmtMoney(aRev)}</div><div class="kpi-sub">${and.length} days</div></div>
-      <div class="kpi-card"><div class="kpi-label">${lbl} Avg Buyers/Day</div><div class="kpi-value">${(aBuyers/and.length).toFixed(0)}</div><div class="kpi-sub">avg daily buyers</div></div>
-      <div class="kpi-card"><div class="kpi-label">${lbl} Avg ARPPU</div><div class="kpi-value">$${avgAR.toFixed(2)}</div><div class="kpi-sub">per paying user/day</div></div>
-      <div class="kpi-card"><div class="kpi-label">${lbl} Purchase Rate</div><div class="kpi-value">${avgPR.toFixed(3)}&permil;</div><div class="kpi-sub">buyers / active users</div></div>`;
+      <div class="kpi-card"${SP(and.map(r=>r.proceeds),and.map(r=>r.date))}><div class="kpi-label">${lbl} Total Revenue</div><div class="kpi-value">${fmtMoney(aRev)}</div><div class="kpi-sub">${and.length} days</div></div>
+      <div class="kpi-card"${SP(and.map(r=>r.buyers),and.map(r=>r.date))}><div class="kpi-label">${lbl} Avg Buyers/Day</div><div class="kpi-value">${(aBuyers/and.length).toFixed(0)}</div><div class="kpi-sub">avg daily buyers</div></div>
+      <div class="kpi-card"${SP((effPlat==='ios'?ios:and).map(r=>r.arppu),(effPlat==='ios'?ios:and).map(r=>r.date))}><div class="kpi-label">${lbl} Avg ARPPU</div><div class="kpi-value">$${avgAR.toFixed(2)}</div><div class="kpi-sub">per paying user/day</div></div>
+      <div class="kpi-card"${SP(and.map(r=>r.purchase_rate),and.map(r=>r.date))}><div class="kpi-label">${lbl} Purchase Rate</div><div class="kpi-value">${avgPR.toFixed(3)}&permil;</div><div class="kpi-sub">buyers / active users</div></div>`;
   }
 
   // Charts
@@ -675,7 +629,7 @@ function ovSeries(sel, dates){
   });
   const totIap=dates.reduce((s,dt)=>s+(iapByDate[dt]||0),0);
   const totAd=dates.reduce((s,dt)=>s+(adRevByDate[dt]||0),0);
-  return {arpdau, totIap, totAd, dauByDate};
+  return {arpdau, totIap, totAd, dauByDate, iapByDate, adRevByDate};
 }
 
 function renderOverview(){
@@ -693,11 +647,11 @@ function renderOverview(){
     const v=arr=>arr.filter(x=>x!=null&&isFinite(x));
     const mean=arr=>{const f=v(arr);return f.reduce((s,x)=>s+x,0)/(f.length||1);};
     document.getElementById('ov-kpis').innerHTML=`
-      <div class="kpi-card"><div class="kpi-label">Avg ARPDAU &mdash; iOS</div><div class="kpi-value">$${mean(ios.arpdau).toFixed(4)}</div><div class="kpi-sub">(IAP + Ad) / DAU</div></div>
-      <div class="kpi-card"><div class="kpi-label">Avg ARPDAU &mdash; Android</div><div class="kpi-value">$${mean(and.arpdau).toFixed(4)}</div><div class="kpi-sub">(IAP + Ad) / DAU</div></div>
-      <div class="kpi-card"><div class="kpi-label">Total Revenue</div><div class="kpi-value">${fmtMoney(totRev)}</div><div class="kpi-sub">iOS + Android, period</div></div>
-      <div class="kpi-card"><div class="kpi-label">Total IAP Revenue</div><div class="kpi-value">${fmtMoney(totIap)}</div><div class="kpi-sub">iOS + Android &middot; ${iapShare.toFixed(1)}% of total</div></div>
-      <div class="kpi-card"><div class="kpi-label">Total Ad Revenue</div><div class="kpi-value">${fmtMoney(totAd)}</div><div class="kpi-sub">iOS + Android &middot; ${adShare.toFixed(1)}% of total</div></div>`;
+      <div class="kpi-card"${SP(ios.arpdau,dates)}><div class="kpi-label">Avg ARPDAU &mdash; iOS</div><div class="kpi-value">$${mean(ios.arpdau).toFixed(4)}</div><div class="kpi-sub">(IAP + Ad) / DAU</div></div>
+      <div class="kpi-card"${SP(and.arpdau,dates)}><div class="kpi-label">Avg ARPDAU &mdash; Android</div><div class="kpi-value">$${mean(and.arpdau).toFixed(4)}</div><div class="kpi-sub">(IAP + Ad) / DAU</div></div>
+      <div class="kpi-card"${SP(dates.map(d=>(ios.iapByDate[d]||0)+(ios.adRevByDate[d]||0)+(and.iapByDate[d]||0)+(and.adRevByDate[d]||0)),dates)}><div class="kpi-label">Total Revenue</div><div class="kpi-value">${fmtMoney(totRev)}</div><div class="kpi-sub">iOS + Android, period</div></div>
+      <div class="kpi-card"${SP(dates.map(d=>(ios.iapByDate[d]||0)+(and.iapByDate[d]||0)),dates)}><div class="kpi-label">Total IAP Revenue</div><div class="kpi-value">${fmtMoney(totIap)}</div><div class="kpi-sub">iOS + Android &middot; ${iapShare.toFixed(1)}% of total</div></div>
+      <div class="kpi-card"${SP(dates.map(d=>(ios.adRevByDate[d]||0)+(and.adRevByDate[d]||0)),dates)}><div class="kpi-label">Total Ad Revenue</div><div class="kpi-value">${fmtMoney(totAd)}</div><div class="kpi-sub">iOS + Android &middot; ${adShare.toFixed(1)}% of total</div></div>`;
     mkChart('c-ov-arpdau','line',labels,[
       dsLine('ARPDAU \u2014 iOS', ios.arpdau, COLORS.ios),
       dsLine('ARPDAU \u2014 Android', and.arpdau, COLORS.android),
@@ -725,10 +679,10 @@ function renderOverview(){
   const adShare=totRev? (totAd/totRev)*100 : 0;
   const platLbl=ovPlat==='both'?'iOS + Android':ovPlat==='ios'?'iOS':'Android';
   document.getElementById('ov-kpis').innerHTML=`
-    <div class="kpi-card"><div class="kpi-label">Avg Blended ARPDAU</div><div class="kpi-value">$${avgArpdau.toFixed(4)}</div><div class="kpi-sub">(IAP + Ad) / DAU</div></div>
-    <div class="kpi-card"><div class="kpi-label">Total Revenue</div><div class="kpi-value">${fmtMoney(totRev)}</div><div class="kpi-sub">IAP + Ad, period</div></div>
-    <div class="kpi-card"><div class="kpi-label">Total IAP Revenue</div><div class="kpi-value">${fmtMoney(totIap)}</div><div class="kpi-sub">${platLbl} &middot; ${iapShare.toFixed(1)}% of total</div></div>
-    <div class="kpi-card"><div class="kpi-label">Total Ad Revenue</div><div class="kpi-value">${fmtMoney(totAd)}</div><div class="kpi-sub">all ad types, est. &middot; ${adShare.toFixed(1)}% of total</div></div>`;
+    <div class="kpi-card"${SP(arpdau,dates)}><div class="kpi-label">Avg Blended ARPDAU</div><div class="kpi-value">$${avgArpdau.toFixed(4)}</div><div class="kpi-sub">(IAP + Ad) / DAU</div></div>
+    <div class="kpi-card"${SP(dates.map(d=>(s.iapByDate[d]||0)+(s.adRevByDate[d]||0)),dates)}><div class="kpi-label">Total Revenue</div><div class="kpi-value">${fmtMoney(totRev)}</div><div class="kpi-sub">IAP + Ad, period</div></div>
+    <div class="kpi-card"${SP(dates.map(d=>s.iapByDate[d]||0),dates)}><div class="kpi-label">Total IAP Revenue</div><div class="kpi-value">${fmtMoney(totIap)}</div><div class="kpi-sub">${platLbl} &middot; ${iapShare.toFixed(1)}% of total</div></div>
+    <div class="kpi-card"${SP(dates.map(d=>s.adRevByDate[d]||0),dates)}><div class="kpi-label">Total Ad Revenue</div><div class="kpi-value">${fmtMoney(totAd)}</div><div class="kpi-sub">all ad types, est. &middot; ${adShare.toFixed(1)}% of total</div></div>`;
 
   mkChart('c-ov-arpdau','line',labels,[dsLine('Blended ARPDAU',arpdau,COLORS.cyan)],v=>'$'+v.toFixed(4),null,buildLogAnnotations(dates,ovPlat));
 
@@ -1197,10 +1151,10 @@ function renderAds(){
   const totalRev=dates.reduce((s,dt)=>s+(byDate[dt].rev||0),0);
 
   document.getElementById('ads-kpis').innerHTML=`
-    <div class="kpi-card"><div class="kpi-label">Total Ad Revenue</div><div class="kpi-value">$${(totalRev/1e6).toFixed(2)}M</div><div class="kpi-sub">est. period total</div></div>
-    <div class="kpi-card"><div class="kpi-label">Avg Ad Viewer Rate</div><div class="kpi-value">${avgAVR.toFixed(1)}%</div><div class="kpi-sub">DAV / DAU</div></div>
-    <div class="kpi-card"><div class="kpi-label">Avg eCPM</div><div class="kpi-value">$${avgECPM.toFixed(2)}</div><div class="kpi-sub">per 1,000 impressions</div></div>
-    <div class="kpi-card"><div class="kpi-label">Avg Imp / DAU</div><div class="kpi-value">${avgImp.toFixed(2)}</div><div class="kpi-sub">impressions per user</div></div>`;
+    <div class="kpi-card"${SP(rev,dates)}><div class="kpi-label">Total Ad Revenue</div><div class="kpi-value">$${(totalRev/1e6).toFixed(2)}M</div><div class="kpi-sub">est. period total</div></div>
+    <div class="kpi-card"${SP(avr,dates)}><div class="kpi-label">Avg Ad Viewer Rate</div><div class="kpi-value">${avgAVR.toFixed(1)}%</div><div class="kpi-sub">DAV / DAU</div></div>
+    <div class="kpi-card"${SP(ecpm,dates)}><div class="kpi-label">Avg eCPM</div><div class="kpi-value">$${avgECPM.toFixed(2)}</div><div class="kpi-sub">per 1,000 impressions</div></div>
+    <div class="kpi-card"${SP(imp,dates)}><div class="kpi-label">Avg Imp / DAU</div><div class="kpi-value">${avgImp.toFixed(2)}</div><div class="kpi-sub">impressions per user</div></div>`;
 
   const col=adsPlat==='ios'?COLORS.ios:adsPlat==='android'?COLORS.android:COLORS.purple;
   // Ad Viewer Rate chart: start from 2024-07-26 onward (earlier dates excluded from this chart only).
@@ -1352,10 +1306,6 @@ function showSection(id,btn){
   renderActive();
 }
 
-/* The theme button now lives in the hub, once, for all three reports.
-   This report still follows the shared setting: the theme module applies the
-   CSS and calls __themeRerender below to redraw the charts. */
-window.__themeRerender = function(){ renderActive(); };
 
 // ── DATA SOURCE (Excel) ──
 const SHEET_TO_RAW_KEY = {

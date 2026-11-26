@@ -116,28 +116,6 @@ async function fetchCall(action,params){
   throw last||new Error('Request failed');
 }
 
-/* ---------------------------- theme ---------------------------- */
-(function(){
-  var KEY='mss3d_theme';
-  function paint(mode){
-    var light=(mode==='light');
-    if(document.body) document.body.classList.toggle('lt',light);
-    document.documentElement.setAttribute('data-theme',light?'light':'dark');
-    var b=document.getElementById('themeBtn');
-    if(b) b.innerHTML=light?'\u{1F319} Dark':'\u2600 Light';
-  }
-  window.getTheme=function(){try{return localStorage.getItem(KEY)||'dark'}catch(e){return 'dark'}};
-  window.setTheme=function(m){try{localStorage.setItem(KEY,m)}catch(e){}paint(m);
-    /* Charts sample their colours from CSS variables when they are built, so a
-       theme flip has to rebuild them. Push it behind a paint so the CSS change
-       lands first and the redraw does not block it. */
-    requestAnimationFrame(function(){setTimeout(function(){if(DATA)render()},0)})};
-  window.addEventListener('storage',function(ev){
-    if(ev.key===KEY)paint(ev.newValue||'dark');
-  });
-  paint(window.getTheme());
-})();
-
 /* --------------------------- constants --------------------------- */
 const MS_DAY=86400000;
 const COLORS={blue:'#4d9fff',teal:'#00e5c3',pink:'#ec0a9b',line:'#a6b8d4',green:'#00c47a',amber:'#ffb800',coral:'#ff4d6d'};
@@ -532,7 +510,7 @@ if(typeof Chart!=='undefined'){
   Chart.defaults.plugins.legend.labels.font={family:"'Segoe UI',Arial,sans-serif",size:12.5,weight:'600'};
   Chart.defaults.plugins.legend.labels.padding=16;
   if(Chart.defaults.scales&&Chart.defaults.scales.linear&&Chart.defaults.scales.linear.ticks){
-    Chart.defaults.scales.linear.ticks.font={family:'Poppins,system-ui,sans-serif',weight:'400'};
+    Chart.defaults.scales.linear.ticks.font={family:'Segoe UI,system-ui,sans-serif',weight:'400'};
   }
 }
 
@@ -2879,7 +2857,7 @@ function buildTable(id,headers,rows,opts){
         '</tr></tfoot>'
       : '')+
     '</table>'+
-    (opts.footer?`<div style="padding:11px 12px;color:var(--amber);background:rgba(255,184,0,.08);border-top:1px solid rgba(255,184,0,.24);font:650 12.5px Poppins,system-ui,sans-serif">${esc(opts.footer)}</div>`:'');
+    (opts.footer?`<div style="padding:11px 12px;color:var(--amber);background:rgba(255,184,0,.08);border-top:1px solid rgba(255,184,0,.24);font:650 12.5px Segoe UI,system-ui,sans-serif">${esc(opts.footer)}</div>`:'');
 }
 
 

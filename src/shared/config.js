@@ -27,29 +27,11 @@ export const API_URLS = {
   aso: import.meta.env.VITE_API_ASO,
   negative: import.meta.env.VITE_API_NEGATIVE,
   game: import.meta.env.VITE_API_GAME,
-  /* The Executive Dashboard's own deployment. It stays its own backend: it
-     reads a separate, already-refined table rather than the raw block
-     game-dashboard aggregates, so pointing it at the game backend would mean
-     rebuilding that refinement on this side for nothing.
-
-     Its endpoint was a literal in a PUBLIC repository (execDash). Moving it
-     here keeps the NEXT one out of a repository, but it does not unpublish
-     this one - that URL is in that repository's commit history for good, so
-     the script wants redeploying to a fresh /exec rather than carrying the
-     old one across. */
+  /* Executive Dashboard: its own Apps Script backend (as in ps_analytics). */
   exec: import.meta.env.VITE_API_EXEC,
-
-  /* Creative Analytics: its own backend too. The compact-v2 wire format, the
-     90-day durable snapshot and the chunked payload cache all stay as they
-     are - only its sign-in moved. Same warning as exec: this endpoint was a
-     literal in a public repository, so deploy a fresh /exec rather than
-     carrying the old one over. */
+  /* Creative Analytics: its own backend, plus the VALIA video-label page
+     inside it, which reads a third deployment (travels as ?valiaApi=). */
   creative: import.meta.env.VITE_API_CREATIVE,
-
-  /* The VALIA page inside the Creative report reads its own deployment -
-     the web app bound to the VALIA sheet. A third endpoint for one section,
-     but the alternative is a literal in a public repo, which is what the old
-     creative-dash did. Travels to the report as ?valiaApi=. */
   valia: import.meta.env.VITE_API_VALIA,
 };
 
@@ -73,9 +55,13 @@ export const GAME_API_KEY = import.meta.env.VITE_API_GAME_KEY || '';
  * "could not reach the web app". Checking here turns a mis-set secret into one
  * clear message at boot, naming the variable that is missing.
  */
+/* Pages that can be absent without stopping the hub: a missing one only
+   leaves its own page unable to load (it says so), never the dashboard. */
+const OPTIONAL_APIS = new Set(['exec', 'creative', 'valia']);
+
 export function assertConfigured() {
   const missing = Object.entries(API_URLS)
-    .filter(([, url]) => !url || /REPLACE_ME/.test(url))
+    .filter(([name, url]) => !OPTIONAL_APIS.has(name) && (!url || /REPLACE_ME/.test(url)))
     .map(([name]) => `VITE_API_${name.toUpperCase()}`);
 
   if (missing.length) {

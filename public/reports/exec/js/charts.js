@@ -54,10 +54,11 @@ function renderKPIs(){
   const sparkRoi=sparkDates.map(d=>sparkByDate[d].spd>0?+(sparkByDate[d].rev/sparkByDate[d].spd).toFixed(3):null).filter(v=>v!==null);
   // Draw spark charts with hover tooltips
   requestAnimationFrame(()=>{
-    spark('spRev', sparkDates.map(d=>sparkByDate[d].rev), sparkDates, '#4d9fff', v=>fmFull(v));
-    spark('spSpd', sparkDates.map(d=>sparkByDate[d].spd), sparkDates, '#ff4d6d', v=>fmFull(v));
-    spark('spPro', sparkDates.map(d=>sparkByDate[d].pro), sparkDates, '#00e5c3', v=>fmFull(v));
-    spark('spRoi', sparkRoi, sparkDates.slice(0,sparkRoi.length), '#ffb800', v=>'ROI: '+v.toFixed(3));
+    const accent = id => getComputedStyle(g(id)).getPropertyValue('--kc').trim();
+    spark('spRev', sparkDates.map(d=>sparkByDate[d].rev), sparkDates, accent('spRev'), v=>fmFull(v));
+    spark('spSpd', sparkDates.map(d=>sparkByDate[d].spd), sparkDates, accent('spSpd'), v=>fmFull(v));
+    spark('spPro', sparkDates.map(d=>sparkByDate[d].pro), sparkDates, accent('spPro'), v=>fmFull(v));
+    spark('spRoi', sparkRoi, sparkDates.slice(0,sparkRoi.length), accent('spRoi'), v=>'ROI: '+v.toFixed(3));
   });
 }
 
@@ -68,7 +69,7 @@ function setKPI(valId,chgId,prevId,curr,prev,upGood){
     const pct=(curr-prev)/prev*100, up=pct>=0, good=upGood?up:!up;
     chgEl.textContent=(up?'▲':'▼')+' '+Math.abs(pct).toFixed(1)+'%';
     chgEl.className='kpiChg '+(good?'up':'dn');
-    prevEl.textContent='Prev: '+fmFull(prev);
+    prevEl.textContent='vs '+fmFull(prev);
   } else {
     chgEl.textContent='No prev data'; chgEl.className='kpiChg neu'; prevEl.textContent='';
   }
@@ -81,7 +82,7 @@ function setROIKPI(curr,prev){
     const diff=curr-prev, up=diff>=0;
     chgEl.textContent=(up?'▲':'▼')+' '+Math.abs(diff).toFixed(3);
     chgEl.className='kpiChg '+(up?'up':'dn');
-    prevEl.textContent='Prev: '+fr2(prev);
+    prevEl.textContent='vs '+fr2(prev);
   } else {
     chgEl.textContent=curr>=thr?'✓ Above Target':'⚠ Below Target';
     chgEl.className='kpiChg '+(curr>=thr?'up':'dn');
@@ -95,6 +96,11 @@ const sparkCharts={};
 function spark(id,vals,dates,color,labelFmt){
   const canvas=g(id);if(!canvas||vals.length<2)return;
   if(sparkCharts[id]){sparkCharts[id].destroy();delete sparkCharts[id];}
+  /* the graph takes its card's own colour (--kc, set by the dashboard design),
+     so a green card always has a green line */
+  const card=canvas.closest('.kpi');
+  const kc=card?getComputedStyle(card).getPropertyValue('--kc').trim():'';
+  if(/^#[0-9a-f]{6}$/i.test(kc))color=kc;
 
   let dVals=vals, dDates=dates||[];
   if(vals.length>60){
@@ -149,8 +155,8 @@ function spark(id,vals,dates,color,labelFmt){
           borderColor:color,
           borderWidth:1,
           padding:8,
-          titleFont:{family:'Poppins',size:10,weight:'600'},
-          bodyFont:{family:'DM Mono',size:12},
+          titleFont:{family:'Segoe UI',size:10,weight:'600'},
+          bodyFont:{family:'Segoe UI',size:12},
           titleColor:'#7a8fad',
           bodyColor:color,
           callbacks:{
@@ -192,7 +198,7 @@ const weekendPlugin = {
         const xPx=x.getPixelForValue(i);
         const bw=Math.max(Math.abs((x.getPixelForValue(1)||0)-(x.getPixelForValue(0)||0)),8);
         ctx.save();
-        ctx.fillStyle=isLight?'rgba(0,0,0,.04)':'rgba(255,255,255,.04)';
+        ctx.fillStyle='rgba(255,255,255,.04)';
         ctx.fillRect(xPx-bw/2,top,bw,bottom-top);
         ctx.restore();
       }
@@ -277,7 +283,7 @@ function renderDaily(){
       interaction:{mode:'index',intersect:false},
       layout:{padding:{left:4,right:8,top:4,bottom:0}},
       plugins:{
-        legend:{labels:{color:tc(),font:{family:'Poppins',size:11},boxWidth:11,padding:12},
+        legend:{labels:{color:tc(),font:{family:'Segoe UI',size:13},boxWidth:13,padding:16},
           onClick: function(e, item, legend) {
             var index = item.datasetIndex;
             var ci = legend.chart;
@@ -312,9 +318,9 @@ function renderDaily(){
         }
       },
       scales:{
-        x:{ticks:{color:tc(),font:{size:10,family:'Poppins'},maxRotation:45,padding:4},grid:{display:false},border:{display:false}},
-        y:{ticks:{color:tc(),callback:v=>fmK(v),font:{family:'Poppins',size:10},padding:6},grid:{display:false},border:{display:false}},
-        y2:{position:'right',min:roiMin,max:roiMax,ticks:{color:'#ffb800',callback:v=>v.toFixed(2),font:{family:'DM Mono',size:10},padding:6},grid:{display:false},border:{display:false}}
+        x:{ticks:{color:tc(),font:{size:13,weight:'600',family:'Segoe UI'},maxRotation:45,padding:7},grid:{display:false},border:{display:false}},
+        y:{ticks:{color:tc(),callback:v=>fmK(v),font:{family:'Segoe UI',size:14,weight:'600'},padding:9},grid:{display:false},border:{display:false}},
+        y2:{position:'right',min:roiMin,max:roiMax,ticks:{color:'#ffd15c',callback:v=>v.toFixed(2),font:{family:'Segoe UI',size:14,weight:'600'},padding:9},grid:{display:false},border:{display:false}}
       }
     }
   });
@@ -600,27 +606,26 @@ function renderProjected(){
 
 function drawGauge(id,pct,fill,track,startLbl,endLbl){
   const c=g(id);if(!c)return;
-  const ctx=c.getContext('2d'),W=c.width,H=c.height,cx=W/2,cy=H-18,r=Math.min(W*.40,H*.75);
+  const ctx=c.getContext('2d'),W=c.width,H=c.height,s=W/210,cx=W/2,cy=H-18*s,r=Math.min(W*.40,H*.75);
   ctx.clearRect(0,0,W,H);
   // Track arc
   ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,2*Math.PI);
-  ctx.strokeStyle=track||(isLight?'#dde5f0':'#1a2d47');ctx.lineWidth=16;ctx.lineCap='round';ctx.stroke();
+  ctx.strokeStyle=track||'#1a2d47';ctx.lineWidth=16*s;ctx.lineCap='round';ctx.stroke();
   // Glow on fill
-  ctx.shadowBlur=pct>0?10:0; ctx.shadowColor=fill;
+  ctx.shadowBlur=pct>0?10*s:0; ctx.shadowColor=fill;
   // Fill arc
   ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,Math.PI+Math.min(pct,1)*Math.PI);
-  ctx.strokeStyle=fill;ctx.lineWidth=16;ctx.lineCap='round';ctx.stroke();
+  ctx.strokeStyle=fill;ctx.lineWidth=16*s;ctx.lineCap='round';ctx.stroke();
   ctx.shadowBlur=0;
   // Left endpoint label  at arc start
   const lx=cx-r, ly=cy+2;
-  ctx.font='700 9px Poppins';
-  ctx.fillStyle=isLight?'#7a8fad':'#7a8fad';
+  ctx.font='700 '+Math.round(10*s)+'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle=tc();
   ctx.textAlign='center';
-  ctx.fillText(startLbl||'$0', lx, ly+16);
+  ctx.fillText(startLbl||'$0', lx, ly+16*s);
   // Right endpoint label  at arc end
   const rx=cx+r;
-  ctx.fillStyle=isLight?'#7a8fad':'#7a8fad';
-  ctx.fillText(endLbl||'', rx, ly+16);
+  ctx.fillText(endLbl||'', rx, ly+16*s);
 }
 
 /* MONTHLY TABLE */
@@ -699,7 +704,7 @@ function renderMonthly(){
       profitCell=hasTgt?`<span style="color:var(--t3)">~${fmK(proj)}</span>`:'';
       deltaCell=delta!==null?`<span style="color:var(--t3)">~${delta>=0?'+':'-'}${fmK(Math.abs(delta))}</span>`:'';
       dailyCell=hasTgt?`<span style="color:var(--t1)">${fmK(smartDaily)}</span><div style="font-size:9px;color:var(--t3);margin-top:1px">need ${fmK(reqFull)}</div>`:'';
-      roiCell=`<span style="color:var(--t3);font-family:'DM Mono',monospace">${fr2(tgtRoi)}</span>`;
+      roiCell=`<span style="color:var(--t3);font-family:'Segoe UI',monospace">${fr2(tgtRoi)}</span>`;
       if(hasTgt){
         const cls=projPct>=100?'pillG':projPct>=80?'pillA':'pillR';
         const arr=projPct>=80?'>':'<';
@@ -769,7 +774,7 @@ function renderTargetChart(){
       responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{
-        legend:{labels:{color:tc(),font:{family:'Poppins',size:11},boxWidth:11,padding:12}},
+        legend:{labels:{color:tc(),font:{family:'Segoe UI',size:13},boxWidth:13,padding:16}},
         tooltip:{
           mode:'index',intersect:false,
           callbacks:{
@@ -801,9 +806,9 @@ function renderTargetChart(){
         }
       },
       scales:{
-        x:{ticks:{color:tc(),font:{size:11,family:'Poppins'}},grid:{color:gc()}},
-        y:{ticks:{color:tc(),callback:v=>fmK(v),font:{family:'Poppins',size:10}},grid:{color:gc()}},
-        y2:{position:'right',min:0,max:2.5,ticks:{color:'#ffb800',callback:v=>v.toFixed(2),font:{family:'DM Mono',size:10}},grid:{display:false}}
+        x:{ticks:{color:tc(),font:{size:14,weight:'600',family:'Segoe UI'}},grid:{color:gc()}},
+        y:{ticks:{color:tc(),callback:v=>fmK(v),font:{family:'Segoe UI',size:14,weight:'600'}},grid:{color:gc()}},
+        y2:{position:'right',min:0,max:2.5,ticks:{color:'#ffd15c',callback:v=>v.toFixed(2),font:{family:'Segoe UI',size:14,weight:'600'}},grid:{display:false}}
       }
     }
   });
@@ -972,7 +977,7 @@ function renderROIRanking(){
 
   const row=(name, tagHtml, roi, thr, rank, sub)=>`
     <tr style="border-bottom:1px solid var(--border)${sub&&!roiRankExpanded?';display:none':''}">
-      <td style="padding:7px 6px;font-size:11px;color:var(--t3);font-family:'DM Mono',monospace;width:22px;vertical-align:middle">${rank}</td>
+      <td style="padding:7px 6px;font-size:11px;color:var(--t3);font-family:'Segoe UI',monospace;width:22px;vertical-align:middle">${rank}</td>
       <td style="padding:7px 6px;vertical-align:middle">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span style="font-size:12px;font-weight:${sub?500:600};color:var(--${sub?'t2':'t1'})">${escapeHTML(name)}</span>
@@ -1030,10 +1035,10 @@ function renderGameTrend(){
         pointRadius:2,borderWidth:2,tension:.35,fill:true,spanGaps:true
       }]},
       options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{labels:{color:tc(),font:{family:'Poppins',size:11}}},
+        plugins:{legend:{labels:{color:tc(),font:{family:'Segoe UI',size:11}}},
           tooltip:{callbacks:{label:ctx=>` Revenue: ${fmK(ctx.parsed.y)}`}}},
         scales:{x:{ticks:{color:tc(),font:{size:10},maxRotation:45},grid:{color:gc()}},
-                y:{ticks:{color:tc(),callback:v=>fmK(v),font:{family:'Poppins',size:10}},grid:{color:gc()}}}}
+                y:{ticks:{color:tc(),callback:v=>fmK(v),font:{family:'Segoe UI',size:10}},grid:{color:gc()}}}}
     });
   } else {
     // Top 6 games multi-line
@@ -1057,10 +1062,10 @@ function renderGameTrend(){
     charts.gameTrend=new Chart(g('gameTrendChart').getContext('2d'),{
       type:'line',data:{labels:allD.map(fmtLbl),datasets},
       options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{labels:{color:tc(),font:{family:'Poppins',size:11},boxWidth:10,padding:10}},
+        plugins:{legend:{labels:{color:tc(),font:{family:'Segoe UI',size:11},boxWidth:10,padding:10}},
           tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmK(ctx.parsed.y)}`}}},
         scales:{x:{ticks:{color:tc(),font:{size:10},maxRotation:45},grid:{color:gc()}},
-                y:{ticks:{color:tc(),callback:v=>fmK(v),font:{family:'Poppins',size:10}},grid:{color:gc()}}}}
+                y:{ticks:{color:tc(),callback:v=>fmK(v),font:{family:'Segoe UI',size:10}},grid:{color:gc()}}}}
     });
   }
 }
@@ -1117,17 +1122,17 @@ function renderDailySummary(){
     return`<tr>
       <td class="nameCol" style="font-size:12px">${escapeHTML(r.game)}</td>
       <td><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${bg};color:${col}">${escapeHTML(r.platform)}</span></td>
-      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--blue)">${fmFull(Math.round(r.rev))}</td>
-      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--coral)">${fmFull(Math.round(r.spd))}</td>
-      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${r.pro>=0?'var(--green)':'var(--coral)'}">${fmFull(Math.round(r.pro))}</td>
+      <td style="text-align:right;font-family:'Segoe UI',monospace;font-size:12px;color:var(--blue)">${fmFull(Math.round(r.rev))}</td>
+      <td style="text-align:right;font-family:'Segoe UI',monospace;font-size:12px;color:var(--coral)">${fmFull(Math.round(r.spd))}</td>
+      <td style="text-align:right;font-family:'Segoe UI',monospace;font-size:12px;color:${r.pro>=0?'var(--green)':'var(--coral)'}">${fmFull(Math.round(r.pro))}</td>
       <td style="text-align:right"><span class="pill ${roiGood?'pillG':'pillR'}" style="font-size:11px">${fr2(roi)}</span></td>
     </tr>`;
   }).join('')+`
     <tr style="border-top:2px solid var(--borderB);background:var(--card2)">
       <td class="nameCol" colspan="2" style="font-size:12px;color:var(--t1)">Total</td>
-      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--blue);font-weight:700">${fmFull(Math.round(totRev))}</td>
-      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--coral);font-weight:700">${fmFull(Math.round(totSpd))}</td>
-      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${totPro>=0?'var(--green)':'var(--coral)'};font-weight:700">${fmFull(Math.round(totPro))}</td>
+      <td style="text-align:right;font-family:'Segoe UI',monospace;font-size:12px;color:var(--blue);font-weight:700">${fmFull(Math.round(totRev))}</td>
+      <td style="text-align:right;font-family:'Segoe UI',monospace;font-size:12px;color:var(--coral);font-weight:700">${fmFull(Math.round(totSpd))}</td>
+      <td style="text-align:right;font-family:'Segoe UI',monospace;font-size:12px;color:${totPro>=0?'var(--green)':'var(--coral)'};font-weight:700">${fmFull(Math.round(totPro))}</td>
       <td style="text-align:right"><span class="pill ${totRoi>=(TARGETS.roiAlert||1.20)?'pillG':'pillR'}" style="font-size:11px;font-weight:700">${fr2(totRoi)}</span></td>
     </tr>`;
 }

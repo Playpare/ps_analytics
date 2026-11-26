@@ -1,0 +1,185 @@
+/* ---------------------------------------------------------------------------
+ * design.css — Life Time on the Negative Spend type system.
+ *
+ * Fonts, sizes, weights and control shapes only. No colour is set here: the
+ * page keeps every colour its own stylesheet gives it. Imported after
+ * till-date.css; `html body` raises specificity over its !important rules.
+ * ------------------------------------------------------------------------- */
+
+/* one family everywhere (no Poppins / DM Mono / Syne / Quicksand / Trebuchet) */
+html body *, html body *::before, html body *::after,
+html body button, html body input, html body select, html body textarea {
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, Roboto, Arial, sans-serif !important;
+}
+html body {
+  font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- top bar: tabs + refresh ---------- */
+html body .top { height: 60px; gap: 10px }
+html body .tabs { gap: 8px }
+html body .tabs button, html body .top .btn, html body #refreshBtn {
+  height: 38px; padding: 0 18px !important; border-radius: 999px !important;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important;
+}
+html body .tabs button.active, html body #refreshBtn { font-weight: 600 !important }
+html body .top .status { font-size: 13px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+
+/* ---------- filter strip + in-page controls ---------- */
+html body .subtop { min-height: 60px; gap: 10px }
+html body .ctrl-label {
+  font-size: 12px !important; font-weight: 600 !important;
+  letter-spacing: .12em !important; text-transform: uppercase;
+}
+html body .pill-group { gap: 6px }
+html body .pill {
+  height: 36px; padding: 0 16px !important; border-radius: 999px !important;
+  display: inline-flex; align-items: center;
+  font-size: 14px !important; font-weight: 500 !important; letter-spacing: 0 !important;
+}
+html body .pill.active { font-weight: 600 !important }
+html body .chan-filter, html body .ctrl-select {
+  height: 36px; border-radius: 999px !important; padding-left: 16px !important;
+  font-size: 14px !important; font-weight: 500 !important;
+}
+
+/* date controls: the pill itself is the shared rounded popup */
+html body .date-span { font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+html body .date-controls input[type=date] {
+  height: 38px; border-radius: 999px !important; padding: 0 14px !important;
+  font-size: 14px !important; font-weight: 600 !important;
+}
+html body .date-confirm {
+  height: 38px; padding: 0 18px !important; border-radius: 999px !important;
+  font-size: 14px !important; font-weight: 600 !important;
+}
+
+/* ---------- headings ---------- */
+html body .eyebrow {
+  font-size: 13px !important; font-weight: 600 !important;
+  letter-spacing: .12em !important; text-transform: uppercase;
+}
+html body .h1 { font-size: 34px !important; font-weight: 700 !important; letter-spacing: -.01em !important; line-height: 1.15 }
+html body .subhead h2 { font-size: 24px !important; font-weight: 700 !important; letter-spacing: -.01em !important }
+html body .subhead p, html body .note { font-size: 15px !important; font-weight: 400 !important; letter-spacing: 0 !important }
+html body .card h2, html body .card-title, html body .card-head h2 {
+  font-size: 20px !important; font-weight: 700 !important; letter-spacing: -.01em !important; line-height: 1.35;
+}
+html body .card-sub { font-size: 15px !important; font-weight: 400 !important; letter-spacing: 0 !important }
+
+/* ---------- KPI cards ---------- */
+html body .kpi-card { padding: 18px 20px }
+html body .kpi-label {
+  font-size: 13px !important; font-weight: 500 !important;
+  letter-spacing: .1em !important; text-transform: uppercase;
+}
+html body .kpi-value {
+  font-size: 32px !important; font-weight: 700 !important; letter-spacing: -.02em !important;
+  line-height: 1.15; margin: 8px 0 6px;
+}
+/* the coloured sub-line under each KPI (teal / blue / amber / red) - bigger
+   and semibold so it reads clearly; its colour is unchanged */
+html body .kpi-sub, html body .kpi-sub * { font-size: 16px !important; font-weight: 600 !important; letter-spacing: 0 !important; line-height: 1.4 }
+
+/* ---------- tables ---------- */
+html body th, html body th.num {
+  font-size: 14px !important; font-weight: 500 !important;
+  letter-spacing: 0 !important; text-transform: none !important; padding-top: 11px; padding-bottom: 11px;
+}
+html body td, html body table td, html body table td * { font-size: 15px !important; font-weight: 400 !important; letter-spacing: 0 !important }
+html body td.num, html body table td.num { font-weight: 600 !important; font-feature-settings: "tnum", "zero" }
+html body td { padding-top: 11px; padding-bottom: 11px }
+
+/* ---------- legends + footer ---------- */
+html body .legend, html body .legend * { font-size: 14px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+html body .sf, html body .sf * { font-size: 13px !important; font-weight: 500 !important; letter-spacing: 0 !important }
+
+/* ===========================================================================
+   Trend cards
+   =========================================================================== */
+
+/* Secondary text a clear step brighter (still not white). Set on <body>,
+   which is where the charts read their tick and label colours from. */
+html body       { --t2: #dce3ef; --t3: #c9d2e1; --tick: #d4dcea; --muted: #dce3ef }
+/* these were pinned to one literal grey (#c0ccdf) in both themes */
+html body .status, html body .date-span, html body .card-sub, html body .eyebrow,
+html body .sf, html body .mut, html body .kpi-label, html body .ctrl-label,
+html body .subhead p, html body .note, html body th { color: var(--t2) !important }
+
+/* bigger charts */
+html body .chartbox      { height: 380px }
+html body .chartbox.tall { height: 470px }
+html body .card { padding: 20px 22px 22px }
+html body .card > h2 { margin-bottom: 4px }
+html body .card > .card-sub { margin: 0 0 14px; color: var(--t2) }
+
+/* the filter row inside a card becomes one tidy toolbar:
+   label + segmented group, groups split by a hairline */
+html body .controls {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 0;
+  margin: 0 0 18px; padding: 8px 10px;
+  background: var(--card2); border: 1px solid var(--border); border-radius: 14px;
+  width: fit-content; max-width: 100%;
+}
+html body .controls .ctrl-label {
+  margin: 0 10px 0 6px !important; color: var(--t2);
+}
+html body .controls .ctrl-label:not(:first-child) {
+  margin-left: 14px !important; padding-left: 16px; border-left: 1px solid var(--borderB);
+}
+html body .controls .pill-group {
+  display: inline-flex; gap: 2px; padding: 3px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--card);
+}
+html body .controls .pill {
+  height: 32px; padding: 0 14px !important; border: 0 !important; background: transparent;
+  box-shadow: none;
+}
+html body .controls .pill:not(.active) { color: var(--t2) }
+html body .controls .pill:not(.active):hover { color: var(--t1); background: var(--border) }
+html body .controls .pill.active { background: var(--grad); color: var(--onGrad) }
+html body .controls select { margin-left: 4px }
+
+/* chart legends sit a little lower so they don't crowd the toolbar */
+html body .card .chartbox { margin-top: 4px }
+
+/* ---------- same toolbar look everywhere ----------
+   Filter rows that sit outside a card (each tab's Platform / Ad Type row,
+   Cohort Impressions, Network Revenue Share) now use the exact toolbar the
+   Overview cards use. The global Change Logs / Trend Lines toggles in the
+   strip under the tabs get the same segmented groups. */
+html body .sb > .controls { margin: 4px 0 20px }
+html body .subhead + .controls { margin-top: 2px }
+
+html body .subtop .pill-group {
+  display: inline-flex; gap: 2px; padding: 3px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--card);
+}
+html body .subtop .pill {
+  height: 32px; padding: 0 14px !important; border: 0 !important; background: transparent; box-shadow: none;
+}
+html body .subtop .pill:not(.active) { color: var(--t2) }
+html body .subtop .pill:not(.active):hover { color: var(--t1); background: var(--border) }
+html body .subtop .pill.active { background: var(--grad); color: var(--onGrad) }
+html body .subtop .ctrl-label { margin: 0 8px 0 0 !important; color: var(--t2) }
+html body .subtop .ctrl-label + .pill-group { margin-right: 18px }
+
+/* the network dropdown inside a toolbar matches the segmented groups */
+html body .controls select.chan-filter, html body .controls select.ctrl-select {
+  height: 38px; margin-left: 0 !important; padding: 0 36px 0 16px !important;
+  border: 1px solid var(--border) !important; border-radius: 999px !important;
+  background-color: var(--card) !important; color: var(--t1) !important;
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--t2) 50%), linear-gradient(135deg, var(--t2) 50%, transparent 50%) !important;
+  background-position: calc(100% - 19px) 52%, calc(100% - 14px) 52% !important;
+  background-size: 5px 5px, 5px 5px !important; background-repeat: no-repeat !important;
+}
+html body .controls select.chan-filter:hover, html body .controls select.chan-filter:focus { border-color: var(--teal) !important; outline: 0 }
+html body .controls select option { background: var(--card); color: var(--t1) }
+
+/* Navigation and date-filter rows match the pure-black report canvas. */
+html[data-theme="dark"] body .top,
+html[data-theme="dark"] body .subtop{background:#000;backdrop-filter:none}

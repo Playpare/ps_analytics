@@ -1,0 +1,87 @@
+/* ---------------------------------------------------------------------------
+ * date-popup.css — the rounded date-filter popup (see src/shared/date-popup.js)
+ *
+ * Colours read the design-system tokens where a page has them (--sur, --bor,
+ * --text, --brand-gradient …) and fall back to the older report palette
+ * (--card, --border, --t1, --grad …) where it does not, so each page keeps
+ * its own colours.
+ * ------------------------------------------------------------------------- */
+/* :not(#_) adds id-level weight: some reports style their date select through
+   an id (#weeklyDateHost …) with !important, which would otherwise keep the
+   native select showing next to the popup */
+html body .date-controls select.date.dd-native:not(#_),
+html body select.dd-native:not(#_):not(#_) { display: none !important }
+.dd { position: relative; display: inline-flex }
+.dd-btn {
+  display: inline-flex; align-items: center; gap: 12px; height: 38px; padding: 0 16px 0 18px;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--brand-gradient, var(--grad, linear-gradient(135deg, #00e5c3, #4d9fff)));
+  color: var(--on-grad, #001014);
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, Arial, sans-serif !important;
+  font-size: 15px !important; font-weight: 600 !important; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 229, 195, .18);
+  transition: filter .15s, box-shadow .15s;
+}
+.dd-btn:hover { filter: brightness(1.06); box-shadow: 0 6px 20px rgba(77, 159, 255, .28) }
+.dd-chev { width: 12px; height: 8px; transition: transform .2s ease }
+.dd.open .dd-chev { transform: rotate(180deg) }
+.dd-menu {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 300; min-width: 232px; padding: 6px;
+  background: var(--sur, var(--card, #0b0c0f));
+  border: 1px solid var(--bor, var(--border, rgba(255, 255, 255, .08)));
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .55), 0 0 0 1px rgba(77, 159, 255, .06);
+  opacity: 0; visibility: hidden; transform: translateY(-6px) scale(.98); transform-origin: top right;
+  transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+}
+.dd.open .dd-menu { opacity: 1; visibility: visible; transform: none; transition: opacity .16s ease, transform .16s ease }
+/* Menu items carry id-level weight (:not(#_)) and !important on the box
+   properties: some reports style every <button> inside their date area
+   (gradient fill, fixed height, pill radius), which would otherwise paint
+   each menu item as a gradient pill. */
+html body .dd .dd-it:not(#_) {
+  display: flex !important; align-items: center; justify-content: space-between; gap: 16px; width: 100% !important;
+  height: auto !important; min-height: 0 !important; margin: 0 !important;
+  padding: 10px 14px !important; border: 0 !important; border-radius: 10px !important;
+  background: transparent !important; box-shadow: none !important; cursor: pointer;
+  color: var(--text, var(--t1, #e8ebfa)) !important;
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, Arial, sans-serif !important;
+  font-size: 15px !important; font-weight: 500 !important; text-align: left; line-height: 1.3 !important;
+}
+.dd-it i { font-style: normal; color: var(--teal, #00e5c3); opacity: 0; font-weight: 700 }
+html body .dd .dd-it:not(#_):hover { background: var(--row-hover, rgba(255, 255, 255, .05)) !important }
+html body .dd .dd-it.on:not(#_) {
+  background: var(--tint-brand, rgba(0, 229, 195, .12)) !important; color: var(--teal, #00e5c3) !important; font-weight: 600 !important;
+}
+.dd-it.on i { opacity: 1 }
+.dd-sep { height: 1px; margin: 6px 8px; background: var(--bor, var(--border, rgba(255, 255, 255, .08))) }
+@media (prefers-reduced-motion: reduce) { .dd-menu, .dd-chev { transition: none } }
+
+/* ---- every other dropdown (game picker, filters, form selects): the same
+   gradient pill as the date range, so all dropdowns look alike. The !important
+   colours beat the pages' own select styling, which these replace. Only the
+   size differs (a filter pill is at least 140px), and the menu opens left. */
+html body .dd.dd-plain .dd-btn:not(#_) {
+  height: 40px; min-width: 140px; justify-content: space-between; padding: 0 14px 0 16px;
+  background: var(--brand-gradient, var(--grad, linear-gradient(135deg, #00e5c3, #4d9fff))) !important;
+  color: var(--on-grad, #001014) !important;
+  border: 0 !important; box-shadow: 0 4px 14px rgba(0, 229, 195, .18) !important;
+}
+html body .dd.dd-plain .dd-btn:not(#_):hover,
+html body .dd.dd-plain.open .dd-btn:not(#_) { filter: brightness(1.06); box-shadow: 0 6px 20px rgba(77, 159, 255, .28) !important }
+html body .dd.dd-plain .dd-chev { color: inherit }
+html body .dd.dd-plain .dd-menu { left: 0; right: auto; transform-origin: top left; max-height: 340px; overflow-y: auto; scrollbar-width: thin }
+
+/* form selects (User Management, Feedback) fill their form row as before */
+html body .dd:has(+ select.form-ctrl) { display: flex; width: 100% }
+html body .dd:has(+ select.form-ctrl) .dd-btn:not(#_):not(#_) { width: 100% }
+
+/* a select the page hides with the hidden attribute (Negative Spend's
+   platform filter) hides its popup too */
+html body .dd:has(+ select[hidden]) { display: none !important }
+html body .filterbar .fgroup:has(> select[id*=heme]) .dd.dd-plain .dd-btn:not(#_) { min-width: 210px }
+
+/* when the page hides the native select (inline display:none, e.g. the hub
+   swaps its range select for a scope chip), its popup hides with it */
+html body .dd:has(+ select[style*="display: none"]),
+html body .dd:has(+ select[style*="display:none"]) { display: none !important }

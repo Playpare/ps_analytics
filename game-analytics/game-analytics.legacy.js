@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { API_URLS, GAME_API_KEY, BUILD_ID, assertConfigured } from '../src/shared/config.js';
 import { getToken, clearSession, login as sessionLogin } from '../src/shared/session.js';
+import { kpiAccent } from '../design/shared/kpi-colors.js';
 /* --- from game_analytics.html · block 1f1f70eae8 --- */
 // ═════════════════════════════════════════
 // CONFIG — Apps Script /exec URL + secret key
@@ -24,7 +25,7 @@ let DATA = {};
  * is named once here and referenced by every chart config. Keep it in step with
  * --mono in the stylesheet.
  */
-const CHART_FONT = 'Poppins, Segoe UI, sans-serif';
+const CHART_FONT = 'Segoe UI, sans-serif';
 
 let charts = {};
 let shopRange = { min:1, max:20 };
@@ -34,7 +35,7 @@ let dayRange  = { min:1, max:30 };
 // Its rows are a cumulative "how many players ever reached level X" aggregate
 // over the window, not a per-day series, so it only reads sensibly over whole
 // weeks and cannot be re-sliced client-side — each window is its own request.
-let progRangeDays = 7;
+let progRangeDays = 14;
 let PROG  = {};        // `${gameId}_${from}_${to}` → { shopLevels, dayCounts, window }
 let _progSeq = 0;      // newest progression request wins
 
@@ -80,7 +81,11 @@ const NAV_ICONS = {
   uareport:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="12" height="12" rx="1.6"/><line x1="5" y1="10.5" x2="5" y2="7"/><line x1="8" y1="10.5" x2="8" y2="5"/><line x1="11" y1="10.5" x2="11" y2="8.5"/></svg>',
   monetization:'<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M10.5 5.5H7a1.5 1.5 0 100 3h2a1.5 1.5 0 010 3H5.5"/><line x1="8" y1="3.5" x2="8" y2="12.5"/></svg>',
   tilldate:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="6"/><path d="M8 4.2V8l2.6 1.6"/></svg>',
+  /* Executive (briefcase) and Creative (image), new with those two pages */
+  exec:      '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="1.8" y="4.6" width="12.4" height="9" rx="1.6"/><path d="M5.6 4.6V3.2a1 1 0 0 1 1-1h2.8a1 1 0 0 1 1 1v1.4M1.8 8.6h12.4"/></svg>',
+  creative:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="1.8" y="2.4" width="12.4" height="11.2" rx="1.6"/><circle cx="5.6" cy="6" r="1.2"/><path d="M14.2 10.6 10.6 7l-6.8 6.6"/></svg>',
   aso:       '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 1.6l1.9 4 4.3.5-3.2 2.9 .9 4.3L8 11.2 4.1 13.3l.9-4.3L1.8 6.1l4.3-.5z"/></svg>',
+  alerts:    '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11z"/><path d="M6.5 14a1.6 1.6 0 0 0 3 0"/></svg>',
   users:     '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-5 5-5s5 2 5 5"/><circle cx="12.5" cy="5" r="2"/><path d="M12.5 9c1.5 0 3 1 3 3.5"/></svg>',
 };
 
@@ -103,21 +108,11 @@ const NAV_ICONS = {
  */
 const SECTION_META = {
   overview:   { group:'Dashboard',      label:'Overview',        order:10,  scope:'game' },
-
-  /* THE EXECUTIVE DASHBOARD, above Growth because that is the order the
-     question gets asked in: how is the portfolio doing, then how is this one
-     game doing. It was a separate repository with a separate deployment and
-     its own sign-in until this change. It keeps its own Apps Script backend
-     and its own refined table - only the front door moved.
-
-     scope:'portfolio', not 'game'. It never shows a single game: the
-     leaderboard and the profit split are cuts ACROSS games, so the game
-     dropdown would be a control that sat there doing nothing. Not 'all'
-     either - that scope promises 'all time', and this report has its own date
-     presets inside it. */
-  exec:       { group:'Executive',      label:'Executive',       order:15,  scope:'portfolio',
+  /* The Executive Dashboard, under Dashboard as "Executive". As in the
+     ps_analytics repo: its own page (reports/exec) and its own Apps Script
+     backend (VITE_API_EXEC); it shows the whole portfolio, not one game. */
+  exec:       { group:'Dashboard',      label:'Executive',       order:15,  scope:'portfolio',
                 report:'exec',           api:'exec' },
-
   growth:     { group:'Growth',         label:'Growth',          order:20,  scope:'game' },
   retention:  { group:'Player Metrics', label:'Retention',       order:30,  scope:'game' },
   playtime:   { group:'Player Metrics', label:'Engagement',      order:40,  scope:'game' },
@@ -129,7 +124,9 @@ const SECTION_META = {
      here is the whole switch. */
   liveops:    { group:'Live Ops',       label:'Live Ops',        order:90,  scope:'game', hidden:true },
   stability:  { group:'App Health',     label:'Stability',       order:100, scope:'game' },
-  rating:     { group:'App Health',     label:'Player Rating',   order:110, scope:'game' },
+  /* Player Rating: removed from the dashboard on request. hidden keeps its
+     render and markup, so it can come back by deleting one word. */
+  rating:     { group:'App Health',     label:'Player Rating',   order:110, scope:'game', hidden:true },
 
   /* The reports. Order puts them after the game sections and before Config,
      which is where a UA manager's eye goes second - the game overview first,
@@ -139,38 +136,32 @@ const SECTION_META = {
      negative-spend/negative differ - so the key is written down rather than
      derived from the path. Deriving it would work for three of the five and
      fail silently on the other two. */
-  negative:     { group:'UA Reports', label:'Negative Spend', order:200, scope:'ua',
+  negative:     { group:'Reports', label:'Negative Spend', order:200, scope:'ua',
                   report:'negative-spend', api:'negative' },
-  uareport:     { group:'UA Reports', label:'UA Report',      order:210, scope:'ua',
+  uareport:     { group:'Reports', label:'UA Report',      order:210, scope:'ua',
                   report:'ua',             api:'ua' },
-  /* The one report that reads THIS project's own backend rather than a
-     report-specific one: it is built on ua.channels and ua.channelDaily,
-     which are part of the game payload. So api:'game', and reportUrl
-     hands it the shared key the same way it does for the UA report's ad
-     network cards. */
-  uanetwork:    { group:'UA Reports', label:'Networks',       order:215, scope:'ua',
+  uanetwork:    { group:'Reports', label:'Networks',       order:215, scope:'ua',
                   report:'ua-network',     api:'game' },
-  monetization: { group:'UA Reports', label:'Monetization',   order:220, scope:'ua',
+  monetization: { group:'Reports', label:'Monetization',   order:220, scope:'ua',
                   report:'weekly',         api:'weekly' },
-  tilldate:     { group:'All Time',   label:'Life Time',      order:230, scope:'all',
+  tilldate:     { group:'Reports',   label:'Life Time',      order:230, scope:'all',
                   report:'till-date',      api:'tilldate' },
-  aso:          { group:'Store',      label:'ASO',            order:240, scope:'aso',
+  aso:          { group:'Reports',      label:'ASO',            order:240, scope:'aso',
                   report:'aso',            api:'aso' },
-
-  /* Creative Analytics, with the reports rather than in a group of its own -
-     it answers the same kind of question they do: which creative, which
-     network, which week. It was a separate repository with its own Google
-     Sign-In; only the sign-in moved, and its data layer is untouched.
-
-     The VALIA page ships inside it, as it always did: reportUrl() hands the
-     creative section a valiaApi of its own, so the third workbook is read
-     through its own endpoint without VALIA becoming a section here. */
-  creative:     { group:'Creative',   label:'Creative',       order:250, scope:'ua',
+  /* Creative Analytics, under Reports. As in the ps_analytics repo: its own
+     page (reports/creative) and backend (VITE_API_CREATIVE); its VALIA page
+     reads a third deployment, handed over as ?valiaApi= by reportUrl(). */
+  creative:     { group:'Reports',      label:'Creative',       order:250, scope:'ua',
                   report:'creative',       api:'creative' },
 
   feedback:   { group:'Config',         label:'Feedback',        order:300, scope:'game', hidden:true },
   thresholds: { group:'Config',         label:'Thresholds',      order:310, scope:'game' },
   users:      { group:'Config',         label:'User Management', order:320, scope:'game' },
+  /* Last in the sidebar, Data team only (DATA_TEAM_PAGES): every page and
+     report, and the KPI cards and charts on it that have no data points. */
+  /* order is far past anything else, so it stays last even when the sheet's
+     Config tab gives other pages orders of its own */
+  alerts:     { group:'Data',           label:'Alerts',          order:99999, scope:'game' },
 };
 
 /**
@@ -189,11 +180,6 @@ const SCOPES = {
   ua:   { game: 'all games',   range: 'set inside the report' },
   all:  { game: 'all games',   range: 'all time' },
   aso:  { game: 'all games',   range: 'set inside the report' },
-  /* Executive. Reads the same as 'ua' today, and is its own entry rather than
-     a reuse of it because the two will not stay the same: 'ua' describes the
-     UA reports' own range control, and this describes the Executive date
-     presets. Sharing the key would make a later change to one of them
-     silently change the other. */
   portfolio: { game: 'all games', range: 'set inside the report' }
 };
 
@@ -226,13 +212,13 @@ function reportUrl(section) {
   const api = API_URLS[section.api];
   let url = 'reports/' + section.report + '/?v=' + encodeURIComponent(BUILD_ID);
   if (api) url += '&api=' + encodeURIComponent(api);
-  if (section.api === 'ua' && API_URLS.negative) {
-    url += '&negativeApi=' + encodeURIComponent(API_URLS.negative);
-  }
   /* Creative's VALIA page talks to a different deployment from the rest of
      that report, so it needs its own endpoint on the same URL. */
   if (section.api === 'creative' && API_URLS.valia) {
     url += '&valiaApi=' + encodeURIComponent(API_URLS.valia);
+  }
+  if (section.api === 'ua' && API_URLS.negative) {
+    url += '&negativeApi=' + encodeURIComponent(API_URLS.negative);
   }
   /* The key travels with the URL because this project's route() checks it
      before anything else; the session token does not, because UA reads the
@@ -241,13 +227,6 @@ function reportUrl(section) {
   if (section.api === 'ua' && API_URLS.game) {
     url += '&gameApi=' + encodeURIComponent(API_URLS.game);
     if (GAME_API_KEY) url += '&gameKey=' + encodeURIComponent(GAME_API_KEY);
-  }
-  /* A report reading this project's backend needs the shared key, which
-     route() checks before anything else. Without it the request is refused
-     in the body with a 200, and a refusal that arrives as a 200 looks like
-     a window with no rows. */
-  if (section.api === 'game' && GAME_API_KEY) {
-    url += '&key=' + encodeURIComponent(GAME_API_KEY);
   }
   return url;
 }
@@ -266,18 +245,19 @@ const SECTION_RENDERS = {
   feedback:   function(){ renderFeedback(); },
   thresholds: function(){ renderThresholds(); },
   users:      function(){ renderUsers(); },
+  alerts:     function(){ renderAlerts(); },
 };
 
 // Fallback enabled set when a game's sheet has no Config tab yet.
 // Once you add a Config tab per game, those rows override this list.
 const DEFAULT_ENABLED_SECTIONS = [
   'overview', 'growth', 'retention', 'playtime', 'ftue',
-  'events', 'liveops', 'stability', 'rating',
+  'events', 'liveops', 'stability',
   'feedback', 'thresholds'
 ];
 
 /**
- * The seven report pages. Appended to whatever the section list turns out to
+ * The five report pages. Appended to whatever the section list turns out to
  * be, never listed inside it.
  *
  * They were in DEFAULT_ENABLED_SECTIONS at first, which looked right and was
@@ -296,6 +276,8 @@ const REPORT_SECTIONS = ['exec', 'negative', 'uareport', 'uanetwork',
                          'monetization', 'tilldate', 'aso', 'creative'];
 // Users section is always available but only shown to admins (filtered in getEnabledSections)
 const ADMIN_ONLY_SECTIONS = ['users'];
+// Pages for the Data team alone - not admins by role, not grantable to a team.
+const DATA_TEAM_PAGES = ['alerts'];
 
 function getEnabledSections(){
   const d = curData();
@@ -358,8 +340,8 @@ function getEnabledSections(){
     });
   });
 
-  // Always add admin-only sections for admin users
-  if(CU && CU.role === 'admin'){
+  // Admin-only sections (User Management) for the Data team, which is the admin
+  if(isAdminUser()){
     ADMIN_ONLY_SECTIONS.forEach(function(id){
       if(!list.find(function(s){ return s.id === id; })){
         const meta = SECTION_META[id] || {};
@@ -382,6 +364,18 @@ function getEnabledSections(){
     });
   }
 
+  /* Alerts: appended last for everyone, then granted like any other page -
+     the Data team (full access) always has it; another team has it when it
+     is ticked on the Teams page. */
+  {
+    DATA_TEAM_PAGES.forEach(function(id){
+      if(list.find(function(s){ return s.id === id; })) return;
+      const meta = SECTION_META[id] || {};
+      list.push({ id:id, label:meta.label || id, order:meta.order || 999, group:meta.group || 'Data',
+        scope:meta.scope || 'game', report:null, api:null, icon:NAV_ICONS[id] || '', render:SECTION_RENDERS[id] });
+    });
+  }
+
   /* One choke point for hiding. Both branches above build the list their
      own way and isEnabled() reads the same function, so a section filtered
      here is gone from the nav, from goTab and from every other check at
@@ -389,8 +383,107 @@ function getEnabledSections(){
      by a stale URL. */
   return list
     .filter(function(s){ return !(SECTION_META[s.id] || {}).hidden; })
+    // team access: a page the user's team may not open is gone everywhere
+    .filter(function(s){ return pageAllowed(s.id); })
     .sort(function(a,b){ return a.order - b.order; });
 }
+
+/* ═════════════════════════════════════════
+   ACCESS: teams, pages and KPIs (see user_access.md)
+
+   The server sends user.access with every payload:
+     { full:true }                                admin / full / legacy rows
+     { full:false, team, pages:{ page:'*'|[ids] }} a team member
+   A page missing from `pages` is not allowed. '*' = every KPI on it.
+
+   PLUG-N-PLAY
+   - Pages: every visible SECTION_META entry is a page the admin can grant.
+     Add a section there and it shows up in the Teams checklist.
+   - KPIs: a KPI's id is its card label, slugged ("UA Spend" -> ua_spend).
+     ACCESS_KPIS seeds the checklist; any card drawn with a label not listed
+     is discovered at render time and added too. A new KPI is hidden for a
+     team with a picked list until the admin ticks it, and shown for '*'.
+   ═════════════════════════════════════════ */
+const ACCESS_KPIS = {
+  overview:  ['Installs','Active Users','D1 Retention','D0 Playtime','Sessions / User','FTUE Complete',
+              'Revenue','ARPDAU','ARPPU','Payer Conv.','Ad / IAP Share','UA Spend'],
+  growth:    ['Total Installs','UA Spend','ROI','Avg CPI','ROAS','LTV : CPI','Revenue','ARPDAU','ARPPU',
+              'Purchase Rate','IAP Revenue','Ad Revenue','LTV D0 / D7 / D28','ARPU',
+              'US Revenue','US Purchases','US ARPPU','US Buyer Rate'],
+  retention: ['D1 Retention','D4 Retention','D7 Retention','D14 Retention','Cohort Size'],
+  playtime:  ['D0 Playtime','Avg Playtime','Session Len D0','Avg Session Len','Sessions / User',
+              'Total Playtime','Total Sessions'],
+  ftue:      ['Funnel Base','Completion','Biggest Drop','10-min Milestone'],
+  events:    ['Active Players','Median Shop Lvl','Median Day','Deepest Level'],
+  stability: ['Crash Rate','ANR Rate','Crash-Free Users','Days Tracked'],
+};
+/* Pages that are admin tools, never granted to a team. */
+const ACCESS_ADMIN_PAGES = ['users'];
+
+function kpiSlug(label){
+  return String(label||'').toLowerCase().replace(/→/g,'to').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+}
+
+/** Every page the admin can grant, in sidebar order. */
+function accessPages(){
+  return Object.keys(SECTION_META)
+    .filter(function(id){ return !SECTION_META[id].hidden && ACCESS_ADMIN_PAGES.indexOf(id) === -1; })
+    .sort(function(a,b){ return (SECTION_META[a].order||999) - (SECTION_META[b].order||999); })
+    .map(function(id){ return { id:id, label:SECTION_META[id].label, group:SECTION_META[id].group }; });
+}
+
+/* KPI labels seen while drawing, merged into the checklist (plug-n-play). */
+const KPI_SEEN = {};
+function accessKpis(page){
+  const seen = KPI_SEEN[page] || {};
+  const list = (ACCESS_KPIS[page] || []).slice();
+  Object.keys(seen).forEach(function(l){ if(list.indexOf(l) === -1) list.push(l); });
+  const out = [], ids = {};
+  list.forEach(function(l){ const id = kpiSlug(l); if(!ids[id]){ ids[id]=1; out.push({ id:id, label:l }); } });
+  return out;
+}
+
+/* Until the server has said what this person may see, they see nothing. The
+   old default was full access, which is how the whole dashboard flashed up for
+   a moment before the team's pages arrived. */
+function userAccessRec(){ return (CU && CU.access) || { full:false, pages:{} }; }
+
+function pageAllowed(id){
+  if(ACCESS_ADMIN_PAGES.indexOf(id) !== -1) return isAdminUser();
+  const a = userAccessRec();
+  if(a.full) return true;
+  return !!(a.pages && Object.prototype.hasOwnProperty.call(a.pages, id));
+}
+
+function kpiAllowed(page, kpiId){
+  const a = userAccessRec();
+  if(a.full) return true;
+  const k = a.pages && a.pages[page];
+  if(!k) return false;
+  return k === '*' || (Array.isArray(k) && k.indexOf(kpiId) !== -1);
+}
+
+/** Hides KPI cards the team may not see, and records labels for the registry. */
+function filterKpis(root){
+  (root || document).querySelectorAll('.tab-pane .kpi').forEach(function(card){
+    const pane = card.closest('.tab-pane'); if(!pane || !pane.id) return;
+    const page = pane.id.replace(/^tab-/, '');
+    const lblEl = card.querySelector('.kpi-label'); if(!lblEl) return;
+    const label = lblEl.textContent.trim(); if(!label) return;
+    (KPI_SEEN[page] = KPI_SEEN[page] || {})[label] = 1;
+    card.classList.toggle('kpi-denied', !kpiAllowed(page, kpiSlug(label)));
+  });
+}
+/* Any page, any time it draws: cards are filtered as they appear. */
+(function(){
+  let t = null;
+  const run = function(){ t = null; filterKpis(); };
+  const obs = new MutationObserver(function(){ if(!t) t = setTimeout(run, 0); });
+  document.addEventListener('DOMContentLoaded', function(){
+    const root = document.querySelector('.content') || document.body;
+    obs.observe(root, { childList:true, subtree:true });
+  });
+})();
 
 function isEnabled(id){
   return getEnabledSections().some(function(s){ return s.id === id; });
@@ -484,29 +577,20 @@ function deltaHtml(cur, prev, goodUp=true){
   const arrow = small ? '•' : up ? '▲' : '▼';
   return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(dp).toFixed(1)}%</span>`;
 }
-/* Up / down arrow under a KPI value, as on the ASO page. Against the previous
-   period when the card has one, otherwise the second half of the card's graph
-   against the first. Green when the move is good for that card (k.better:
-   'up' or 'down'), amber when not. k.noTrend skips it (graphs that run across
-   funnel steps or levels rather than dates). Used on every hub page. */
+/* Compare the same metric across two equal calendar windows. */
 function kpiTrendHtml(k){
-  if (k.noTrend) return '';
-  let pct = null, vs = '';
-  if (k.prev != null && isFinite(k.prev) && +k.prev !== 0 && k.cur != null && isFinite(k.cur)) {
-    pct = (k.cur - k.prev) / Math.abs(k.prev) * 100; vs = 'vs previous period';
-  } else {
-    const v = (k.data||[]).filter(x=>x!=null && x!=='' && isFinite(x)).map(Number);
-    if (v.length >= 2) {
-      const h = Math.floor(v.length/2), mean = a=>a.reduce((s,x)=>s+x,0)/a.length;
-      const a = mean(v.slice(0, v.length-h)), b = mean(v.slice(v.length-h));
-      if (a) { pct = (b - a) / Math.abs(a) * 100; vs = 'vs first half'; }
-    }
-  }
-  if (pct == null || !isFinite(pct)) return '';
-  if (Math.abs(pct) < 0.05) return '<div class="kpi-trend flat">● no change <span>'+vs+'</span></div>';
-  const up = pct > 0, good = (k.better || 'up') === 'up' ? up : !up;
-  return '<div class="kpi-trend '+(good?'good':'bad')+'">'+(up?'▲ ':'▼ ')+Math.abs(pct).toFixed(1)+'% '
-    + '<span>'+vs+'</span></div>';
+  if(k.noTrend || k.val === '—' || !isNum(k.cur) || !isNum(k.prev)) return '';
+  const formatter = k.fmt || (String(k.val).includes('%') ? fmtPct
+    : String(k.val).includes('$') ? fmtMoney : fmtKn);
+  const baseline = '<span>vs ' + formatter(+k.prev) + '</span>';
+  const delta = +k.cur - +k.prev;
+  if(!delta) return '<div class="kpi-trend flat">● no change ' + baseline + '</div>';
+  const pct = +k.prev ? Math.abs(delta / +k.prev * 100) : null;
+  if(pct !== null && pct < 0.05) return '<div class="kpi-trend flat">● no change ' + baseline + '</div>';
+  const up = delta > 0;
+  const good = (k.better || 'up') === 'up' ? up : !up;
+  const move = pct === null ? (up ? 'Up' : 'Down') : (up ? '▲ ' : '▼ ') + pct.toFixed(1) + '%';
+  return '<div class="kpi-trend ' + (good ? 'good' : 'bad') + '">' + move + ' ' + baseline + '</div>';
 }
 function getWindow(arr){
   if(!arr || !arr.length) return [];
@@ -515,14 +599,37 @@ function getWindow(arr){
   }
   return arr.slice(-activeRange);
 }
-function getPrevWindow(arr){
-  if(!arr || !arr.length) return [];
-  const cur = getWindow(arr);
-  if(!cur.length) return [];
-  const len = cur.length;
-  const firstDate = cur[0].date;
-  const idx = arr.findIndex(r => r.date === firstDate);
-  return idx > 0 ? arr.slice(Math.max(0, idx-len), idx) : [];
+function previousDashboard(){
+  const current = curData();
+  return current.meta?.from === dateFrom && current.meta?.to === dateTo ? current.previousPeriod || {} : {};
+}
+function averageReported(rows, key){
+  const values = (rows || []).map(row => row[key]).filter(isNum);
+  return values.length ? avg(values) : null;
+}
+
+const pendingComparisons = new WeakSet();
+
+async function loadPreviousDashboard(){
+  const current = curData(), game = currentGame, from = dateFrom, to = dateTo;
+  if(!from || !to || current.meta?.from !== from || current.meta?.to !== to ||
+     current._fetchError || current.previousPeriod || pendingComparisons.has(current) || !getToken()) return;
+
+  const days = Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1;
+  const priorFrom = isoShift(from, -days), priorTo = isoShift(from, -1);
+  pendingComparisons.add(current);
+  try {
+    const cached = readCache(game, priorFrom, priorTo);
+    const raw = cached?.payload || await fetchRange(game, priorFrom, priorTo);
+    if(raw.meta?.from !== priorFrom || raw.meta?.to !== priorTo) return;
+    if(!cached) writeCache(game, raw, priorFrom, priorTo);
+    current.previousPeriod = normalizeSheetData(raw);
+    if(current === curData() && game === currentGame && from === dateFrom && to === dateTo) renderAll();
+  } catch(e){
+    console.warn('[dash] previous period unavailable:', e.message);
+  } finally {
+    pendingComparisons.delete(current);
+  }
 }
 function curData(){ return DATA[currentGame] || {}; }
 
@@ -544,7 +651,6 @@ function aggregateFtue(){
 }
 
 function chartColors(){
-  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   return {
     /* Chart.js takes literals, not CSS variables, so every one of these is a
        copy of a token in the stylesheet and has to be changed with it. The
@@ -554,14 +660,14 @@ function chartColors(){
 
          cyan -> teal    violet -> blue    lime -> green
          magenta -> pink    amber, coral unchanged in role */
-    text:  dark ? '#d7deea' : '#56657f',
-    grid:  dark ? 'rgba(255,255,255,0.07)' : 'rgba(15,30,60,0.08)',
-    cyan:  dark ? '#00e5c3' : '#00b39a',
-    magenta: dark ? '#ec0a9b' : '#c2077f',
-    lime:  dark ? '#00c47a' : '#00a065',
-    amber: dark ? '#ffb800' : '#d99400',
-    coral: dark ? '#ff4d6d' : '#e23a59',
-    violet:dark ? '#4d9fff' : '#2f7fe0',
+    text:  '#d7deea',
+    grid:  'rgba(255,255,255,0.07)',
+    cyan:  '#00e5c3',
+    magenta: '#ec0a9b',
+    lime:  '#00c47a',
+    amber: '#ffb800',
+    coral: '#ff4d6d',
+    violet:'#4d9fff',
   };
 }
 
@@ -926,7 +1032,7 @@ async function loadGameData(gameId, opts){
   try {
     let raw = null, source = 'network';
 
-    if(!opts.refresh){
+    if(!opts.refresh && !opts.noLocal){
       // Use the stored copy straight away rather than waiting on a version
       // check first — that check was a network round trip in front of every
       // "cached" load, which defeated the point of caching. Freshness is
@@ -976,7 +1082,12 @@ async function loadGameData(gameId, opts){
     const normalized = normalizeSheetData(raw);
     normalized._source = source;
     DATA[gameId] = normalized;
-    applyUserRecord(raw.user);
+    /* Who this is and what they may see comes from the SERVER only. A copy
+       stored in the browser carries the user record from when it was saved -
+       one saved before teams existed has no access at all, which read as
+       "no pages" and left only User Management on screen after a range
+       change. Those copies still supply the data; never the access. */
+    if(source !== 'local') applyUserRecord(raw.user);
     applySheetThresholds(raw.thresholds || []);
     feedback = (normalized.feedback || []).slice();
     return { ok:true, raw: raw, source: source };
@@ -1034,6 +1145,8 @@ function getSparkTip(){
 
 function drawSpark(id, data, color, fmt, dates){
   const c = g(id); if(!c) return;
+  const label = c.closest('.kpi')?.querySelector('.kpi-label')?.textContent.trim();
+  if(label) color = kpiAccent(label);
   if(sparkCharts[id]){ try{sparkCharts[id].destroy();}catch(e){} delete sparkCharts[id]; }
 
   const vals = (data || []).map(v => (v == null || v === '') ? null : +v);
@@ -1069,12 +1182,24 @@ function drawSpark(id, data, color, fmt, dates){
   const peakLine = Math.max(0.35, Math.min(0.72, valueMid));
   const sparkMax = peak > 0 ? peak / (1 - peakLine) : undefined;
 
+  /* Dashboard design (design/hub/pro-theme.js sets html.pro-theme): the graph
+     is a band along the bottom of the card. It starts from 0 at the
+     bottom-left corner and rises into the series, which fills the band
+     (lowest point near the bottom edge). */
+  const pro = document.documentElement.classList.contains('pro-theme');
+  const lo = nums.length ? Math.min.apply(null, nums) : 0;
+  const span = (peak - lo) || Math.abs(peak) * 0.1 || 1;
+  const proMin = lo - span * 0.12;
+  const proMax = peak + span * 0.2;
+  const off = pro ? 1 : 0;                       // the leading 0 anchor point
+  const plotted = pro ? [proMin].concat(vals) : vals;
+
   sparkCharts[id] = new Chart(c, {
     type: 'line',
     data: {
-      labels: vals.map((_, i) => (dates && dates[i]) ? dates[i] : i),
+      labels: (pro ? [''] : []).concat(vals.map((_, i) => (dates && dates[i]) ? dates[i] : i)),
       datasets: [{
-        data: vals,
+        data: plotted,
         borderColor: color,
         backgroundColor: grad,
         borderWidth: 1.8,
@@ -1103,7 +1228,8 @@ function drawSpark(id, data, color, fmt, dates){
             if(tt.opacity === 0){ tip.style.opacity = '0'; return; }
             if(!tt.dataPoints || !tt.dataPoints.length){ tip.style.opacity = '0'; return; }
 
-            const i = tt.dataPoints[0].dataIndex;
+            const i = tt.dataPoints[0].dataIndex - off;
+            if(i < 0){ tip.style.opacity = '0'; return; }   // the 0 anchor, not data
             const cur = vals[i];
             const dateLbl = (dates && dates[i]) ? fmtDate(dates[i]) : '';
 
@@ -1155,9 +1281,9 @@ function drawSpark(id, data, color, fmt, dates){
         // that only moves between 900 and 1000 must not look like it triples.
         // The dynamic ceiling places the crest level with this card's value.
         y: {
-          display: false, beginAtZero: true, min: 0, grid: { display: false },
+          display: false, beginAtZero: !pro, min: pro ? proMin : 0, grid: { display: false },
           border: { display: false },
-          max: sparkMax
+          max: pro ? proMax : sparkMax
         }
       }
     }
@@ -1332,7 +1458,7 @@ function dataThrough(){ return isoShift(sheetToday(), -1); }
  * days takes a deliberate choice. Deeper history goes last.
  */
 /** Every preset the range dropdown offers. Custom ranges are not warmed. */
-const PRESET_DAYS = [14, 28, 42, 56];
+const PRESET_DAYS = [14, 30, 60, 90];
 
 /**
  * The complete set of views worth holding locally: every preset for every
@@ -1575,43 +1701,34 @@ async function init(){
   applyGameList(DEFAULT_GAMES);
   applyPresetToInputs(14);
 
-  // ── Instant path ──
-  // A stored payload for this exact range is rendered without waiting on the
-  // network. The data version is checked afterwards, and only rows actually
-  // being appended triggers a refetch, so the common case is one small request
-  // and no redraw.
-  const cached = readCache(currentGame, dateFrom, dateTo);
-  let servedFromCache = false;
-
-  if(cached){
-    try {
-      DATA[currentGame] = normalizeSheetData(cached.payload);
-      DATA[currentGame]._source = 'local';
-      applySheetThresholds(cached.payload.thresholds || []);
-      applyUserRecord(cached.payload.user);
-      if(cached.payload.games) applyGameList(cached.payload.games);
-      servedFromCache = true;
-      setSyncState('live');
-      markSource('local');
-    } catch(e){
-      // A stored payload that cannot be rendered is worse than none. Delete it
-      // before falling through, or loadGameData() would simply read the same
-      // broken entry back and fail the same way.
-      console.warn('[dash] stored payload could not be rendered, refetching:', e.message);
-      dropCache(currentGame, dateFrom, dateTo);
-      servedFromCache = false;
-    }
-  }
-
-  if(!servedFromCache){
-    const result = await loadGameData(currentGame);
-    if(result.ok){
-      if(result.raw && result.raw.games) applyGameList(result.raw.games);
-      setSyncState('live');
-      markSource(result.source);
-    } else {
-      setSyncState('error', result.error);
-    }
+  /* ── Sign-in path: current access and current data, nothing older ──
+   *
+   * The browser's stored payload is NOT drawn at sign-in. It carried the team
+   * and access from whenever it was saved, so the dashboard opened on the
+   * pages someone used to have - and, before access arrived, on every page.
+   *
+   * Both requests go out together and nothing is painted until both answer:
+   * myAccess says which pages this person may open, and the data comes from
+   * the server rather than from localStorage. The loading screen covers the
+   * wait. Stored payloads are still written, and still used when the range
+   * changes later in the session. */
+  CU = CU || { username: '', name: '', role: 'viewer' };
+  CU.access = null;                         // unknown until the server answers
+  _booting = true;                          // applyUserRecord records, does not draw
+  let boot;
+  try {
+    boot = await Promise.all([
+      refreshMyAccess(),
+      loadGameData(currentGame, { noLocal:true })
+    ]);
+  } finally { _booting = false; }
+  const result = boot[1];
+  if(result.ok){
+    if(result.raw && result.raw.games) applyGameList(result.raw.games);
+    setSyncState('live');
+    markSource(result.source);
+  } else {
+    setSyncState('error', result.error);
   }
 
   feedback = (DATA[currentGame] && DATA[currentGame].feedback || []).slice();
@@ -1627,12 +1744,15 @@ async function init(){
    * renderAll already guards each section individually. This guards the rest,
    * and puts the message on screen instead of only in the console. */
   try {
+    // Both a fresh sign-in and a restored session start from Overview.
+    currentTab = 'overview';
     buildNav();
     restoreSidebarState();
-    if(!isEnabled(currentTab)) currentTab = 'overview';
     renderAll();
     goTab(currentTab);
     updateRangeLabel();
+    // Only when access is actually known: a failed request is an error, not "no pages".
+    showNoAccess(!!(CU && CU.access) && !getEnabledSections().length);
   } catch (e) {
     console.error('[dash] boot failed while drawing:', e);
     setSyncState('error', e.message || String(e));
@@ -1647,9 +1767,29 @@ async function init(){
 
   // The dashboard is now interactive. Everything below is background work and
   // must never block or alter what is on screen.
-  if(servedFromCache) revalidateInBackground(currentGame, payloadVersion(cached.payload));
   schedulePrefetch(currentGame);
   startVersionPoll();
+}
+
+/**
+ * Someone with no team, or a team with no pages, would otherwise land on an
+ * Overview they are not allowed to see. Every page is hidden and they are
+ * told who can fix it.
+ */
+function showNoAccess(on){
+  let el = document.getElementById('noAccessMsg');
+  document.querySelectorAll('.tab-pane').forEach(function(p){ if(on) p.classList.remove('on'); });
+  if(!on){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'noAccessMsg';
+    el.className = 'notice';
+    el.style.cssText = 'margin:48px auto;max-width:520px;text-align:center;font-size:15px;line-height:1.6';
+    const pane = document.querySelector('.tab-pane');
+    (pane && pane.parentNode ? pane.parentNode : document.body).appendChild(el);
+  }
+  el.innerHTML = '<b>You do not have access to any pages yet.</b><br>'
+    + 'Ask someone in the Data team to add you to a team in User Management.';
 }
 
 /** The two games this dashboard covers. Used until the payload confirms them. */
@@ -1719,7 +1859,18 @@ function showLoadingOverlay(show){
     document.body.appendChild(el);
   }
   if(el && !show){ el.remove(); }
+  if(!show) hideBootOverlay();
 }
+
+/* The first-open screen (#bootOverlay, in index.html) is up from the first
+   paint, before any script runs; it goes when the sign-in form or the
+   dashboard is ready to be seen. */
+function hideBootOverlay(){
+  const b = g('bootOverlay');
+  if(b) b.remove();
+}
+// never strand anyone behind it, whatever fails on the way
+setTimeout(hideBootOverlay, 45000);
 
 // ═════════════════════════════════════════
 // VERSION POLL — replaces the old 15-minute forced refresh
@@ -1770,11 +1921,11 @@ function applyPresetToInputs(days){
   // the dropdown back to whatever was selected before.
   activeRange = days;
   syncPresetSelect();
+  updateRangeLabel();
 }
 
 function updateGameBranding(){
-  g('sbGameName').textContent = 'PlaySpare Pulse';
-  g('sbMark').textContent = 'PP';
+  g('sbGameName').textContent = 'Pulse';
 }
 
 /**
@@ -1816,8 +1967,264 @@ function renderAll(){
     if(!s.report && typeof s.render === 'function') staleSections.add(s.id);
   });
   renderSection(currentTab);
+  loadPreviousDashboard();
   // No-op once this window is cached; otherwise it lands and repaints itself.
   ensureProgression();
+}
+
+// ═════════════════════════════════════════
+// ALERTS — every page and report, and its cards with no data points
+// ═════════════════════════════════════════
+/* Data team only. Walks the sidebar in order: a dashboard page is drawn (it is
+   drawn hidden, exactly as it would be on opening it) and read; a report is
+   loaded off screen in its own frame and read once its loader has gone. What
+   counts as "no data":
+     KPI card   value is a dash / blank / N/A, or its trend line has no points
+     chart      no finite data point in any series (a doughnut summing to 0)
+     card       shows a "no data / no rows / unavailable" notice
+   Dashboard pages are checked for the range and game selected at the top;
+   each report for its own default range. */
+const AL_SKIP   = ['alerts', 'users', 'thresholds', 'feedback'];
+const AL_EMPTY  = /^(—|–|-|n\/?a|no data|…|\.\.\.|null|undefined|nan)?$/i;
+const AL_NOTICE = /no data|no rows|unavailable|not connected|nothing to show|not reported|no .{0,40}\b(in|for) (this |the )?(range|period)/i;
+const ALERTS = { results: null, key: '', running: false, at: null };
+
+function alText(el){
+  if(!el) return '';
+  const c = el.cloneNode(true);
+  c.querySelectorAll('.card-sub, small, .kpi-sub, svg, button').forEach(function(n){ n.remove(); });
+  return (c.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+}
+
+/** Finite data points across a chart's series (a pie/doughnut summing to 0 counts as none). */
+function alChartPoints(chart){
+  let n = 0, sum = 0;
+  const type = chart.config && chart.config.type;
+  (chart.data.datasets || []).forEach(function(ds){
+    (ds.data || []).forEach(function(v){
+      const y = (v && typeof v === 'object') ? (v.y !== undefined ? v.y : v.r) : v;
+      if(y !== null && y !== undefined && y !== '' && Number.isFinite(+y)){ n++; sum += Math.abs(+y); }
+    });
+  });
+  if((type === 'doughnut' || type === 'pie' || type === 'polarArea') && sum === 0) return 0;
+  return n;
+}
+
+function alCardTitle(el){
+  const card = el.closest('.card, .panel, .chart-card, .box, section');
+  if(!card) return '';
+  return alText(card.querySelector('.card-title, .card-head h3, .card-head h2, .card-head, .ch-title, .panel-title, h3, h2, .hd, .title'));
+}
+
+/** Keep line breaks between notice blocks even when the scanned pane is hidden. */
+function alNoticeText(notice){
+  const copy = notice.cloneNode(true);
+  copy.querySelectorAll('div, p, br, li, h2, h3, h4').forEach(function(block){
+    block.before(' ');
+    block.after(' ');
+  });
+  return copy.textContent.replace(/\s+/g, ' ').trim()
+    .replace(/^(.*?No data source connected)\s+(?=\S)/i, '$1 — ');
+}
+
+/** Findings inside one root (a hub pane or a report's <body>). */
+function alScanRoot(root, ChartCtor){
+  const out = [], seen = {};
+  const add = function(kind, name, reason){
+    name = name || '(untitled)';
+    const k = kind + '|' + name;
+    if(seen[k]) return;
+    seen[k] = 1; out.push({ kind: kind, name: name, reason: reason });
+  };
+  const getChart = function(cv){ try { return ChartCtor && ChartCtor.getChart ? ChartCtor.getChart(cv) : null; } catch(e){ return null; } };
+  const inCard = new Set();
+
+  // KPI cards: the hub's .kpi, the reports' .kpi-card / .act, Executive's .kpi
+  root.querySelectorAll('.kpi, .kpi-card, .act').forEach(function(card){
+    if(card.classList.contains('kpi-denied')) return;
+    const lbl = alText(card.querySelector('.kpi-label, .kpiLbl, .l, .hd'));
+    if(!lbl) return;
+    const valEl = card.querySelector('.kpi-val, .kpi-value, .kpiVal, .v, .amt');
+    const val = valEl ? (valEl.textContent || '').replace(/\s+/g, ' ').trim() : null;
+    const cv = card.querySelector('canvas');
+    if(cv) inCard.add(cv);
+    const ch = cv ? getChart(cv) : null;
+    const spark = card.getAttribute('data-spark');
+    if(val !== null && AL_EMPTY.test(val)) add('KPI', lbl, 'no value');
+    else if(ch && !alChartPoints(ch)) add('KPI', lbl, 'trend line has no points');
+    else if(spark !== null && !spark.split(',').some(function(x){ return x.trim() !== '' && Number.isFinite(+x); }))
+      add('KPI', lbl, 'trend line has no points');
+  });
+
+  // charts that are not a KPI card's sparkline
+  root.querySelectorAll('canvas').forEach(function(cv){
+    if(inCard.has(cv)) return;
+    const ch = getChart(cv);
+    if(!ch) return;
+    const scales = Object.values(ch.scales || {});
+    if(scales.length && !scales.some(function(s){ return s.options && s.options.display !== false; })) return;
+    if(!alChartPoints(ch)) add('Chart', alCardTitle(cv) || cv.id, 'no data points');
+  });
+
+  // cards that say so in words
+  root.querySelectorAll('.notice, .empty, .empty-state, .nodata, .no-data').forEach(function(n){
+    const txt = alNoticeText(n);
+    if(!AL_NOTICE.test(txt)) return;
+    const name = alCardTitle(n);
+    if(name) add('Card', name, txt.slice(0, 110));
+  });
+  return out;
+}
+
+function alScanHub(sec){
+  staleSections.add(sec.id);
+  renderSection(sec.id);
+  const pane = g('tab-' + sec.id);
+  return pane ? alScanRoot(pane, window.Chart) : [];
+}
+
+/** True while a report still shows any of its loading screens. */
+function alReportLoading(doc){
+  const els = doc.querySelectorAll('.loader, #uaLoader, #loadingOverlay, .load-progress.show');
+  return Array.prototype.some.call(els, function(el){
+    const cs = doc.defaultView.getComputedStyle(el);
+    return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
+  });
+}
+
+/** Loads a report off screen, waits for it to settle, reads it. */
+function alScanReport(sec){
+  return new Promise(function(resolve){
+    const pane = ensureReportPane(sec);
+    if(!pane){ resolve({ error: 'not signed in' }); return; }
+    const frame = pane.querySelector('iframe');
+    if(!frame){ resolve({ error: 'report frame missing' }); return; }
+    const visible = pane.classList.contains('on');
+    // laid out but off screen, so a hidden report still loads and sizes its charts
+    if(!visible) pane.classList.add('al-offscreen');
+    if(frame.getAttribute('loading') === 'lazy') frame.setAttribute('loading', 'eager');
+    const t0 = Date.now();
+    let last = -1, stable = 0;
+    const finish = function(r){ if(!visible) pane.classList.remove('al-offscreen'); resolve(r); };
+    const tick = function(){
+      let doc = null, win = null;
+      try { doc = frame.contentDocument; win = frame.contentWindow; } catch(e){}
+      if(doc && win && doc.readyState === 'complete' && doc.body && !alReportLoading(doc)){
+        const count = doc.querySelectorAll('.kpi, .kpi-card, .act, canvas').length;
+        if(count > 0){
+          stable = (count === last) ? stable + 1 : 0;
+          last = count;
+          if(stable >= 2){ finish({ items: alScanRoot(doc.body, win.Chart) }); return; }
+        }
+      }
+      if(Date.now() - t0 > 60000){ finish({ error: 'did not finish loading within a minute' }); return; }
+      setTimeout(tick, 800);
+    };
+    tick();
+  });
+}
+
+function renderAlerts(){ alertsScan(false); }
+
+function alertsRangeKey(){ return currentGame + '|' + dateFrom + '|' + dateTo; }
+
+function updateOverviewDataStatus(){
+  const pill = g('overviewDataStatus');
+  if(!pill) return false;
+  pill.hidden = String(CU?.team || '').trim().toLowerCase() !== 'data' ||
+    currentTab !== 'overview' || !isEnabled('alerts') || !dateFrom || !dateTo;
+  if(pill.hidden) return false;
+  const complete = ALERTS.key === alertsRangeKey() && ALERTS.at;
+  const results = ALERTS.results || [];
+  pill.classList.toggle('is-checking', !complete);
+  g('overviewDataStatusLabel').textContent = !complete ? 'Checking if any data is missing'
+    : results.some(r => r.items.length) ? 'Missing data found'
+    : results.some(r => r.error) || !results.length ? 'Data check incomplete'
+    : 'No missing data';
+  return !complete;
+}
+
+async function alertsScan(force){
+  if(ALERTS.running) return;
+  const key = alertsRangeKey();
+  if(!force && ALERTS.results && ALERTS.key === key){ alDraw(); return; }
+  ALERTS.running = true; ALERTS.key = key; ALERTS.results = []; ALERTS.at = null;
+  const btn = g('alScanBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Checking…'; }
+  const secs = getEnabledSections().filter(function(s){ return AL_SKIP.indexOf(s.id) === -1; });
+  try {
+    for(let i = 0; i < secs.length; i++){
+      if(key !== alertsRangeKey()) break;
+      const s = secs[i];
+      ALERTS.progress = 'Checking ' + s.label + ' (' + (i + 1) + ' of ' + secs.length + ')…';
+      alDraw();
+      let r;
+      try {
+        r = s.report ? await alScanReport(s) : { items: alScanHub(s) };
+      } catch(e){
+        r = { error: e.message };
+      }
+      ALERTS.results.push({ id: s.id, label: s.label, group: s.group, report: !!s.report,
+                            items: r.items || [], error: r.error || null });
+    }
+  } finally {
+    const superseded = key !== alertsRangeKey();
+    ALERTS.running = false; ALERTS.progress = ''; ALERTS.at = superseded ? null : new Date();
+    if(superseded){ ALERTS.key = null; ALERTS.results = null; }
+    if(btn){ btn.disabled = false; btn.textContent = 'Check again'; }
+    alDraw();
+    if(superseded && (currentTab === 'alerts' || updateOverviewDataStatus())){
+      setTimeout(() => alertsScan(false), 0);
+    }
+  }
+}
+
+function alDraw(){
+  updateOverviewDataStatus();
+  const list = g('alList'), sum = g('alSummary'), sub = g('alSub');
+  if(!list) return;
+  const res = ALERTS.results || [];
+  const game = (games.find(function(x){ return x.id === currentGame; }) || {}).name || currentGame;
+  if(sub){
+    sub.innerHTML = ALERTS.progress
+      ? umStatus(ALERTS.progress)
+      : 'Dashboard pages checked for <b>' + umEsc(dateFrom) + ' → ' + umEsc(dateTo) + '</b> · ' + umEsc(game)
+        + '. Reports use their own default range.'
+        + (ALERTS.at ? ' Last checked ' + ALERTS.at.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + '.' : '');
+  }
+  const withIssues = res.filter(function(r){ return r.items.length; });
+  const failed = res.filter(function(r){ return r.error; });
+  const clean = res.filter(function(r){ return !r.items.length && !r.error; });
+  const total = withIssues.reduce(function(a, r){ return a + r.items.length; }, 0);
+  if(sum){
+    sum.innerHTML = res.length
+      ? '<span class="al-pill ' + (total ? 'bad' : 'ok') + '">' + total + ' card' + (total === 1 ? '' : 's') + ' with no data</span>'
+        + '<span class="al-pill">' + withIssues.length + ' page' + (withIssues.length === 1 ? '' : 's') + ' affected</span>'
+        + '<span class="al-pill ok">' + clean.length + ' complete</span>'
+        + (failed.length ? '<span class="al-pill warn">' + failed.length + ' could not be checked</span>' : '')
+      : '';
+  }
+  const kindCls = { KPI: 'kpi', Chart: 'chart', Card: 'card' };
+  const pageCard = function(r){
+    const rows = r.error
+      ? '<div class="al-row"><span class="al-kind warn">Not checked</span><span class="al-reason">' + umEsc(r.error) + '</span></div>'
+      : r.items.map(function(it){
+          return '<div class="al-row"><span class="al-kind ' + kindCls[it.kind] + '">' + it.kind + '</span>'
+            + '<span class="al-name">' + umEsc(it.name) + '</span>'
+            + '<span class="al-reason">' + umEsc(it.reason) + '</span></div>';
+        }).join('');
+    return '<div class="card al-page">'
+      + '<div class="al-page-hd"><div><span class="al-page-name">' + umEsc(r.label) + '</span>'
+      + '<span class="al-where">' + umEsc(r.group) + ' · ' + (r.report ? 'report' : 'dashboard page') + '</span></div>'
+      + '<div class="al-page-right">' + (r.error ? '' : '<span class="al-count">' + r.items.length + ' missing</span>')
+      + '<button type="button" class="um-link" data-tab="' + umEsc(r.id) + '" onclick="goTab(this.dataset.tab)">Open ›</button></div></div>'
+      + '<div class="al-rows">' + rows + '</div></div>';
+  };
+  list.innerHTML = withIssues.map(pageCard).join('') + failed.map(pageCard).join('')
+    + (clean.length
+        ? '<div class="card al-page"><div class="al-page-hd"><div><span class="al-page-name">No missing data</span></div></div>'
+          + '<div class="al-clean">' + clean.map(function(r){ return '<span class="al-chip">' + umEsc(r.label) + '</span>'; }).join('') + '</div></div>'
+        : '');
 }
 
 // ═════════════════════════════════════════
@@ -1902,12 +2309,21 @@ function ovRate(rows, numOf, denOf){
 }
 
 
+function scheduleOverviewDataStatus(){
+  if(updateOverviewDataStatus() && !ALERTS.running){
+    setTimeout(() => {
+      if(updateOverviewDataStatus()) alertsScan(false);
+    }, 0);
+  }
+}
+
 function renderOverview(){
+  scheduleOverviewDataStatus();
   const d = curData(); if(!d.daily) return;
   const cur  = getWindow(d.daily);
-  const prev = getPrevWindow(d.daily);
+  const prior = previousDashboard();
+  const prev = prior.daily || [];
   const curR = getWindow(d.retention);
-  const prevR= getPrevWindow(d.retention);
   const cc   = chartColors();
   const curDates = cur.map(x=>x.date);
 
@@ -1931,20 +2347,20 @@ function renderOverview(){
      the window length would quietly drag the figure down as the feed falls
      behind. */
   const activeAvg     = avgNN(cur.map(x=>x.activeUsers));
-  const activePrevAvg = avgNN(prev.map(x=>x.activeUsers));
+  const activePrevAvg = averageReported(prev,'activeUsers');
   // D1 comes from Executive_KPIs (cohort-weighted, platform-aware) so the value
   // has the same meaning whichever platform is selected.
   const retSum        = d.retSummary || {};
   const cohortsCur    = getWindow(d.retCohorts || []);
   const d1            = (retSum.d1 != null) ? retSum.d1 : null;
-  const prevD1        = avg(prevR.map(x=>x.d1));
+  const prevD1        = prior.retSummary?.d1 ?? null;
   const d0Play        = avgNN(cur.map(x=>x.d0Playtime));
-  const prevD0Play    = avgNN(prev.map(x=>x.d0Playtime));
+  const prevD0Play    = averageReported(prev,'d0Playtime');
   /* Sessions per user belongs with the core metrics, not the money. It is
      already a per-user figure on each row, so it stays an AVERAGE across days
      - there is no total of "sessions per user" to sum. */
   const spd           = avgNN(cur.map(x=>x.sessionsPerUser));
-  const spdPrev       = avgNN(prev.map(x=>x.sessionsPerUser));
+  const spdPrev       = averageReported(prev,'sessionsPerUser');
   const ftueSteps     = d.ftueSteps || [];
   // Measured at the deepest step every platform reaches, so Android, iOS and
   // Combined are comparable. The old "last step" figure was not.
@@ -1956,21 +2372,22 @@ function renderOverview(){
      is correct only until the data moves - which is exactly how the installs
      card came to read "Android" under an iOS filter. */
   const kpis = [
-    { cls:'cy', lbl:'Installs',      val:totalInstalls!=null?fmtKn(totalInstalls):'—',  data:cur.map(x=>x.installs==null?null:+x.installs), dates:curDates, cur:totalInstalls, prev:prevInstalls, sub:totalInstalls!=null?ovInstallsSub(d, cur):'no install rows in range', col:'--cyan',    fmt:fmtKn },
-    { cls:'mg', lbl:'Active Users',  val:fmtKn(activeAvg),      data:cur.map(x=>x.activeUsers==null?null:+x.activeUsers), dates:curDates, cur:activeAvg, prev:activePrevAvg, sub:ovDauSub(d), col:'--magenta', fmt:fmtKn },
-    { cls:'vl', lbl:'D1 Retention',  val:d1?fmtPct(d1):'—',     data:cohortsCur.map(x=>+x.d1||0), dates:cohortsCur.map(x=>x.date), cur:d1, prev:prevD1, sub:'cohort-weighted',   col:'--violet',  fmt:fmtPct },
-    { cls:'lm', lbl:'D0 Playtime',   val:fmtSec(d0Play),        data:cur.map(x=>+x.d0Playtime||0), dates:curDates, cur:d0Play,     prev:prevD0Play,   sub:'avg new user', col:'--lime',    fmt:fmtSec },
-    { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'\u2014', data:cur.map(x=>+x.sessionsPerUser||0), dates:curDates, cur:spd, prev:spdPrev, sub:'period avg', col:'--amber', fmt:v=>(+v).toFixed(2) },
+    { cls:'cy', lbl:'Installs',      val:totalInstalls!=null?fmtKn(totalInstalls):'—',  data:cur.map(x=>x.installs==null?null:+x.installs), dates:curDates, cur:totalInstalls, prev:prevInstalls, sub:totalInstalls!=null?ovInstallsSub(d, cur):'no install rows in range', color:'#2DD4BF',    fmt:fmtKn },
+    { cls:'mg', lbl:'Active Users',  val:fmtKn(activeAvg),      data:cur.map(x=>x.activeUsers==null?null:+x.activeUsers), dates:curDates, cur:activeAvg, prev:activePrevAvg, sub:ovDauSub(d), color:'#22D3EE', fmt:fmtKn },
+    { cls:'vl', lbl:'D1 Retention',  val:d1?fmtPct(d1):'—',     data:cohortsCur.map(x=>+x.d1||0), dates:cohortsCur.map(x=>x.date), cur:d1, prev:prevD1, sub:'cohort-weighted',   color:'#38BDF8',  fmt:fmtPct },
+    { cls:'lm', lbl:'D0 Playtime',   val:fmtSec(d0Play),        data:cur.map(x=>+x.d0Playtime||0), dates:curDates, cur:d0Play,     prev:prevD0Play,   sub:'avg new user', color:'#60A5FA',    fmt:fmtSec },
+    { cls:'am', lbl:'Sessions / User', val:spd?spd.toFixed(2):'\u2014', data:cur.map(x=>+x.sessionsPerUser||0), dates:curDates, cur:spd, prev:spdPrev, sub:'period avg', color:'#818CF8', fmt:v=>(+v).toFixed(2) },
     /* No per-day series exists for FTUE completion, so its graph is the funnel
        itself: share of users still engaged at each step, first to last. */
     { cls:'co', lbl:'FTUE Complete', val:ftueComplete?fmtPct(ftueComplete):'\u2014',
       data: ftueSteps.map(s => (s && s.engagement != null && isFinite(s.engagement)) ? +s.engagement : null),
       dates: ftueSteps.map((s,i) => (s && (s.name || s.step || s.label)) || ('Step ' + (i+1))),
-      cur:ftueComplete, prev:null, noTrend:true, sub:(ftueRef.name ? 'reached ' + ftueRef.name : 'final step'), col:'--coral', fmt:fmtPct },
+      cur:ftueComplete, prev:prior.ftue?.referenceStep?.name === ftueRef.name ? prior.ftue?.referenceStep?.engagement : null,
+      sub:(ftueRef.name ? 'reached ' + ftueRef.name : 'final step'), color:'#A78BFA', fmt:fmtPct },
   ];
 
   g('heroKpis').innerHTML = kpis.map((k,i)=>`
-    <div class="kpi has-spark ${k.cls}">
+    <div class="kpi has-spark ${k.cls}" style="--kc:${k.color}">
       <div class="kpi-text">
         <div class="kpi-label">${k.lbl}</div>
         <div class="kpi-val${String(k.val).length>6?' small':''}">${k.val}</div>
@@ -1981,7 +2398,7 @@ function renderOverview(){
   `).join('');
   kpis.forEach((k,i)=>{
     if(!k.data.length) return;
-    const color = getComputedStyle(document.documentElement).getPropertyValue(k.col).trim();
+    const color = k.color;
     drawSpark('sp'+i, k.data, color, k.fmt, k.dates);
   });
 
@@ -2029,7 +2446,10 @@ function renderOverview(){
      does not - with the card saying which. Swapping silently between two
      measurements is how a chart comes to show a step nobody can explain. */
   const revTot   = haveSh ? adTot + iapTot : sum(cur.map(x => +x.revenue || 0));
-  const revPrev  = sum(prev.map(x => +x.revenue || 0));
+  const priorAd = sum(prev.map(x => +x.adRevenue || 0));
+  const priorIap = sum(prev.map(x => +x.iapRevenue || 0)) * (ovNettable ? 1 - ovCut : 1);
+  const priorSplit = priorAd + priorIap;
+  const revPrev  = priorSplit || (haveSh || !prev.length ? null : sum(prev.map(x => +x.revenue || 0)));
   const revSub   = !haveSh      ? 'ads + IAP \u00b7 no revenue rows in range'
                  : ovNettable   ? 'ads + IAP, IAP net of store cut'
                                 : 'ads + IAP, IAP GROSS \u00b7 cut varies by platform';
@@ -2042,12 +2462,13 @@ function renderOverview(){
      Users x ARPDAU comes back to Revenue, and payers over that same figure is
      a conversion somebody can verify by hand. */
   const activeOf  = x => x.activeUsers;
-  const activeTot = sum(cur.map(x => +x.activeUsers || 0));
+  const activeTot = sum(cur.map(x => +activeOf(x) || 0));
 
   /* Built from the same net total the Revenue card shows, so the two
      reconcile. Not the mean of each day's ARPDAU. */
   const arpdau   = activeTot > 0 ? revTot / activeTot : null;
-  const arpdauP  = ovRate(prev, x => x.revenue, activeOf);
+  const priorActive = sum(prev.map(x => +activeOf(x) || 0));
+  const arpdauP  = revPrev != null && priorActive > 0 ? revPrev / priorActive : null;
 
   /* Payers over the same active users: both come from that tab, so numerator
      and denominator describe one population rather than two feeds that need
@@ -2076,7 +2497,7 @@ function renderOverview(){
      restricted to the visible window like everything else in this row, and
      names the source on the card. */
   const ovChDaily = getWindow((d.ua && d.ua.channelDaily) || []);
-  const ovChPrev  = getPrevWindow((d.ua && d.ua.channelDaily) || []);
+  const ovChPrev  = prior.ua?.channelDaily || [];
   const spendTot  = sum(ovChDaily.map(x=>+x.spend||0));
   const spendPrev = sum(ovChPrev.map(x=>+x.spend||0));
   /* Zero is not the same as absent. No Channel Performance rows for a range
@@ -2084,12 +2505,12 @@ function renderOverview(){
   const spendCur  = spendTot > 0 ? spendTot : null;
 
   const kpis2 = [
-    { cls:'lm', lbl:'Revenue',    val:fmtMoney(revTot), data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:revSub, col:'--lime' },
-    { cls:'cy', lbl:'ARPDAU',     val:arpdau!=null?fmtMoney(arpdau, 4):'\u2014', data:cur.map(x=>+x.arpdau||0), cur:arpdau, prev:arpdauP, sub:'revenue \u00f7 active users', col:'--cyan' },
+    { cls:'lm', lbl:'Revenue',    val:fmtMoney(revTot), data:cur.map(x=>+x.revenue||0), cur:revTot, prev:revPrev, sub:revSub, color:'#34D399' },
+    { cls:'cy', lbl:'ARPDAU',     val:arpdau!=null?fmtMoney(arpdau, 4):'\u2014', data:cur.map(x=>+x.arpdau||0), cur:arpdau, prev:arpdauP, sub:'revenue \u00f7 active users', color:'#A3E635' },
     /* The one gross figure on the page, and the subtitle says so. What a
        payer is worth is what they spent, not what survived the store cut. */
-    { cls:'vl', lbl:'ARPPU',      val:arppu!=null?fmtMoney(arppu, 2):'\u2014', data:cur.map(x=>+x.arppu||0), cur:arppu, prev:arppuP, sub:'gross sales \u00f7 paying users', col:'--violet' },
-    { cls:'mg', lbl:'Payer Conv.', val:payerPctV!=null?payerPctV.toFixed(3)+'%':'\u2014', data:cur.map(x=>+x.payerRate||0), cur:payerPctV, prev:payerPrvV, sub:'payers \u00f7 active users', col:'--magenta' },
+    { cls:'vl', lbl:'ARPPU',      val:arppu!=null?fmtMoney(arppu, 2):'\u2014', data:cur.map(x=>+x.arppu||0), cur:arppu, prev:arppuP, sub:'gross sales \u00f7 paying users', color:'#FACC15' },
+    { cls:'mg', lbl:'Payer Conv.', val:payerPctV!=null?payerPctV.toFixed(3)+'%':'\u2014', data:cur.map(x=>+x.payerRate||0), cur:payerPctV, prev:payerPrvV, sub:'payers \u00f7 active users', color:'#FB923C' },
     /* One card, both halves. Two cards for two numbers that always add to 100
        spends the space twice and still makes the reader do the subtraction. */
     { cls:'am', lbl:'Ad / IAP Share',
@@ -2099,24 +2520,26 @@ function renderOverview(){
         const a = +x.adRevenue || 0, ip = (+x.iapRevenue || 0) * (ovNettable ? 1 - ovCut : 1);
         return (a + ip) > 0 ? a / (a + ip) * 100 : null;
       }) : [],
-      cur:null, prev:null,
+      cur:splitTot > 0 ? adShare * 100 : null,
+      prev:priorSplit > 0 ? priorAd / priorSplit * 100 : null,
+      fmt:v => Math.round(v) + '% / ' + Math.round(100 - v) + '%',
       /* Both halves net, so the split is of money we keep rather than money
          that passed through. */
       sub: splitTot>0
         ? fmtMoney(adTot)+' ads \u00b7 '+fmtMoney(iapTot)+' IAP'
           + (ovNettable ? (ovCut ? ', net of '+(ovCut*100)+'%' : ', proceeds') : ', GROSS')
         : 'no revenue rows in range',
-      col:'--amber' },
+      color:'#FB7185' },
     { cls:'co', lbl:'UA Spend',        val:fmtMoney(spendCur),
       data: spendCur!=null ? ovChDaily.map(x=>+x.spend||0) : [],
       dates: spendCur!=null ? ovChDaily.map(x=>x.date) : [],
       cur:spendCur, prev:spendCur!=null&&spendPrev>0?spendPrev:null,
       sub: spendCur!=null ? 'Channel Performance' : 'no spend rows in range',
-      col:'--coral' },
+      color:'#E879F9' },
   ];
   if(g('heroKpis2')){
     g('heroKpis2').innerHTML = kpis2.map((k,i)=>`
-      <div class="kpi has-spark ${k.cls}">
+      <div class="kpi has-spark ${k.cls}" style="--kc:${k.color}">
         <div class="kpi-text">
           <div class="kpi-label">${k.lbl}</div>
           <div class="kpi-val${String(k.val).length>6?' small':''}">${k.val}</div>
@@ -2127,7 +2550,7 @@ function renderOverview(){
     `).join('');
     kpis2.forEach((k,i)=>{
       if(!k.data.length) return;
-      const color = getComputedStyle(document.documentElement).getPropertyValue(k.col).trim();
+      const color = k.color;
       drawSpark('sq'+i, k.data, color, v=>(+v).toFixed(2), curDates);
     });
   }
@@ -2281,6 +2704,24 @@ function installsNote(d, cur){
       + gap;
 }
 
+function renderGrowthUsNotices(us){
+  const host = g('growthUsNote');
+  if(!host) return;
+  const notices = [];
+  const onDataTeam = String(CU?.team || '').trim().toLowerCase() === 'data';
+  if(us && !us.buyersVerified && onDataTeam){
+    notices.push('<div class="notice" style="padding:10px 14px;margin-bottom:10px;'
+      + 'border-left:3px solid var(--amber);font-size:11px;color:var(--text3)">'
+      + '<b style="color:var(--text2)">Buyers are not reconciled.</b> ' + umEsc(us.buyersNote)
+      + '</div>');
+  }
+  (us?.notes || []).forEach(note => {
+    notices.push('<div class="notice" style="padding:8px 14px;margin-bottom:10px;'
+      + 'font-size:11px;color:var(--text3)">' + umEsc(note) + '</div>');
+  });
+  host.innerHTML = notices.join('');
+}
+
 function renderGrowth(){
   // Drawn first: the matrix has its own date spine, so it still renders on a
   // game that has no daily rows yet.
@@ -2288,15 +2729,20 @@ function renderGrowth(){
 
   const d = curData(); if(!d.daily) return;
   const cur  = getWindow(d.daily);
-  const prev = getPrevWindow(d.daily);
+  const prior = previousDashboard();
+  const prev = prior.daily || [];
   const ua   = d.ua || {channels:[],daily:[],campaigns:[]};
   const uaCur  = getWindow(ua.daily || []);
-  const uaPrev = getPrevWindow(ua.daily || []);
+  const uaPrev = prior.ua?.daily || [];
   const cc   = chartColors();
   const lbls = cur.map(x=>x.date.slice(5));
 
-  const totalInstalls = sum(cur.map(x=>+x.installs||0));
-  const prevInstalls  = sum(prev.map(x=>+x.installs||0));
+  const reportedTotal = (rows,key) => {
+    const values = rows.map(row=>row[key]).filter(isNum);
+    return values.length ? sum(values.map(Number)) : null;
+  };
+  const totalInstalls = reportedTotal(cur,'installs');
+  const prevInstalls  = reportedTotal(prev,'installs');
 
   // The daily-installs card's subtitle, written from the payload rather than
   // from the markup.
@@ -2322,7 +2768,7 @@ function renderGrowth(){
                       .sort();
   const useAG     = agKeys.length > 0;
   const chDaily     = getWindow(ua.channelDaily || []);
-  const chDailyPrev = getPrevWindow(ua.channelDaily || []);
+  const chDailyPrev = prior.ua?.channelDaily || [];
   const chByDate    = {}; chDaily.forEach(x=>{ chByDate[x.date] = x; });
 
   // ── Organic installs ──
@@ -2387,9 +2833,9 @@ function renderGrowth(){
   // scales the raw fraction once), so nothing is multiplied again here — that
   // double scaling is what produced the four-digit "6131%" readings.
   const chans_       = (ua.channels||[]);
-  const roasWeighted = (key) => {
+  const roasWeighted = (key, channels=chans_) => {
     let n = 0, dsum = 0;
-    chans_.forEach(c=>{
+    channels.forEach(c=>{
       const v = c[key], w = +c.spend||+c.cost||0;
       if(v==null || v==='' || !w) return;
       n += (+v)*w; dsum += w;
@@ -2438,15 +2884,20 @@ function renderGrowth(){
   const avgCpi        = uaSpendTot != null && acqInstalls > 0
     ? uaSpendTot / acqInstalls
     : null;
-  const roi           = chSpendTot>0 ? chRevTot/chSpendTot*100 : null;
-  const prevRoas      = null;
+  const roi           = chSpendTot > 0 && chDaily.some(r=>isNum(r.revenue)) ? chRevTot/chSpendTot*100 : null;
+  const prevRoas      = roasWeighted('roasD7',prior.ua?.channels || []);
+  const priorRoi     = chSpendPrev > 0 && chDailyPrev.some(r=>isNum(r.revenue))
+    ? sum(chDailyPrev.map(x=>+x.revenue||0)) / chSpendPrev * 100 : null;
+  const priorCpi     = uaSpendPrev != null && acqPrevInst > 0 ? uaSpendPrev / acqPrevInst : null;
+  const ratioLabel   = v => (v / 100).toFixed(2) + '×';
+  const priorLtvD0   = averageReported(prior.monetization?.ltv,'d0');
   const ltvRows       = (d.monetization&&d.monetization.ltv)||[];
-  const ltvD0         = ltvRows.length ? avg(ltvRows.map(x=>+x.d0||0)) : 0;
+  const ltvD0         = averageReported(ltvRows,'d0');
   const ltvD7Vals     = ltvRows.map(x=>x.d7).filter(x=>x!=null && x!=='' && !isNaN(x));
   const ltvD28Vals    = ltvRows.map(x=>x.d28).filter(x=>x!=null && x!=='' && !isNaN(x));
   const ltvD7         = ltvD7Vals.length ? avg(ltvD7Vals) : null;
   const ltvD28        = ltvD28Vals.length ? avg(ltvD28Vals) : null;
-  const ltvCpi        = avgCpi>0 ? ltvD0/avgCpi : null;
+  const ltvCpi        = avgCpi > 0 && ltvD0 != null ? ltvD0/avgCpi : null;
   const scKey         = currentGame + '|' + dateFrom + '|' + dateTo;
   const scStatus      = _scFailed[scKey] ? 'Sheet1 unavailable' : 'loading Sheet1…';
 
@@ -2492,7 +2943,7 @@ function renderGrowth(){
       dates: chSpendTot>0 ? chDaily.map(x=>x.date)
            : agSpendTot>0 ? agKeys : [], col:'--coral',
       cur:uaSpendTot, prev:uaSpendPrev, sub:uaSpendSrc },
-    { cls:'lm', lbl:'ROI', val:roi!=null?roi.toFixed(0)+'%':'—',
+    { cls:'lm', lbl:'ROI', val:roi!=null?ratioLabel(roi):'—', cur:roi, prev:priorRoi, fmt:ratioLabel,
       data: chDaily.map(x=>(+x.spend>0 ? (+x.revenue||0)/(+x.spend)*100 : null)),
       dates: chDaily.map(x=>x.date), col:'--lime',
       sub:chSpendTot>0?'revenue / UA spend':'Channel Performance unavailable' },
@@ -2506,38 +2957,38 @@ function renderGrowth(){
   const acqKpis2 = [
     /* cheaper installs are the good direction */
     { cls:'mg', lbl:'Avg CPI',   val:fmtMoney(avgCpi, 3), better:'down',
+      cur:avgCpi, prev:priorCpi, fmt:v=>fmtMoney(v,3),
       data: chDaily.map(x=>(+x.installs>0 ? (+x.spend||0)/(+x.installs) : null)),
       dates: chDaily.map(x=>x.date), col:'--magenta',
       sub: uaSpendTot!=null ? 'blended · spend / all installs' : scStatus },
-    /* graph: daily cohort ROAS from Combines_ROAS - D7 where that cohort has
-       matured, D0 where it has not yet */
+    /* The sparkline uses D7, the same cohort age as the headline. */
     { cls:'am', lbl:'ROAS',      val:roas!=null?roas.toFixed(0)+'%':'—', sub:roasSub, col:'--amber',
-      data: growthRoasDaily.map(x => x.d7 != null ? +x.d7 : (x.d0 != null ? +x.d0 : null)),
+      cur:roas, prev:prevRoas,
+      data: growthRoasDaily.map(x => x.d7 != null ? +x.d7 : null),
       dates: growthRoasDaily.map(x => x.date), fmt: v => (+v).toFixed(0) + '%' },
     /* graph: the period's D0 LTV over each day's CPI. LTV arrives per cohort
        age, not per day, so the day-to-day movement here is CPI's. */
     { cls:'vl', lbl:'LTV : CPI', val:ltvCpi!=null?ltvCpi.toFixed(2)+'x':'—', sub:sc?'D0 LTV vs cost':scStatus, col:'--violet',
+      cur:ltvCpi, prev:priorCpi > 0 && priorLtvD0 != null ? priorLtvD0 / priorCpi : null,
       data: ltvD0 > 0 ? chDaily.map(x => (+x.installs > 0 && +x.spend > 0) ? ltvD0 / ((+x.spend) / (+x.installs)) : null) : [],
       dates: chDaily.map(x => x.date), fmt: v => (+v).toFixed(2) + 'x' },
   ];
   // Growth cards now carry the same sparkline as the Overview cards. A card
   // with no series still renders — it just falls back to the plain layout
   // rather than reserving an empty chart box.
-  /* Under each value: an up / down arrow instead of an explanation line, as on
-     the ASO page. Against the previous period when the card has one,
-     otherwise the second half of this window against the first. Green when
-     the move is good for that card (k.better: 'up' or 'down'), amber when not. */
+  /* A trend is shown only when the same metric has a previous-period value. */
   const trendHtml = kpiTrendHtml;
   const kpiHtml = (k, i, pfx) => {
     const hasData = (k.data||[]).filter(v=>v!=null && v!=='' && isFinite(v)).length >= 2;
     const bottom = trendHtml(k);
+    const label = '<div class="kpi-label" title="'+umEsc(k.sub || k.lbl)+'">'+k.lbl+'</div>';
     if(!hasData){
-      return '<div class="kpi '+k.cls+'"><div class="kpi-label">'+k.lbl+'</div>'
+      return '<div class="kpi '+k.cls+'">'+label
         + '<div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div>'
         + bottom + '</div>';
     }
     return '<div class="kpi has-spark '+k.cls+'">'
-      + '<div class="kpi-text"><div class="kpi-label">'+k.lbl+'</div>'
+      + '<div class="kpi-text">'+label
       + '<div class="kpi-val'+(String(k.val).length>6?' small':'')+'">'+k.val+'</div>'
       + bottom + '</div>'
       + '<div class="kpi-spark-box"><canvas id="'+pfx+i+'"></canvas></div>'
@@ -2792,12 +3243,18 @@ function renderGrowth(){
   }
 
   // ── Monetization ──
-  const revTot   = sum(cur.map(x=>+x.revenue||0));
-  const prevRev  = sum(prev.map(x=>+x.revenue||0));
-  const dauAvg   = avg(cur.map(x=>+x.dau||0)) || 1;
-  const arpdau   = revTot/(dauAvg*(cur.length||1));
-  const prevDauA = avg(prev.map(x=>+x.dau||0)) || 1;
-  const prevArpd = prevRev/(prevDauA*(prev.length||1));
+  // Match Overview: reported active users, with the same platform fee treatment.
+  const storeCut = { android:0.35, ios:0 }[d.platform] ?? 0;
+  const netRow = r => (+r.adRevenue || 0) + (+r.iapRevenue || 0) * (1 - storeCut);
+  const hasSplit = rows => sum(rows.map(r=>(+r.adRevenue || 0) + (+r.iapRevenue || 0))) > 0;
+  const splitNow = hasSplit(cur), splitPrior = hasSplit(prev);
+  const activeTotal = reportedTotal(cur,'activeUsers');
+  const previousActive = reportedTotal(prev,'activeUsers');
+  const netRevenue = splitNow ? sum(cur.map(netRow)) : reportedTotal(cur,'revenue');
+  const previousNetRevenue = splitNow === splitPrior
+    ? (splitPrior ? sum(prev.map(netRow)) : reportedTotal(prev,'revenue')) : null;
+  const arpdau = activeTotal > 0 && netRevenue != null ? netRevenue / activeTotal : null;
+  const prevArpd = previousActive > 0 && previousNetRevenue != null ? previousNetRevenue / previousActive : null;
   const payers   = sum(cur.map(x=>+x.payers||0));
   // ARPPU: IAP revenue per PAYING user. Ad revenue is excluded on purpose —
   // a payer is defined by making a purchase, so crediting ad views to them
@@ -2806,7 +3263,12 @@ function renderGrowth(){
   // tab's `sales` column, not `revenue`, which is blank on every row there).
   const iapSalesT = sum(cur.map(x=>+x.iapSales||0));
   const arppu    = payers>0 && iapSalesT>0 ? iapSalesT/payers : null;
-  const payerPct = avg(cur.map(x=>+x.payerRate||0));
+  const payerRate = rows => {
+    const rate = ovRate(rows,r=>r.payers,r=>r.activeUsers);
+    return rate == null ? null : rate * 100;
+  };
+  const payerPct = payerRate(cur), priorPayerPct = payerRate(prev);
+  const priorArppu = ovRate(prev,r=>r.iapSales,r=>r.payers);
 
   // ── Revenue split, from Channel Performance ──
   // Revenue / Ad Revenue / IAP Revenue columns, summed across channels per day
@@ -2827,8 +3289,8 @@ function renderGrowth(){
   const shIapTot  = useShRev ? sum(shKeysM.map(k=>+shDaysM[k].inappTotal||0)) : 0;
   const shAdTot   = useShRev ? sum(shKeysM.map(k=>+shDaysM[k].adTotal||0))    : 0;
 
-  const chRevTotM = sum(chDaily.map(x=>+x.revenue||0));
-  const useChRev  = chRevTotM > 0;
+  const chRevTotM = reportedTotal(chDaily,'revenue');
+  const useChRev  = chRevTotM != null;
   const revTotM   = useChRev ? chRevTotM : null;
   const iapTot    = useShRev ? shIapTot : null;
   const adTot     = useShRev ? shAdTot : null;
@@ -2836,7 +3298,7 @@ function renderGrowth(){
   // rather than against a Revenue figure from a different source.
   const splitTot  = useShRev ? (shIapTot + shAdTot) : null;
   const shSeries  = (key) => cur.map(x => shDaysM[x.date] ? +shDaysM[x.date][key]||0 : null);
-  const prevRevM  = useChRev ? sum(chDailyPrev.map(x=>+x.revenue||0)) : null;
+  const prevRevM  = useChRev ? reportedTotal(chDailyPrev,'revenue') : null;
   const revSrc    = useChRev ? 'Channel Performance' : 'Channel Performance unavailable';
 
   // ARPU: revenue per ACTIVE user, the standard definition. This previously
@@ -2851,11 +3313,18 @@ function renderGrowth(){
       data: useChRev ? chDaily.map(x=>+x.revenue||0) : [],
       dates: useChRev ? chDates : [], col:'--lime' },
     { cls:'cy', lbl:'ARPDAU', val:fmtMoney(arpdau, 4), cur:arpdau, prev:prevArpd,
-      sub:'per active user', data: cur.map(x=>+x.arpdau||0), dates:curDatesG, col:'--cyan' },
-    { cls:'mg', lbl:'ARPPU', val:fmtMoney(arppu, 2), sub:'sales / paying user',
+      sub:'per active user', fmt:v=>fmtMoney(v,4),
+      data:cur.map(r=>{
+        const revenue = splitNow
+          ? (isNum(r.adRevenue) || isNum(r.iapRevenue) ? netRow(r) : null)
+          : r.revenue;
+        return r.activeUsers > 0 && isNum(revenue) ? revenue / r.activeUsers : null;
+      }), dates:curDatesG, col:'--cyan' },
+    { cls:'mg', lbl:'ARPPU', val:fmtMoney(arppu, 2), cur:arppu, prev:priorArppu, fmt:v=>fmtMoney(v,2), sub:'gross sales / paying user',
       data: cur.map(x=>+x.arppu||null), dates:curDatesG, col:'--magenta' },
-    { cls:'am', lbl:'Purchase Rate', val:payerPct?payerPct.toFixed(3)+'%':'—', sub:'paying / active users',
-      data: cur.map(x=>+x.payerRate||null), dates:curDatesG, col:'--amber' },
+    { cls:'am', lbl:'Purchase Rate', val:payerPct!=null?payerPct.toFixed(3)+'%':'—',
+      cur:payerPct, prev:priorPayerPct, fmt:v=>v.toFixed(3)+'%', sub:'paying / active users',
+      data:cur.map(r=>payerRate([r])), dates:curDatesG, col:'--amber' },
   ];
   // Renamed from "IAP Share" / "Ad Share": the headline is now the dollar
   // amount, with the share carried underneath, so the pair reads as a split of
@@ -3051,32 +3520,14 @@ function renderGrowth(){
      rest of this tab: Android reads Sales_By_Country, iOS reads the App Store
      territory report, and neither sees the other.
 
-     THE CAVEAT IS RENDERED, NOT ASSUMED. buyersVerified is false while the
-     GA4 US buyer figures are unreconciled, and the two cards that divide by
-     them say so on screen. A number shown without its doubt is a number
-     somebody will act on.
+     The Data team sees the reconciliation notice. Buyer-derived KPIs retain
+     their unverified status until those inputs are reconciled.
 
      One axis per chart. Revenue and buyers are different scales, and a second
      y-axis would let any pair of series be drawn as agreeing. */
   const us = d.us || null;
 
-  if(g('growthUsNote')){
-    let noteHtml = '';
-    if(us && !us.buyersVerified){
-      /* Our own backend string, but stripped of angle brackets anyway: it is
-         rendered as HTML and nothing else on this tab is. */
-      const why = String(us.buyersNote || '').replace(/[<>]/g, '');
-      noteHtml = '<div class="notice" style="padding:10px 14px;margin-bottom:10px;'
-        + 'border-left:3px solid var(--amber);font-size:11px;color:var(--text3)">'
-        + '<b style="color:var(--text2)">Buyers are not reconciled.</b> ' + why
-        + '</div>';
-    }
-    ((us && us.notes) || []).forEach(function(n){
-      noteHtml += '<div class="notice" style="padding:8px 14px;margin-bottom:10px;'
-        + 'font-size:11px;color:var(--text3)">' + String(n).replace(/[<>]/g, '') + '</div>';
-    });
-    g('growthUsNote').innerHTML = noteHtml;
-  }
+  renderGrowthUsNotices(us);
 
   const usRows  = (us && us.rows) || [];
   const usTot   = (us && us.totals) || {};
@@ -3635,11 +4086,13 @@ function wrapEmpty(canvasId, reason){
 function markTable(containerId, count, noun){
   const el = g(containerId);
   if(!el) return;
-  try { el.classList.toggle('tbl-scroll', count > 15); } catch(e){}
+  // Growth's outer table region scrolls the header and rows together.
+  const bodyScrolls = !el.closest('.growth-table') && count > 15;
+  try { el.classList.toggle('tbl-scroll', bodyScrolls); } catch(e){}
   const card = (el.closest && el.closest('.card')) || null;
   if(!card) return;
   // Keep header tracks aligned with the body when its 8px scrollbar appears.
-  try { card.classList.toggle('has-table-scroll', count > 15); } catch(e){}
+  try { card.classList.toggle('has-table-scroll', bodyScrolls); } catch(e){}
   const hd = card.querySelector('.card-hd');
   if(!hd) return;
   let tag = hd.querySelector('.row-count');
@@ -3686,7 +4139,8 @@ function clearEmpty(canvasId){
 function renderRetention(){
   const d = curData(); if(!d) return;
   const cohorts = getWindow(d.retCohorts || []);
-  const prevCo  = getPrevWindow(d.retCohorts || []);
+  const previous = previousDashboard();
+  const prevCo  = previous.retCohorts || [];
   const curR    = getWindow(d.retention || []);      // D1-D7 + D14 for this platform
   const cur     = getWindow(d.daily || []);
   const cc      = chartColors();
@@ -3710,24 +4164,19 @@ function renderRetention(){
   };
 
   const sum = d.retSummary || {};
-  // Every day the sheet reports, so D2/D4/D5/D6 and D14 are first-class rather
-  // than only reachable from the curve. Backend summary wins; the windowed
-  // cohorts are the fallback when the dashboard range differs from the payload's.
+  // Keep every reported day available for the charts. DAY_STYLE selects the
+  // smaller set shown as KPI cards.
   const dayVals = {};
   RET_DAYS.forEach(function(k){
     dayVals[k] = sum[k] != null ? sum[k] : null;
   });
   const prevVals = {};
-  RET_DAYS.forEach(function(k){ prevVals[k] = wAvg(prevCo, k) || null; });
+  RET_DAYS.forEach(function(k){ prevVals[k] = previous.retSummary?.[k] ?? (wAvg(prevCo, k) || null); });
 
-  const d1  = dayVals.d1, d3 = dayVals.d3, d7 = dayVals.d7, d14 = dayVals.d14;
-  const p1  = prevVals.d1, p7 = prevVals.d7, p14 = prevVals.d14;
   const cohortSize = sum.cohortSize || sum2(cohorts, 'cohortSize');
 
   const DAY_STYLE = {
-    d1:{cls:'cy',lbl:'D1 Retention'},  d2:{cls:'mg',lbl:'D2 Retention'},
-    d3:{cls:'am',lbl:'D3 Retention'},  d4:{cls:'lm',lbl:'D4 Retention'},
-    d5:{cls:'vl',lbl:'D5 Retention'},  d6:{cls:'co',lbl:'D6 Retention'},
+    d1:{cls:'cy',lbl:'D1 Retention'}, d4:{cls:'lm',lbl:'D4 Retention'},
     d7:{cls:'cy',lbl:'D7 Retention'},  d14:{cls:'mg',lbl:'D14 Retention'}
   };
 
@@ -3738,22 +4187,18 @@ function renderRetention(){
   const kDates  = kRows.map(r => r.date);
   const num     = v => (v == null || v === '' || isNaN(v)) ? null : +v;
   const series  = k => kRows.map(r => num(r[k]));
-  const diff    = (a,b) => kRows.map(r => { const x = num(r[a]), y = num(r[b]); return (x==null||y==null) ? null : +(x-y).toFixed(2); });
   const coRows  = cohorts.slice().sort((a,b)=> String(a.date).localeCompare(String(b.date)));
 
-  const retCards = RET_DAYS.map(function(k){
-    const st  = DAY_STYLE[k] || { cls:'cy', lbl:k.toUpperCase()+' Retention' };
+  const retCards = RET_DAYS.filter(k => DAY_STYLE[k]).map(function(k){
+    const st  = DAY_STYLE[k];
     const v   = dayVals[k], p = prevVals[k];
     const bad = (k === 'd1' && v && v < thresholds.d1.val)
              || (k === 'd7' && v && v < thresholds.d7.val);
-    return { cls:st.cls, lbl:st.lbl, val:v?fmtPct(v):'—', bad:bad, cur:v, prev:p,
+    return { cls:st.cls, lbl:st.lbl, val:v != null ? fmtPct(v) : '—', bad:bad, cur:v, prev:p,
              data:series(k), dates:kDates, fmt:fmtPct };
   }).concat([
-    { cls:'co', lbl:'D1 Churn',      val:d1?fmtPct(d1-100):'—',
-      data:series('d1').map(v => v==null ? null : +(v-100).toFixed(2)), dates:kDates, fmt:fmtPct },
-    { cls:'mg', lbl:'D1 → D7 Drop',  better:'down', val:(d1&&d7)?fmtPct(d1-d7):'—',  data:diff('d1','d7'),  dates:kDates, fmt:fmtPct },
-    { cls:'am', lbl:'D7 → D14 Drop', better:'down', val:(d7&&d14)?fmtPct(d7-d14):'—', data:diff('d7','d14'), dates:kDates, fmt:fmtPct },
-    { cls:'lm', lbl:'Cohort Size',   val:fmtKn(cohortSize),
+    { cls:'lm', lbl:'Cohort Size',   val:fmtKn(cohortSize), cur:cohortSize,
+      prev:previous.retSummary?.cohortSize ?? (prevCo.length ? sum2(prevCo,'cohortSize') : null),
       data:coRows.map(r => num(r.cohortSize)), dates:coRows.map(r => r.date), fmt:fmtKn }
   ]);
 
@@ -3770,55 +4215,32 @@ function renderRetention(){
     drawSpark('rk'+i, c.data, color, c.fmt, c.dates);
   });
 
-  // ── Decay curve ──
-  // The full D1-D7 curve lives on the Retention tab, which has no platform
-  // column. On a platform view we plot the three points we can attribute.
-  if(isSplit || !curR.length){
-    const vals = [100, d1 || null, d3 || null, d7 || null, d14 || null];
-    makeChart('cvRetCurve','line',{
-      labels:['D0','D1','D3','D7','D14'],
-      datasets:[{label:'Still active',data:vals,borderColor:cc.cyan,backgroundColor:cc.cyan+'22',fill:true,tension:.35,borderWidth:2,pointRadius:3,spanGaps:true}]
-    }, {
-      plugins:{tooltip:{callbacks:{label:c=>'  '+c.parsed.y+'% still active'}}},
-      scales:{x:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:10}}},
-        y:{grid:{color:cc.grid},min:0,max:100,ticks:{color:cc.text,font:{family:CHART_FONT,size:10},callback:v=>v+'%'}}}
-    });
-    const churn = [d1, d3, d7, d14].map(v => v ? +(v-100).toFixed(2) : null);
-    makeChart('cvRetChurn','bar',{
-      labels:['D1','D3','D7','D14'],
-      datasets:[{label:'Churn %',data:churn,backgroundColor:cc.coral+'cc',borderColor:cc.coral,borderWidth:1,borderRadius:3}]
-    }, {
-      plugins:{tooltip:{callbacks:{label:c=>'  '+c.parsed.y+'% churned vs install day'}}},
-      scales:{x:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:10}}},
-        y:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:10},callback:v=>v+'%'}}}
-    });
+  // Churn is the share of the original cohort no longer active on each day.
+  const curveKeys = isSplit ? ['d1','d3','d7','d14'] : RET_DAYS;
+  const retention = curveKeys.map(k => {
+    if(isSplit) return num(dayVals[k]);
+    const reported = curR.map(r => num(r[k])).filter(v => v != null);
+    return reported.length ? +avg(reported).toFixed(2) : null;
+  });
+  if(retention.every(v => v == null)){
+    wrapEmpty('cvRetCurve', 'No matured retention cohorts in range');
   } else {
-    const keys = RET_DAYS;
-    // A day is missing only when NO cohort reported it. avg() returns 0 both for
-    // "no rows" and for "every row was 0.00%", so the presence check has to look
-    // at the rows themselves — otherwise a real 0% retention day renders as a
-    // gap in the curve and drops out of the churn chart entirely.
-    const has = k => curR.some(x => x[k] != null && x[k] !== '' && !isNaN(x[k]));
-    const dayVal = k => has(k) ? +avg(curR.map(x=>x[k])).toFixed(2) : null;
-    const curveVals = [100].concat(keys.map(dayVal));
+    const churn = retention.map(v => v == null ? null : +(100 - v).toFixed(2));
     makeChart('cvRetCurve','line',{
-      labels:['D0'].concat(keys.map(k=>k.toUpperCase())),
-      datasets:[{label:'Still active',data:curveVals,borderColor:cc.cyan,backgroundColor:cc.cyan+'22',fill:true,tension:.35,borderWidth:2,pointRadius:3,spanGaps:true}]
+      labels:['D0', ...curveKeys.map(k => k.toUpperCase())],
+      datasets:[
+        {label:'Retention',data:[100,...retention],borderColor:cc.cyan,backgroundColor:cc.cyan+'22',fill:true,tension:.35,borderWidth:2,pointRadius:3,spanGaps:true},
+        {label:'Cumulative churn',data:[0,...churn],borderColor:cc.coral,tension:.35,borderWidth:2,pointRadius:3,spanGaps:true}
+      ]
     }, {
-      plugins:{tooltip:{callbacks:{label:c=>'  '+c.parsed.y+'% still active'}}},
-      scales:{x:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:10}}},
-        y:{grid:{color:cc.grid},min:0,max:100,ticks:{color:cc.text,font:{family:CHART_FONT,size:10},callback:v=>v+'%'}}}
-    });
-    const churn = keys.map(k=>{ const v = dayVal(k); return v==null ? null : +(v-100).toFixed(2); });
-    makeChart('cvRetChurn','bar',{
-      labels:keys.map(k=>k.toUpperCase()),
-      datasets:[{label:'Churn %',data:churn,backgroundColor:cc.coral+'cc',borderColor:cc.coral,borderWidth:1,borderRadius:3}]
-    }, {
-      plugins:{tooltip:{callbacks:{label:c=>'  '+c.parsed.y+'% churned vs install day'}}},
-      scales:{x:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:10}}},
-        y:{grid:{color:cc.grid},ticks:{color:cc.text,font:{family:CHART_FONT,size:10},callback:v=>v+'%'}}}
+      plugins:{
+        legend:{display:true,labels:{color:cc.text}},
+        tooltip:{callbacks:{label:c => c.dataset.label + ': ' + c.parsed.y + '%'}}
+      },
+      scales:{y:{grid:{color:cc.grid},min:0,max:100,ticks:{color:cc.text,callback:v=>v+'%'}}}
     });
   }
+
 
   // ── Cohort heatmap ──
   // Row labels read "4th Nov", "5th Nov" rather than "11-04".
@@ -3916,8 +4338,7 @@ function renderRetention(){
 }
 
 /**
- * D1-D7 + D14 side by side for Android and iOS, from retention.byPlatform.
- * Built on every view, so the split is visible without switching platform.
+ * Shows the selected platform's retention, or compares both on a combined view.
  * Each bar is the cohort-weighted average across the dates in the window.
  */
 function renderRetentionPlatform(d, RET_DAYS, cc){
@@ -3926,16 +4347,19 @@ function renderRetentionPlatform(d, RET_DAYS, cc){
   const byP   = d.retByPlatform || {};
   const badge = g('retPlatBadge');
 
+  const platform = currentGame === 'mss_android' ? 'android' : currentGame === 'mss_ios' ? 'ios' : d.platform;
   const SERIES = [
     { key:'android', label:'Android', color:cc.lime },
     { key:'ios',     label:'iOS',     color:cc.cyan }
-  ].filter(s => byP[s.key] && (byP[s.key].curve || []).length);
+  ].filter(s => !platform || platform === 'all' || s.key === platform)
+    .map(s => ({...s, rows:getWindow(byP[s.key]?.curve || [])}))
+    .filter(s => s.rows.some(r => RET_DAYS.some(k => isNum(r[k]))));
 
   if(!SERIES.length){
+    if(badge) badge.textContent = 'unavailable';
     wrapEmpty('cvRetPlatform', d.retentionRaw && d.retentionRaw.platformAware === false
       ? 'The Retention tab has no Platform column — add one (Android / iOS) to see the split.'
       : 'No platform-split retention rows in range');
-    if(badge) badge.textContent = 'unavailable';
     return;
   }
 
@@ -3953,14 +4377,11 @@ function renderRetentionPlatform(d, RET_DAYS, cc){
     return w > 0 ? +(acc / w).toFixed(2) : (n ? +(plain / n).toFixed(2) : null);
   };
 
-  const windows = {};
-  SERIES.forEach(s => { windows[s.key] = getWindow(byP[s.key].curve || []); });
-
   makeChart('cvRetPlatform','bar',{
     labels: RET_DAYS.map(k => k.toUpperCase()),
     datasets: SERIES.map(s => ({
       label: s.label,
-      data: RET_DAYS.map(k => wAvg(windows[s.key], k)),
+      data: RET_DAYS.map(k => wAvg(s.rows, k)),
       backgroundColor: s.color + 'cc',
       borderColor: s.color,
       borderWidth: 1,
@@ -3978,7 +4399,7 @@ function renderRetentionPlatform(d, RET_DAYS, cc){
   });
 
   if(badge){
-    const days = Math.max.apply(null, SERIES.map(s => windows[s.key].length).concat([0]));
+    const days = Math.max(...SERIES.map(s => s.rows.length));
     badge.textContent = SERIES.map(s => s.label).join(' · ') + ' · ' + days + ' days';
   }
 }
@@ -3989,7 +4410,7 @@ function sum2(rows, key){ return (rows||[]).reduce((a,r)=>a+(+r[key]||0),0); }
 function renderPlaytime(){
   const d = curData(); if(!d.daily) return;
   const cur  = getWindow(d.daily);
-  const prev = getPrevWindow(d.daily);
+  const prev = previousDashboard().daily || [];
   const cc   = chartColors();
   const lbls = cur.map(x=>x.date.slice(5));
 
@@ -4002,13 +4423,15 @@ function renderPlaytime(){
   const totalSes = sum(cur.map(x=>+x.sessions||0));
 
   const pk = [
-    { cls:'mg', lbl:'D0 Playtime',     val:fmtSec(avgD0),   cur:avgD0,  prev:avgNN(prev.map(x=>x.d0Playtime)),   sub:'avg per new user', key:'d0Playtime', fmt:fmtSec },
-    { cls:'cy', lbl:'Avg Playtime',    val:fmtSec(avgPlay), cur:avgPlay,prev:avgNN(prev.map(x=>x.playtimeAvg)),  sub:'avg per active user', key:'playtimeAvg', fmt:fmtSec },
-    { cls:'lm', lbl:'Session Len D0',  val:fmtSec(avgSess), cur:avgSess,prev:avgNN(prev.map(x=>x.sessionLenD0)), sub:'day-zero sessions', key:'sessionLenD0', fmt:fmtSec },
-    { cls:'vl', lbl:'Avg Session Len', val:fmtSec(avgSessG),cur:avgSessG,prev:avgNN(prev.map(x=>x.avgSessionLen)),sub:'all sessions', key:'avgSessionLen', fmt:fmtSec },
-    { cls:'am', lbl:'Sessions / User', val:spu?spu.toFixed(2):'—', cur:spu, prev:avgNN(prev.map(x=>x.sessionsPerUser)), sub:'per active user', key:'sessionsPerUser', fmt:v=>(+v).toFixed(2) },
-    { cls:'cy', lbl:'Total Playtime',  val:fmtKn(totalHrs)+'h', sub:'period hours', key:'playtimeHours', fmt:v=>fmtKn(v)+'h' },
-    { cls:'lm', lbl:'Total Sessions',  val:fmtKn(totalSes), sub:'period count', key:'sessions', fmt:fmtKn },
+    { cls:'mg', lbl:'D0 Playtime',     val:fmtSec(avgD0),   cur:avgD0,  prev:averageReported(prev,'d0Playtime'), sub:'avg per new user', key:'d0Playtime', fmt:fmtSec },
+    { cls:'cy', lbl:'Avg Playtime',    val:fmtSec(avgPlay), cur:avgPlay,prev:averageReported(prev,'playtimeAvg'), sub:'avg per active user', key:'playtimeAvg', fmt:fmtSec },
+    { cls:'lm', lbl:'Session Len D0',  val:fmtSec(avgSess), cur:avgSess,prev:averageReported(prev,'sessionLenD0'), sub:'day-zero sessions', key:'sessionLenD0', fmt:fmtSec },
+    { cls:'vl', lbl:'Avg Session Len', val:fmtSec(avgSessG),cur:avgSessG,prev:averageReported(prev,'avgSessionLen'), sub:'all sessions', key:'avgSessionLen', fmt:fmtSec },
+    { cls:'am', lbl:'Sessions / User', val:spu?spu.toFixed(2):'—', cur:spu, prev:averageReported(prev,'sessionsPerUser'), sub:'per active user', key:'sessionsPerUser', fmt:v=>(+v).toFixed(2) },
+    { cls:'cy', lbl:'Total Playtime',  val:fmtKn(totalHrs)+'h', cur:totalHrs, prev:prev.length ? sum2(prev,'playtimeHours') : null,
+      sub:'period hours', key:'playtimeHours', fmt:v=>fmtKn(v)+'h' },
+    { cls:'lm', lbl:'Total Sessions',  val:fmtKn(totalSes), cur:totalSes, prev:prev.length ? sum2(prev,'sessions') : null,
+      sub:'period count', key:'sessions', fmt:fmtKn },
   ];
   /* Same card as the Overview: label, value, change pill and a small daily graph */
   const PK_COL = { cy:'--cyan', mg:'--magenta', am:'--amber', lm:'--lime', vl:'--violet', co:'--coral' };
@@ -4555,7 +4978,7 @@ async function ensureProgression(opts){
 }
 
 function onProgRangeChange(){
-  progRangeDays = +g('progRange').value || 7;
+  progRangeDays = +g('progRange').value || 14;
   ensureProgression({ repaint:true });
 }
 
@@ -4700,7 +5123,7 @@ function addFeedback(){
   const name = g('fbName').value.trim();
   const cat = g('fbCat').value;
   const text = g('fbText').value.trim();
-  if(!name || !text){ alert('Please fill in name and description.'); return; }
+  if(!name || !text){ umAlert('Missing details', 'Please fill in your name and a description.'); return; }
   const today = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'});
   feedback.unshift({ author:name, date:today, category:cat, text });
   g('fbName').value = '';
@@ -4719,262 +5142,123 @@ function renderThresholds(){
       <span class="thresh-unit">${t.unit}</span>
     </div>
   `).join('');
-  renderExecTargets();
 }
-
-
-/* ═════════════════════════════════════════
-   EXECUTIVE TARGETS
-   ═════════════════════════════════════════
-   These used to be a tab inside the Executive report, which meant the place
-   you SET a goal was buried inside the place you WATCH it. They live here
-   now, beside the other numbers somebody comes to this page to change.
-
-   The Executive report still reads them - it draws the projection against
-   them - it just no longer offers to edit them. One editor, one place.
-
-   They are stored by the Executive backend, not by this project: the same
-   dashTargets_v1 property the report has always used. Nothing was migrated,
-   so a target set last month is still the target, and this page is a new
-   door onto the same room.
-
-   Who may save is decided there too, by the TargetAdmins tab in that
-   project's spreadsheet. This page does not try to guess the answer and
-   hide the button - a hidden button is not a permission check, and the
-   signed token carries no role to check against anyway. Everyone sees the
-   editor; the server refuses, in words, and those words are shown. */
-
-const EXEC_TARGET_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun',
-                            'Jul','Aug','Sep','Oct','Nov','Dec'];
-let execTargets = null;
-let execTargetsBusy = false;
-
-function execTargetsDefault_(year){
-  const t = { year: year, roiAlert: 1.20, quarter: null, annual: null, months: {}, gameRoi: {} };
-  EXEC_TARGET_MONTHS.forEach(function(_, i){
-    t.months[year + '-' + String(i + 1).padStart(2, '0')] = { profit: 0, roi: 1.20 };
+function saveThresh(){
+  Object.keys(thresholds).forEach(k=>{
+    const el = g('th-'+k);
+    if(el) thresholds[k].val = parseFloat(el.value);
   });
-  return t;
-}
-
-/** One call for both directions; the Executive backend answers GET only. */
-async function execTargetsApi_(params){
-  const base = API_URLS.exec;
-  if(!base) throw new Error('No Executive endpoint. VITE_API_EXEC is not set in this build.');
-  const token = getToken();
-  if(!token) throw new Error('Not signed in.');
-
-  const qs = new URLSearchParams(Object.assign({ token: token }, params));
-  const res = await fetch(base + '?' + qs, { redirect:'follow', cache:'no-store' });
-  const json = await res.json();
-  if(json && json.error) throw new Error(json.error);
-  return json;
-}
-
-async function renderExecTargets(){
-  const host = g('execTargetsHost');
-  if(!host) return;
-
-  host.innerHTML = '<div class="thresh-lbl" style="padding:12px 0">Loading targets…</div>';
-
-  try {
-    const json = await execTargetsApi_({ action:'getTargets', _cb: Date.now() });
-    let t = json && json.targets;
-    /* The backend sends the whole set as a JSON STRING, not as an object. */
-    if(typeof t === 'string'){ try { t = JSON.parse(t); } catch(e){ t = null; } }
-    execTargets = (t && typeof t === 'object' && t.months) ? t
-                : execTargetsDefault_(new Date().getFullYear());
-  } catch(err){
-    host.innerHTML = '<div class="thresh-lbl" style="padding:12px 0;color:var(--amber,#f5a524)">'
-      + 'Could not read the targets: ' + esc_(err.message || String(err)) + '</div>';
-    return;
-  }
-
-  drawExecTargets_(host);
-}
-
-function drawExecTargets_(host){
-  const year = Number(execTargets.year) || new Date().getFullYear();
-
-  const rows = EXEC_TARGET_MONTHS.map(function(name, i){
-    const key = year + '-' + String(i + 1).padStart(2, '0');
-    const m = (execTargets.months && execTargets.months[key]) || { profit:0, roi:1.2 };
-    return '<div class="thresh-row">'
-      + '<span class="thresh-lbl">' + name + ' ' + year + '</span>'
-      + '<span class="thresh-unit">profit</span>'
-      + '<input class="thresh-input" type="number" step="1000" data-et-profit="' + key + '"'
-      + ' value="' + (Number(m.profit) || 0) + '">'
-      + '<span class="thresh-unit">ROI</span>'
-      + '<input class="thresh-input" type="number" step="0.01" data-et-roi="' + key + '"'
-      + ' value="' + (Number(m.roi) || 0) + '">'
-      + '</div>';
-  }).join('');
-
-  host.innerHTML =
-    '<div class="thresh-grid">'
-      + '<div class="thresh-row">'
-        + '<span class="thresh-lbl">Target year</span>'
-        + '<input class="thresh-input" type="number" step="1" id="etYear" value="' + year + '">'
-      + '</div>'
-      + '<div class="thresh-row">'
-        + '<span class="thresh-lbl">ROI alert below</span>'
-        + '<input class="thresh-input" type="number" step="0.01" id="etRoiAlert"'
-        + ' value="' + (Number(execTargets.roiAlert) || 1.2) + '">'
-      + '</div>'
-      + rows
-    + '</div>'
-    + '<div style="margin-top:18px;display:flex;align-items:center;gap:14px">'
-      + '<button class="btn-primary" id="etSave">Save targets</button>'
-      + '<span class="thresh-lbl" id="etMsg"></span>'
-    + '</div>';
-
-  g('etSave').addEventListener('click', saveExecTargets);
-
-  /* Changing the year rebuilds the twelve rows against that year's keys.
-     Without this the inputs keep writing to last year's months while their
-     labels claim otherwise - the kind of wrong that looks saved. */
-  g('etYear').addEventListener('change', function(){
-    const next = Number(g('etYear').value) || year;
-    if(next === year) return;
-    const fresh = execTargetsDefault_(next);
-    /* Carry the figures across by month number, so changing the year keeps
-       the plan rather than blanking it. */
-    EXEC_TARGET_MONTHS.forEach(function(_, i){
-      const from = year + '-' + String(i + 1).padStart(2, '0');
-      const to   = next + '-' + String(i + 1).padStart(2, '0');
-      if(execTargets.months && execTargets.months[from]) fresh.months[to] = execTargets.months[from];
-    });
-    fresh.roiAlert = execTargets.roiAlert;
-    fresh.gameRoi  = execTargets.gameRoi || {};
-    execTargets = fresh;
-    drawExecTargets_(host);
-  });
-}
-
-async function saveExecTargets(){
-  if(execTargetsBusy) return;
-  const msg = g('etMsg');
-  const btn = g('etSave');
-
-  const year = Number(g('etYear').value) || execTargets.year;
-  const next = {
-    year: year,
-    roiAlert: Number(g('etRoiAlert').value) || 1.2,
-    /* quarter and annual stay whatever they were. They are overrides the
-       report computes from the months when they are null, and silently
-       writing a number here would freeze a total that should keep following
-       the monthly figures. */
-    quarter: execTargets.quarter == null ? null : execTargets.quarter,
-    annual:  execTargets.annual  == null ? null : execTargets.annual,
-    months: {},
-    gameRoi: execTargets.gameRoi || {}
-  };
-
-  document.querySelectorAll('[data-et-profit]').forEach(function(el){
-    const key = el.getAttribute('data-et-profit');
-    next.months[key] = next.months[key] || {};
-    next.months[key].profit = Number(el.value) || 0;
-  });
-  document.querySelectorAll('[data-et-roi]').forEach(function(el){
-    const key = el.getAttribute('data-et-roi');
-    next.months[key] = next.months[key] || {};
-    next.months[key].roi = Number(el.value) || 0;
-  });
-
-  execTargetsBusy = true;
-  btn.disabled = true;
-  msg.textContent = 'Saving…';
-  msg.style.color = '';
-
-  try {
-    await execTargetsApi_({ action:'saveTargets', targets: JSON.stringify(next) });
-    execTargets = next;
-    msg.textContent = 'Saved. The Executive report picks these up on its next load.';
-  } catch(err){
-    /* The server's words, not ours. When it refuses it names the
-       TargetAdmins tab and the address you are signed in as, which is the
-       whole of what somebody needs to get added to it. */
-    msg.textContent = err.message || String(err);
-    msg.style.color = 'var(--amber,#f5a524)';
-  } finally {
-    execTargetsBusy = false;
-    btn.disabled = false;
-  }
-}
-/**
- * Writes the thresholds to the Thresholds tab, and says so truthfully.
- *
- * This used to set them in memory, redraw, and alert('Thresholds saved!').
- * Nothing was written anywhere. They are READ from the sheet on every load -
- * applySheetThresholds() - so the next reload quietly put the old numbers
- * back, and the alert had already said otherwise. A message that claims a
- * write that did not happen is worse than no message: it sends somebody away
- * believing the alert strip is now watching a limit it is not.
- *
- * The backend has had saveThresholds since before this - routed, writing
- * key/val rows, clearing the config bundle so the next request serves the new
- * values. It simply had no caller.
- *
- * The role check is the server's. It permits admin and manager and refuses
- * anyone else by name, and that refusal is shown as it arrives rather than
- * guessed at here.
- */
-async function saveThresh(){
-  const btn = g('threshSaveBtn');
-  const msg = g('threshMsg');
-
-  const items = Object.keys(thresholds).map(function(k){
-    const el = g('th-' + k);
-    const v = el ? parseFloat(el.value) : NaN;
-    return isNaN(v) ? null : { key: k, value: v };
-  }).filter(Boolean);
-
-  if(!items.length){ if(msg) msg.textContent = 'Nothing to save.'; return; }
-
-  if(btn) btn.disabled = true;
-  if(msg){ msg.textContent = 'Saving…'; msg.style.color = ''; }
-
-  try {
-    const token = getToken();
-    const params = [
-      'action=saveThresholds',
-      'key=' + encodeURIComponent(SHEET_API_KEY),
-      'thresholds=' + encodeURIComponent(JSON.stringify(items)),
-      token ? 'token=' + encodeURIComponent(token) : '',
-      '_cb=' + Date.now()
-    ].filter(Boolean).join('&');
-
-    const res = await fetch(SHEET_API_URL + '?' + params, { redirect:'follow', cache:'no-store' });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const j = await res.json();
-    if(j.error) throw new Error(j.error);
-
-    /* Only now do the values in memory change. Setting them before the write
-       and leaving them set after a refusal is how a screen comes to show a
-       limit the alert strip is not using. */
-    items.forEach(function(it){ if(thresholds[it.key]) thresholds[it.key].val = it.value; });
-    renderAll();
-    if(msg) msg.textContent = 'Saved to the Thresholds tab.';
-  } catch(err){
-    if(msg){
-      msg.textContent = err.message || String(err);
-      msg.style.color = 'var(--amber,#f5a524)';
-    }
-    /* The inputs keep what was typed, so a refused save can be retried
-       without typing it all again - but the thresholds themselves are
-       untouched, and the strip still uses the saved ones. */
-  } finally {
-    if(btn) btn.disabled = false;
-  }
+  renderAll();
+  umAlert('Thresholds saved', 'The new thresholds are applied to every card.');
 }
 
 // ═════════════════════════════════════════
 // USER MANAGEMENT (admin only)
 // ═════════════════════════════════════════
 
+/* Users | Teams admin page (see user_access.md). Every call is a POST to
+   this project's backend: a password never rides in a URL. */
+const UM = { users:[], teams:{}, team:'', draft:{}, page:'', busy:{} };
+
+/**
+ * The dashboard's own confirm / alert, in place of the browser's grey box.
+ * Resolves true for the main button, false for Cancel, Escape or a click
+ * outside. With no `cancel` it is an alert and only has the one button.
+ *
+ *   if(!await umDialog({ title:'Delete team?', message:'...', ok:'Delete', danger:true })) return;
+ */
+function umDialog(o){
+  o = o || {};
+  return new Promise(function(resolve){
+    const prev = document.getElementById('umDialog'); if(prev) prev.remove();
+    const wrap = document.createElement('div');
+    wrap.id = 'umDialog';
+    wrap.className = 'um-dlg-wrap';
+    wrap.innerHTML = '<div class="um-dlg" role="dialog" aria-modal="true" aria-labelledby="umDlgTitle">'
+      + '<div class="um-dlg-title" id="umDlgTitle">' + umEsc(o.title || 'Are you sure?') + '</div>'
+      + (o.message ? '<div class="um-dlg-msg">' + umEsc(o.message) + '</div>' : '')
+      + '<div class="um-dlg-actions">'
+      +   (o.cancel === false ? '' : '<button type="button" class="um-dlg-btn" data-r="0">' + umEsc(o.cancel || 'Cancel') + '</button>')
+      +   '<button type="button" class="um-dlg-btn ' + (o.danger ? 'danger' : 'primary') + '" data-r="1">' + umEsc(o.ok || 'OK') + '</button>'
+      + '</div></div>';
+    const finish = function(v){ document.removeEventListener('keydown', onKey, true); wrap.remove(); resolve(v); };
+    const onKey = function(e){
+      if(e.key === 'Escape'){ e.preventDefault(); finish(o.cancel === false); }
+      if(e.key === 'Enter'){ e.preventDefault(); finish(true); }
+    };
+    wrap.addEventListener('click', function(e){
+      const b = e.target.closest('[data-r]');
+      if(b) return finish(b.dataset.r === '1');
+      if(e.target === wrap) finish(o.cancel === false);     // click outside
+    });
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(wrap);
+    const focus = wrap.querySelector(o.cancel === false ? '[data-r="1"]' : '[data-r="0"]');
+    if(focus) focus.focus();
+  });
+}
+/** Alert with one button. */
+function umAlert(title, message){ return umDialog({ title:title, message:message, ok:'OK', cancel:false }); }
+
+/* Status shown on a row while its change is being written to the sheet. */
+function umStatus(text){
+  const done = text.charAt(0) === '✓';
+  return '<span class="um-status' + (done ? ' done' : '') + '">' + (done ? '' : '<span class="um-spin"></span>') + umEsc(text) + '</span>';
+}
+/* Busy state for a button while a save runs; returns a function that restores it. */
+function umBtnBusy(btn, text){
+  if(!btn) return function(){};
+  const old = btn.innerHTML; btn.disabled = true; btn.innerHTML = umEsc(text);
+  return function(){ btn.disabled = false; btn.innerHTML = old; };
+}
+
+function umEsc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+/* Current team, role and access for the signed-in user, straight from
+   DashUsers. Quiet on failure: the copy already on screen stays. */
+async function refreshMyAccess(){
+  try {
+    const r = await adminApi('myAccess');
+    if(!r || !r.access){ console.warn('[dash] myAccess returned no access record', r); return false; }
+    /* The username comes from the server when it sends one. After a page
+       reload CU starts with an empty username, and requiring it here meant
+       the refresh silently did nothing. */
+    applyUserRecord({ username: r.username || (CU && CU.username) || 'me',
+      name: r.name || (CU && CU.name) || '', role: r.role, team: r.team, access: r.access });
+    return true;
+  } catch(e){ console.warn('[dash] myAccess failed:', e.message); return false; }
+}
+
+async function adminApi(action, body){
+  const res = await fetch(SHEET_API_URL, {
+    method:'POST', redirect:'follow',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' },   // no CORS preflight
+    body: JSON.stringify(Object.assign({ action:action, key:SHEET_API_KEY, token:getToken() }, body || {}))
+  });
+  const data = await res.json();
+  if(data && data.error) throw new Error(data.error);
+  return data;
+}
+
+function umFlash(id, text, bad){
+  const el = g(id); if(!el) return;
+  el.textContent = text; el.classList.toggle('bad', !!bad); el.style.display = 'inline';
+  clearTimeout(el._t); el._t = setTimeout(function(){ el.style.display = 'none'; }, 3500);
+}
+
+function umShow(which){
+  document.querySelectorAll('#tab-users .um-tab').forEach(function(b){ b.classList.toggle('on', b.dataset.um === which); });
+  g('umUsers').style.display = which === 'users' ? '' : 'none';
+  g('umTeams').style.display = which === 'teams' ? '' : 'none';
+  if(which === 'teams') renderTeams();
+}
+
 function renderUsers(){
-  // Only admin can see this section
-  if(!CU || CU.role !== 'admin'){
+  if(!isAdminUser()){
     g('usersList').innerHTML = '<div class="notice">Admin access required.</div>';
     g('addUserCard').style.display = 'none';
     return;
@@ -4984,116 +5268,282 @@ function renderUsers(){
 }
 
 async function loadUsers(){
-  // DEMO MODE — show dummy users instead of network call
-  g('usersList').innerHTML = '<div class="notice">Loading…</div>';
-  const demoUsers = [
-    { email:'demo@playspare.com',     name:'Demo Admin',      role:'admin',   games:'*',                 status:'active' },
-    { email:'ua.lead@playspare.com',  name:'UA Lead',         role:'manager', games:'mss,mbs',          status:'active' },
-    { email:'aso@playspare.com',      name:'ASO Manager',     role:'manager', games:'mss',              status:'active' },
-    { email:'analyst@playspare.com',  name:'Data Analyst',    role:'viewer',  games:'*',                 status:'active' },
-    { email:'creative@playspare.com', name:'Creative Lead',   role:'viewer',  games:'mss,mcw',          status:'active' },
-  ];
-  setTimeout(function(){ renderUsersList(demoUsers); }, 250);
+  /* "Loading…" only on the first load. A refresh after an edit keeps the
+     current table on screen and swaps in the new one when it arrives, so the
+     list never blanks out. */
+  if(!UM.users || !UM.users.length) g('usersList').innerHTML = '<div class="notice">Loading…</div>';
+  try {
+    const both = await Promise.all([ adminApi('listUsers'), adminApi('listTeams') ]);
+    UM.users = both[0].users || [];
+    UM.teams = both[1].teams || {};
+    fillTeamSelects();
+    renderUsersList(UM.users);
+    if(g('umTeams').style.display !== 'none') renderTeams();
+  } catch(e){
+    g('usersList').innerHTML = '<div class="notice">Could not load users: ' + umEsc(e.message) + '</div>';
+  }
+}
+
+function teamNames(){ return Object.keys(UM.teams).sort(); }
+
+function fillTeamSelects(){
+  const sel = g('nuTeam'); if(!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">No team</option>' + teamNames().map(function(t){
+    return '<option value="' + umEsc(t) + '">' + umEsc(t) + '</option>';
+  }).join('');
+  sel.value = keep;
+  /* The Team dropdown on every row of All users is built from the same list.
+     Redraw it too, or a team created on the Teams tab is missing there until
+     the whole list is reloaded. */
+  if(UM.users && UM.users.length) renderUsersList(UM.users);
 }
 
 function renderUsersList(users){
   if(!users.length){ g('usersList').innerHTML = '<div class="notice">No users found.</div>'; return; }
-  const roleColor = {admin:'var(--magenta)', manager:'var(--cyan)', viewer:'var(--text3)'};
-  g('usersList').innerHTML = `
-    <div class="tbl-head users-head" style="display:grid;grid-template-columns:1fr 130px 110px 110px 90px;gap:10px;padding:0 4px 10px;font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);margin-bottom:8px">
-      <span>Email / Name</span><span>Role</span><span>Games</span><span>Status</span><span></span>
-    </div>
-    ${users.map(u => `
-    <div class="users-row" style="display:grid;grid-template-columns:1fr 130px 110px 110px 90px;gap:10px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text)">${u.name || '—'}</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">${u.email}</div>
-      </div>
-      <div>
-        <select onchange="changeRole('${u.email}',this.value)" style="background:var(--surface2);border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:10px;color:${roleColor[u.role]||'var(--text)'};padding:4px 6px;cursor:pointer">
-          <option value="viewer"   ${u.role==='viewer'   ?'selected':''}>Viewer</option>
-          <option value="manager"  ${u.role==='manager'  ?'selected':''}>Manager</option>
-          <option value="admin"    ${u.role==='admin'    ?'selected':''}>Admin</option>
-        </select>
-      </div>
-      <div style="font-family:var(--mono);font-size:10px;color:var(--text2)">${u.games||'*'}</div>
-      <div>
-        <span style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:10px;background:${u.active?'var(--limeBg)':'var(--coralBg)'};color:${u.active?'var(--lime)':'var(--coral)'}">
-          ${u.active ? 'Active' : 'Disabled'}
-        </span>
-      </div>
-      <div style="text-align:right">
-        ${u.email !== CU.email ? `<button onclick="removeUser('${u.email}')" style="font-family:var(--mono);font-size:10px;color:var(--coral);background:none;border:none;cursor:pointer;font-weight:600">Remove</button>` : '<span style="font-family:var(--mono);font-size:10px;color:var(--text3)">You</span>'}
-      </div>
-    </div>`).join('')}
-  `;
+  const teamOpts = function(cur){
+    return '<option value="">No team</option>' + teamNames().map(function(t){
+      return '<option value="' + umEsc(t) + '"' + (t === cur ? ' selected' : '') + '>' + umEsc(t) + '</option>';
+    }).join('');
+  };
+  /* No Access column: what a member sees is set by their team. The role
+     (column D in DashUsers) is still read by the backend. */
+  g('usersList').innerHTML =
+    '<div class="tbl-head users-head um-grid"><span>Name / Email</span><span>Team</span><span>Games</span><span>Status</span><span></span></div>'
+    + users.map(function(u){
+      const me = CU && u.email.toLowerCase() === String(CU.username || '').toLowerCase();
+      const e = umEsc(u.email);
+      const busy = UM.busy[u.email];
+      const lock = busy ? ' disabled' : '';
+      return '<div class="users-row um-grid' + (busy ? ' um-busy' : '') + '">'
+        + '<div><div class="um-name">' + umEsc(u.name || '—') + '</div><div class="um-email">' + e + '</div></div>'
+        + '<div><select class="um-sel" data-popup' + lock + ' onchange="umUpdate(\'' + e + '\',{team:this.value})"' + (u.role !== 'member' ? ' title="Ignored for Full access and Admin"' : '') + '>' + teamOpts(u.team) + '</select></div>'
+        + '<div class="um-games">' + umEsc(u.games || '*') + '</div>'
+        + '<div><button type="button" class="um-pill ' + (u.active ? 'on' : 'off') + '"' + (me ? ' disabled' : lock)
+        +   ' onclick="umUpdate(\'' + e + '\',{active:' + (!u.active) + '})">' + (u.active ? 'Active' : 'Disabled') + '</button></div>'
+        + '<div class="um-right">' + (busy ? umStatus(busy) : me ? '<span class="um-you">You</span>'
+            : '<button type="button" class="um-link danger" onclick="removeUser(\'' + e + '\')">Remove</button>') + '</div>'
+        + '</div>';
+    }).join('');
 }
 
 async function addUser(){
-  const email  = g('nuEmail').value.trim().toLowerCase();
-  const name   = g('nuName').value.trim();
-  const pwd    = g('nuPwd').value;
-  const role   = g('nuRole').value;
-  const games  = g('nuGames').value.trim() || '*';
-  const msgEl  = g('addUserMsg');
-
-  if(!email || !pwd){ alert('Email and password required.'); return; }
-
-  // Hash password before sending (same as login)
-  const hashed = await hashPwd(pwd);
-  const token  = getToken();
-  const url = SHEET_API_URL
-    + '?action=addUser&key='+encodeURIComponent(SHEET_API_KEY)
-    + '&token='+encodeURIComponent(token)
-    + '&email='+encodeURIComponent(email)
-    + '&name='+encodeURIComponent(name)
-    + '&pwd='+encodeURIComponent(hashed)
-    + '&role='+encodeURIComponent(role)
-    + '&games='+encodeURIComponent(games)
-    + '&_cb='+Date.now();
-
+  const email = g('nuEmail').value.trim().toLowerCase();
+  const name  = g('nuName').value.trim();
+  const pwd   = g('nuPwd').value;
+  if(!email || !pwd){ umFlash('addUserMsg', 'Email and password required.', true); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ umFlash('addUserMsg', 'That is not a valid email address.', true); return; }
+  const done = umBtnBusy(g('nuAddBtn'), 'Adding…');
+  umWorking('addUserMsg', 'Adding user…');
   try {
-    const res = await fetch(url, {redirect:'follow'});
-    const data = await res.json();
-    if(data.error){ alert('Error: '+data.error); return; }
-    msgEl.textContent = '✓ User added!'; msgEl.style.display='inline';
-    setTimeout(()=>{ msgEl.style.display='none'; }, 3000);
-    g('nuEmail').value=''; g('nuName').value=''; g('nuPwd').value='';
+    await adminApi('addUser', {
+      email:email, name:name, pwd: await hashPwd(pwd),
+      team: g('nuTeam').value, games: g('nuGames').value.trim() || '*'
+    });
+    umFlash('addUserMsg', '✓ User added. They can sign in after the auth list refreshes (run refreshAuthUsers).');
+    g('nuEmail').value = ''; g('nuName').value = ''; g('nuPwd').value = '';
     loadUsers();
-  } catch(e){ alert('Error: '+e.message); }
+  } catch(e){ umFlash('addUserMsg', e.message, true); }
+  done();
 }
 
-async function changeRole(email, newRole){
-  const token = getToken();
-  const url = SHEET_API_URL
-    + '?action=updateRole&key='+encodeURIComponent(SHEET_API_KEY)
-    + '&token='+encodeURIComponent(token)
-    + '&email='+encodeURIComponent(email)
-    + '&role='+encodeURIComponent(newRole)
-    + '&_cb='+Date.now();
+async function umUpdate(email, fields){
+  /* Shown at once, saved in the background. Only a failed save re-reads the
+     sheet, which puts the row back to what is actually stored. */
+  const u = (UM.users || []).find(function(x){ return x.email === email; });
+  if(u) Object.assign(u, fields);
+  UM.busy[email] = 'Saving…'; renderUsersList(UM.users);
   try {
-    const res = await fetch(url, {redirect:'follow'});
-    const data = await res.json();
-    if(data.error){ alert('Error: '+data.error); return; }
+    await adminApi('updateUser', Object.assign({ email:email }, fields));
+    UM.busy[email] = '✓ Saved'; renderUsersList(UM.users);
+    // your own team changed: pick it up now, not on the next data download
+    if(CU && email.toLowerCase() === String(CU.username || '').toLowerCase()) refreshMyAccess();
+    setTimeout(function(){
+      if(UM.busy[email] === '✓ Saved'){ delete UM.busy[email]; renderUsersList(UM.users); }
+    }, 1800);
+  } catch(e){
+    delete UM.busy[email];
     loadUsers();
-  } catch(e){ alert('Error: '+e.message); }
+    umAlert('Could not save the change', e.message);
+  }
 }
+/* kept for any old caller */
+function changeRole(email, role){ return umUpdate(email, { role:role }); }
 
 async function removeUser(email){
-  if(!confirm('Remove user: '+email+'?')) return;
-  const token = getToken();
-  const url = SHEET_API_URL
-    + '?action=removeUser&key='+encodeURIComponent(SHEET_API_KEY)
-    + '&token='+encodeURIComponent(token)
-    + '&email='+encodeURIComponent(email)
-    + '&_cb='+Date.now();
+  if(!await umDialog({ title:'Remove user?', ok:'Remove', danger:true,
+    message: email + ' will no longer be able to open the dashboard.' })) return;
+  UM.busy[email] = 'Removing…'; renderUsersList(UM.users);
   try {
-    const res = await fetch(url, {redirect:'follow'});
-    const data = await res.json();
-    if(data.error){ alert('Error: '+data.error); return; }
-    loadUsers();
-  } catch(e){ alert('Error: '+e.message); }
+    await adminApi('removeUser', { email:email });
+    delete UM.busy[email];
+    UM.users = UM.users.filter(function(x){ return x.email !== email; });
+    renderUsersList(UM.users);
+  } catch(e){
+    delete UM.busy[email]; renderUsersList(UM.users);
+    umAlert('Could not remove the user', e.message);
+  }
 }
+
+/* ── Teams tab ── */
+function renderTeams(){
+  const sel = g('tmSelect'); if(!sel) return;
+  const names = teamNames();
+  if(!UM.team || names.indexOf(UM.team) === -1) UM.team = names[0] || '';
+  sel.innerHTML = names.length
+    ? names.map(function(t){ return '<option value="' + umEsc(t) + '">' + umEsc(t) + '</option>'; }).join('')
+    : '<option value="">No teams yet: create one</option>';
+  sel.value = UM.team;
+  tmRenderList();
+  tmPick(UM.team, true);
+}
+
+/* Right-hand column: every team, how many users are in it, and a Delete for
+   each. Clicking a name opens that team on the left. */
+function tmRenderList(){
+  const box = g('tmList'); if(!box) return;
+  const names = teamNames();
+  if(!names.length){ box.innerHTML = '<div class="um-hint">No teams yet.</div>'; return; }
+  box.innerHTML = names.map(function(t){
+    const n = (UM.users || []).filter(function(u){ return u.team === t; }).length;
+    const busy = UM.busy['team:' + t];
+    return '<div class="um-team-row' + (t === UM.team ? ' sel' : '') + '">'
+      + '<button type="button" class="um-team-name" data-team="' + umEsc(t) + '" onclick="tmPick(this.dataset.team)">'
+      +   umEsc(t) + '<small>' + n + (n === 1 ? ' user' : ' users') + '</small></button>'
+      + (busy ? umStatus(busy)
+              : '<button type="button" class="um-team-del" data-team="' + umEsc(t) + '" onclick="tmDelete(this.dataset.team)">Delete</button>')
+      + '</div>';
+  }).join('');
+}
+
+function tmPick(team, keepPage){
+  UM.team = team;
+  // keep the Team dropdown and the All teams highlight on the same team
+  const sel = g('tmSelect'); if(sel && sel.value !== team) sel.value = team;
+  tmRenderList();
+  UM.draft = JSON.parse(JSON.stringify(UM.teams[team] || {}));
+  if(!keepPage || !UM.draft[UM.page]) UM.page = Object.keys(UM.draft)[0] || '';
+  tmRenderPages(); tmRenderKpis();
+}
+
+function tmRenderPages(){
+  const box = g('tmPages');
+  if(!UM.team){ box.innerHTML = '<div class="um-hint">Create a team to start.</div>'; return; }
+  let group = '';
+  box.innerHTML = accessPages().map(function(p){
+    const on = Object.prototype.hasOwnProperty.call(UM.draft, p.id);
+    const head = p.group !== group ? '<div class="um-group">' + umEsc(group = p.group) + '</div>' : '';
+    const k = UM.draft[p.id];
+    const note = !on ? '' : (k === '*' ? 'all KPIs' : (Array.isArray(k) ? k.length + ' KPIs' : ''));
+    const hasKpis = accessKpis(p.id).length > 0;
+    return head + '<div class="um-page' + (UM.page === p.id ? ' sel' : '') + (on ? ' on' : '') + '">'
+      + '<label><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="tmTogglePage(\'' + p.id + '\',this.checked)"/> '
+      + '<span>' + umEsc(p.label) + '</span></label>'
+      + (on && hasKpis ? '<button type="button" class="um-kpi-btn" onclick="tmOpenPage(\'' + p.id + '\')">' + note + ' ›</button>'
+                       : (on ? '<span class="um-note">whole page</span>' : ''))
+      + '</div>';
+  }).join('');
+}
+
+function tmTogglePage(id, on){
+  if(on){ UM.draft[id] = '*'; UM.page = id; }
+  else { delete UM.draft[id]; if(UM.page === id) UM.page = Object.keys(UM.draft)[0] || ''; }
+  tmRenderPages(); tmRenderKpis();
+}
+function tmOpenPage(id){ UM.page = id; tmRenderPages(); tmRenderKpis(); }
+
+function tmRenderKpis(){
+  const box = g('tmKpis'), hd = g('tmKpisHd');
+  const id = UM.page;
+  if(!UM.team || !id || !Object.prototype.hasOwnProperty.call(UM.draft, id)){
+    hd.textContent = 'KPIs shown on that page';
+    box.innerHTML = '<div class="um-hint">Tick a page, then click its KPI count to choose KPIs.</div>';
+    return;
+  }
+  const meta = SECTION_META[id] || {};
+  hd.textContent = 'KPIs on ' + (meta.label || id);
+  const kpis = accessKpis(id);
+  if(!kpis.length){
+    box.innerHTML = '<div class="um-hint">This page has no KPI cards to pick from. The whole page is shown.</div>';
+    return;
+  }
+  const k = UM.draft[id], all = k === '*';
+  box.innerHTML = '<label class="um-all"><input type="checkbox"' + (all ? ' checked' : '') + ' onchange="tmAll(this.checked)"/> <b>All KPIs</b> <span class="um-note">(new KPIs added later show too)</span></label>'
+    + '<div class="um-kpis' + (all ? ' dim' : '') + '">' + kpis.map(function(x){
+      const on = all || (Array.isArray(k) && k.indexOf(x.id) !== -1);
+      return '<label class="um-kpi"><input type="checkbox"' + (on ? ' checked' : '') + (all ? ' disabled' : '')
+        + ' onchange="tmKpi(\'' + x.id + '\',this.checked)"/> ' + umEsc(x.label) + '</label>';
+    }).join('') + '</div>';
+}
+
+function tmAll(on){
+  UM.draft[UM.page] = on ? '*' : accessKpis(UM.page).map(function(x){ return x.id; });
+  tmRenderPages(); tmRenderKpis();
+}
+function tmKpi(id, on){
+  let k = UM.draft[UM.page];
+  if(!Array.isArray(k)) k = [];
+  k = k.filter(function(x){ return x !== id; });
+  if(on) k.push(id);
+  UM.draft[UM.page] = k;
+  tmRenderPages();
+}
+
+function tmCreate(){
+  const name = g('tmNew').value.trim();
+  if(!name) return;
+  if(UM.teams[name]){ umFlash('tmMsg', 'That team already exists.', true); return; }
+  UM.teams[name] = {};
+  g('tmNew').value = '';
+  UM.team = name;
+  renderTeams(); fillTeamSelects();
+  umFlash('tmMsg', 'Team created. Tick its pages, then Save team.');
+}
+
+/* A status that stays up until the save finishes (umFlash hides itself). */
+function umWorking(id, text){
+  const el = g(id); if(!el) return;
+  clearTimeout(el._t); el.classList.remove('bad');
+  el.innerHTML = umStatus(text); el.style.display = 'inline';
+}
+
+async function tmSave(){
+  if(!UM.team) return;
+  const done = umBtnBusy(g('tmSaveBtn'), 'Saving…');
+  umWorking('tmMsg', 'Saving team…');
+  try {
+    await adminApi('saveTeam', { team:UM.team, pages: JSON.stringify(UM.draft) });
+    UM.teams[UM.team] = JSON.parse(JSON.stringify(UM.draft));
+    umFlash('tmMsg', '✓ Saved. Members see the change on their next load.');
+    tmRenderPages();
+  } catch(e){ umFlash('tmMsg', e.message, true); }
+  done();
+}
+
+/** Deletes one team from the All teams list. `team` defaults to the one open. */
+async function tmDelete(team){
+  team = team || UM.team;
+  if(!team) return;
+  const inUse = UM.users.filter(function(u){ return u.team === team; }).length;
+  if(!await umDialog({ title:'Delete team "' + team + '"?', ok:'Delete', danger:true,
+    message: inUse
+      ? inUse + (inUse === 1 ? ' user is' : ' users are') + ' in this team and will see no pages until you move them to another team.'
+      : 'Nobody is in this team. Its page and KPI settings will be removed.' })) return;
+  const key = 'team:' + team;
+  UM.busy[key] = 'Deleting…'; tmRenderList();
+  try {
+    await adminApi('deleteTeam', { team:team });
+    delete UM.busy[key];
+    delete UM.teams[team];
+    if(UM.team === team) UM.team = '';
+    renderTeams(); fillTeamSelects();
+    umFlash('tmMsg', '✓ Team "' + team + '" deleted.');
+  } catch(e){
+    delete UM.busy[key]; tmRenderList();
+    umFlash('tmMsg', e.message, true);
+  }
+}
+
 
 // ═════════════════════════════════════════
 // CHART FACTORY
@@ -5122,7 +5572,7 @@ function makeChart(id, type, data, extra={}){
         borderWidth:1,
         padding:10,
         cornerRadius:8,
-        titleFont:{family:'Inter',size:11,weight:'600'},
+        titleFont:{family:'Segoe UI',size:11,weight:'600'},
         bodyFont:{family:CHART_FONT,size:11},
         boxPadding:5,
       }
@@ -5230,7 +5680,7 @@ function applyScope(scope){
  * Builds a report section's pane the first time it is opened.
  *
  * The iframe src is set here rather than in markup, so a report is downloaded
- * when somebody asks for it and not before - seven reports eagerly loaded would
+ * when somebody asks for it and not before - five reports eagerly loaded would
  * cost more than the whole dashboard. The token is already in sessionStorage
  * by the time this runs, and the report reads it there, which is the entire
  * reason the sign-in work came first.
@@ -5250,64 +5700,18 @@ function ensureReportPane(section){
   pane.id = 'tab-' + section.id;
   pane.innerHTML =
     '<iframe class="report-frame" title="' + esc_(section.label) + '"' +
-    ' src="' + reportUrl(section) + '"></iframe>' +
-    '<div class="report-loading" role="status" aria-live="polite">' +
-      '<div class="report-loading-logo" aria-hidden="true"></div>' +
-      '<div class="report-loading-txt">Loading ' + esc_(section.label) + '…</div>' +
-    '</div>';
-
-  /* loading="lazy" is gone from that iframe on purpose. It tells the browser
-     to defer until the frame is near the viewport - and this one is built
-     hidden, so "near the viewport" may not arrive until the pane is shown.
-     The whole point of building the pane on first open is that the download
-     starts NOW. */
-
+    ' src="' + reportUrl(section) + '" loading="lazy"></iframe>' +
+    /* the shared loading screen covers the pane until the report's page has
+       arrived; from there the report shows its own (same) loader */
+    '<div class="frame-loader" role="status" aria-label="Loading"></div>';
+  const frame = pane.querySelector('iframe');
+  if (frame) frame.addEventListener('load', function(){
+    const l = pane.querySelector('.frame-loader');
+    if (l) l.remove();
+  }, { once: true });
   const host = document.querySelector('.content');
   if(host) host.appendChild(pane);
-
-  markReportLoaded_(pane);
   return pane;
-}
-
-/**
- * Takes the loader down once the report's document has painted.
- *
- * Three ways out, and the page needs all three:
- *
- *   the frame's load event, which is the normal one;
- *
- *   a check for a frame that already finished - between building the pane and
- *   attaching the listener a cached report can be done, and a load event that
- *   has already fired will not fire again for a late listener;
- *
- *   a timeout, because load never fires for a frame that fails to load at
- *   all. A report that cannot be reached should show whatever it shows -
- *   its own error, or an empty frame - and not a cube floating forever over
- *   a page that is never coming. Twenty seconds is past any normal cold
- *   Apps Script start and well short of giving up on a slow one.
- */
-function markReportLoaded_(pane){
-  const frame = pane.querySelector('.report-frame');
-  if(!frame){ pane.classList.add('loaded'); return; }
-
-  let done = false;
-  const finish = function(){
-    if(done) return;
-    done = true;
-    pane.classList.add('loaded');
-  };
-
-  frame.addEventListener('load', finish, { once: true });
-
-  /* Same-origin only, and a cross-origin frame throws rather than answering -
-     which is itself fine, because then the load event is the only answer
-     available and it is still coming. */
-  try {
-    const doc = frame.contentDocument;
-    if(doc && doc.readyState === 'complete' && doc.URL !== 'about:blank') finish();
-  } catch (err) { /* cross-origin: wait for load */ }
-
-  setTimeout(finish, 20000);
 }
 
 /** Minimal escape for the one attribute built from a label. */
@@ -5318,9 +5722,16 @@ function esc_(s){
 }
 
 function goTab(id, el){
-  // If requested section isn't enabled for the current game, fall back to overview
-  if(!isEnabled(id)) id = 'overview';
+  // If requested section isn't enabled (game config or team access), fall back
+  // to overview, or to the first page this person may open.
+  if(!isEnabled(id)){
+    const first = getEnabledSections()[0];
+    id = isEnabled('overview') ? 'overview' : (first ? first.id : 'overview');
+  }
   currentTab = id;
+  if(id === 'alerts') staleSections.add(id);
+  if(id === 'overview') scheduleOverviewDataStatus();
+  else updateOverviewDataStatus();
 
   const section = getEnabledSections().find(function(s){ return s.id === id; }) || {};
   if(section.report) ensureReportPane(section);
@@ -5386,14 +5797,19 @@ function applySidebarState(collapsed){
 }
 
 /* The sidebar footer's user block: initial in a circle, name, role. */
+/* The chip under the sidebar shows the person's TEAM, since the team is what
+   decides access now ("Data", "UA", ...). The old role column (viewer /
+   admin) no longer means anything to the reader. Blank until the server has
+   said who this is, rather than a placeholder that is wrong. */
 function fillSidebarUser(){
   const name = (CU && (CU.name || CU.username)) || '';
-  const role = (CU && CU.role) || '';
+  const known = !!(CU && CU.access);
+  const team = known ? (String(CU.team || '').trim() || 'No team') : '';
   const av = g('sbAvatar'), nm = g('sbUserName'), rl = g('sbUserRole'), box = g('sbUser');
   if(av) av.textContent = name ? name.trim().charAt(0).toUpperCase() : '·';
   if(nm) nm.textContent = name;
-  if(rl) rl.textContent = role ? role.charAt(0).toUpperCase() + role.slice(1) : '';
-  if(box) box.title = name + (role ? ' · ' + role : '');
+  if(rl) rl.textContent = team;
+  if(box) box.title = name + (team ? ' · ' + team : '');
 }
 
 function toggleSidebar(){
@@ -5415,26 +5831,7 @@ function restoreSidebarState(){
   applySidebarState(collapsed);
 }
 
-function toggleTheme(){
-  const root = document.documentElement;
-  const dark = root.getAttribute('data-theme') === 'dark';
-  const next = dark ? 'light' : 'dark';
-  root.setAttribute('data-theme', next);
-  g('themeLbl').textContent = dark ? 'Dark mode' : 'Light mode';
-
-  /* The reports read localStorage['mss3d_theme'] and follow it, and the hub
-     used to be what wrote it. Now that they load inside this page and the hub
-     is gone, this is. Without it the shell switches to light and every report
-     framed inside it stays dark - which is exactly what happened the moment
-     the reports became iframes.
-
-     A storage write does not raise an event in the tab that made it, but it
-     does in every OTHER same-origin context, and each report is one. So the
-     frames repaint without being told anything else. */
-  try { localStorage.setItem('mss3d_theme', next); } catch (e) { /* blocked */ }
-
-  setTimeout(renderAll, 30);
-}
+/* toggleTheme() was here: the light theme was removed, the dashboard is dark only. */
 
 // ═════════════════════════════════════════
 // GAME SWITCH
@@ -5594,6 +5991,7 @@ async function applyDateFilter(){
   dateFrom = from;
   dateTo = to;
   activeRange = Math.round((new Date(to + 'T00:00:00Z') - new Date(from + 'T00:00:00Z')) / 86400000) + 1;
+  updateRangeLabel();
   try { await reloadForRange(); }
   finally { if(btn){ btn.textContent = 'Apply'; btn.disabled = false; } }
 }
@@ -5629,6 +6027,15 @@ async function reloadForRange(){
   }
 }
 
+function formatRangeDate(iso){
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if(!match) return iso || '';
+  const day = Number(match[3]);
+  const suffix = day >= 11 && day <= 13 ? 'th' : ({1:'st', 2:'nd', 3:'rd'}[day % 10] || 'th');
+  const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(match[2]) - 1];
+  return day + suffix + ' ' + month;
+}
+
 function updateRangeLabel(){
   const el = g('rangeLabel');
   const d  = curData();
@@ -5641,10 +6048,9 @@ function updateRangeLabel(){
     pl.style.borderColor = pl.style.color;
   }
   if(el){
-    const n = (d.meta && d.meta.days) || activeRange;
     el.textContent = (dateFrom === dateTo)
-      ? 'Single day · ' + dateFrom
-      : n + ' days · ' + dateFrom + ' → ' + dateTo;
+      ? formatRangeDate(dateFrom)
+      : formatRangeDate(dateFrom) + ' - ' + formatRangeDate(dateTo);
   }
   renderFreshness(d);
 }
@@ -5714,6 +6120,9 @@ function renderFreshness(d){
     return !s.latest || s.latest < dateFrom || s.latest > dateTo;
   });
   if(!stale.length){ box.innerHTML = ''; return; }
+  // which sources are empty is a note for the data team (and admins), not
+  // for everyone reading the dashboard
+  if(!isDataTeam()){ box.innerHTML = ''; return; }
 
   const label = function(s){
     if(!s.latest) return s.source + ' → no data';
@@ -5731,6 +6140,21 @@ function renderFreshness(d){
     + '<span class="fresh-list">' + stale.map(label).join('  ·  ') + '</span>'
     + (jumpTo ? '<button onclick="jumpToLatest()">Jump to latest data (' + jumpTo + ')</button>' : '')
     + '</div>';
+}
+
+/* Who can open User Management. The Data team is the admin; the backend's
+   access record (edit:true) and the old 'admin' role are accepted too, so a
+   team that has not reached the browser yet cannot lock the admin out. */
+function isAdminUser(){
+  if(!CU) return false;
+  return isDataTeam() || !!(CU.access && CU.access.edit) || CU.role === 'admin';
+}
+
+/** Anyone in a team whose name has "data" in it. */
+function isDataTeam(){
+  if(!CU) return false;
+  // data team only: admins and everyone else never see the sources warning
+  return /data/i.test(String(CU.team || ''));
 }
 
 /** Wipes every local copy and forces a fresh server read. */
@@ -5783,6 +6207,7 @@ async function jumpToLatest(){
 // value would be enough to sign in without ever knowing what was typed.
 
 let CU = null;   // { username, name, role } - the SERVER decides this, not the token
+let _booting = false;   // true while init() waits on access + data; one draw at the end
 
 /** Still used by addUser(); Auth.gs will grow per-user passwords next. */
 async function hashPwd(pwd){
@@ -5800,15 +6225,31 @@ async function hashPwd(pwd){
  */
 function applyUserRecord(u){
   if(!u || !u.username) return;
-  const before = CU && CU.role;
+  const before = CU ? (CU.team + '|' + JSON.stringify(CU.access || null)) : '';
   CU = {
     username: u.username,
     name: u.name || u.username,
-    role: String(u.role || 'viewer').toLowerCase()
+    role: String(u.role || 'viewer').toLowerCase(),
+    team: u.team || '',
+    // what this person may see; absent = nothing, never everything
+    access: u.access || { full:false, pages:{} }
   };
+  console.info('[dash] signed in as', CU.username, '| role:', CU.role, '| team:', CU.team || '(none)');
   const el = g('unameEl');
   if(el) el.textContent = CU.name;
-  if(CU.role !== before) buildNav();
+  fillSidebarUser();                        // name + team under the sidebar
+  // During sign-in init() draws everything once, after access and data are in.
+  if(_booting) return;
+  // the data-source warning depends on the team
+  try { if(typeof DATA !== 'undefined' && DATA[currentGame]) renderFreshness(DATA[currentGame]); } catch(e){}
+  if(CU.team + '|' + JSON.stringify(CU.access) !== before){
+    buildNav();
+    filterKpis();
+    scheduleOverviewDataStatus();
+    renderGrowthUsNotices(curData().us);
+    // the page on screen may have just become off-limits
+    if(!isEnabled(currentTab)) goTab(currentTab, null);
+  }
 }
 
 async function doLogin(){
@@ -5881,6 +6322,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if(checkSession()) return;
   g('loginScreen').style.display = 'flex';
   g('appShell').style.display = 'none';
+  hideBootOverlay();
 });
 
 
@@ -5937,6 +6379,9 @@ window.__shell = {
  * source and keeping those this script actually declares.
  * ========================================================================= */
 Object.assign(window, {
+  /* User Management: Users | Teams */
+  umShow, umUpdate, tmPick, tmTogglePage, tmOpenPage, tmAll, tmKpi, tmCreate, tmSave, tmDelete,
+  alertsScan,
   addFeedback,
   addUser,
   applyDateFilter,
@@ -5958,5 +6403,4 @@ Object.assign(window, {
   saveThresh,
   syncNow,
   toggleSidebar,
-  toggleTheme,
 });

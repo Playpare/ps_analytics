@@ -53,6 +53,24 @@ body{font-family:var(--font-body);font-size:14px;-webkit-font-smoothing:antialia
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .sb-footer code{color:var(--mut);word-break:break-all}
 
+/* Creative navigation uses the same horizontal header-tab pattern as the UA
+   report. The old left rail is no longer part of this report's layout. */
+.app-shell{flex-direction:column}
+.sidebar{width:100%;height:auto;min-height:62px;overflow:visible;border-right:0;border-bottom:1px solid var(--bor);flex-direction:row;align-items:center;padding:10px 20px;background:#000}
+.sb-header,.sb-group,.sb-footer{display:none!important}
+.sb-nav{display:flex;align-items:center;gap:8px;flex:0 1 auto;padding:0;overflow:visible}
+.sb-item{width:auto;min-height:40px;margin:0;padding:10px 17px;border:1px solid rgba(255,255,255,.16);border-radius:22px;background:#0b0c0f;font-size:14px;white-space:nowrap}
+.sb-item:hover{border-color:var(--acc);background:rgba(77,159,255,.1)}
+.sb-item.on{color:#05121a;background:linear-gradient(90deg,#18d6d0,#4d9fff);border-color:transparent;font-weight:700;box-shadow:none}
+.sb-item .cnt{display:none!important}
+.main-area{height:auto;flex:1;min-height:0}
+.hamburger{display:none}
+.app-shell.sidebar-collapsed .sidebar{width:100%}
+.app-shell.sidebar-collapsed .sb-nav{padding:0}
+.app-shell.sidebar-collapsed .sb-item{justify-content:space-between;padding:10px 17px;margin:0}
+.app-shell.sidebar-collapsed .sb-item .sbi-l{font-size:14px;gap:10px}
+.app-shell.sidebar-collapsed .sb-item .icn{width:14px;height:14px}
+
 .main-area{flex:1;min-width:0;height:100vh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
 .main-topbar{display:flex;align-items:center;gap:18px;padding:19px 28px;border-bottom:0.5px solid var(--bor);background:var(--sur);position:sticky;top:0;z-index:10;flex-wrap:wrap}
 .hamburger{display:inline-flex;width:42px;height:42px;background:rgba(77,159,255,.1);border:1px solid rgba(77,159,255,.32);color:var(--acc);cursor:pointer;padding:9px;border-radius:9px;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
@@ -65,9 +83,9 @@ body{font-family:var(--font-body);font-size:14px;-webkit-font-smoothing:antialia
 select.inp{color-scheme:dark}
 select.inp option{background:#171a25;color:#f2f4ff;font-weight:600}
 select.inp option:checked{background:#274d78;color:#fff}
-.main-topbar>#search,.main-actions .inp,.main-actions .btn:not(#adminBtn):not(#logoutBtn){background:rgba(77,159,255,.1);border-color:rgba(77,159,255,.32);color:#eaf4ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.main-topbar>#search{width:240px;min-width:210px;min-height:42px}
-.main-topbar>#search:focus,.main-actions .inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(77,159,255,.12)}
+.sb-tools>#search,.main-actions .inp,.main-actions .btn:not(#adminBtn):not(#logoutBtn){background:rgba(77,159,255,.1);border-color:rgba(77,159,255,.32);color:#eaf4ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.sb-tools>#search{width:240px;min-width:210px;min-height:42px}
+.sb-tools>#search:focus,.main-actions .inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(77,159,255,.12)}
 .main-actions select.inp option{background:#101827;color:#eaf4ff}
 .inp::placeholder{color:var(--mut)}
 input.inp{cursor:text;min-width:190px}
@@ -395,3 +413,26 @@ input.inp:focus,select.inp:focus{border-color:var(--acc)}
 .admin-msg.err{background:rgba(240,82,82,.08);border:0.5px solid rgba(240,82,82,.3);color:var(--red)}
 .admin-msg.ok{background:rgba(0,229,195,.08);border:0.5px solid rgba(0,229,195,.3);color:var(--teal)}
 .admin-sel{background:#111725;color:var(--text);border:1px solid rgba(77,159,255,.24);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700;font-family:inherit}
+
+/* Keep the header tabs horizontal on smaller screens; they scroll instead of
+   reverting to the former off-canvas sidebar. */
+@media(max-width:860px){
+  .sidebar,.app-shell.sidebar-collapsed .sidebar{position:relative;inset:auto;transform:none;width:100%;height:auto;min-height:58px;box-shadow:none;padding:9px 12px;overflow-x:auto;overflow-y:hidden}
+  .sidebar.open{transform:none}
+  .sb-nav{min-width:max-content}
+}
+
+/* the top header, left and right, in solid black */
+.main-topbar,.sidebar,.sb-header{background:#000!important}
+/* and the page behind the content in the same black */
+:root{--bg:#000}
+html,body,.app-shell,.main-area,.page-content{background:#000!important}
+
+/* one header line: page buttons, search right after them, the filters at
+   the far right; no grey rules, and no title row beneath it */
+.sidebar{border-bottom:0!important;flex-wrap:nowrap!important;gap:12px!important}
+.main-topbar{display:none!important}
+.sb-tools{display:flex!important;align-items:center;gap:12px;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+.sb-tools>#search{flex:0 1 240px;width:240px;min-width:150px;min-height:40px}
+.sb-tools>.main-actions{margin-left:auto;flex-wrap:nowrap}
+.tabs{border-bottom:0!important}

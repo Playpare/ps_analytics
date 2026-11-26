@@ -49,7 +49,6 @@ document.querySelectorAll('.card div').forEach(el=>{
 
 /* --- from weekly_report.html · block e28313ffee --- */
 /* ---- API client: URL arrives via ?api= from the hub, token via sessionStorage ---- */
-window.__themeRerender = function(){ if (STATE && STATE.data) renderAll(STATE.data); };
 
 /* Available before the first API request starts. The report contains large
    embedded fallback datasets later in the document, so defining this helper
@@ -291,7 +290,7 @@ const clockTime=d=>new Date(d).toLocaleTimeString('en-US',{hour:'numeric',minute
 const longRange=(a,b)=>a&&b?shortDate(a)+' - '+shortDate(b)+', '+String(b).slice(0,4):'N/A';
 const change=(cur,prev)=>finite(cur)&&finite(prev)&&prev!==0?(cur-prev)/Math.abs(prev):null;
 const deltaText=(cur,prev,suffix='')=>{const d=change(cur,prev);if(!finite(d))return 'Previous comparison unavailable';return (d>=0?'+':'-')+num(Math.abs(d)*100,1)+'%'+suffix;};
-const deltaHTML=(cur,prev,formatter)=>{const d=change(cur,prev);if(!finite(d))return '<span style="color:var(--t3)">Previous comparison unavailable</span>';return '<span class="'+(d>=0?'up':'down')+'">'+(d>=0?'+':'-')+num(Math.abs(d)*100,1)+'% WoW</span> <span style="color:var(--t3);font-family:\'DM Mono\'">vs '+formatter(prev)+' previous</span>';};
+const deltaHTML=(cur,prev,formatter)=>{const d=change(cur,prev);if(!finite(d))return '<span style="color:var(--t3)">Previous comparison unavailable</span>';return '<span class="'+(d>=0?'up':'down')+'">'+(d>=0?'+':'-')+num(Math.abs(d)*100,1)+'% WoW</span> <span style="color:var(--t3);font-family:\'Segoe UI\'">vs '+formatter(prev)+' previous</span>';};
 const sum=o=>Object.values(o||{}).reduce((a,v)=>a+(finite(v)?v:0),0);
 
 function slide(title){return [...document.querySelectorAll('.slide')].find(s=>clean(s.querySelector('.h1')?.textContent).includes(title));}
@@ -355,9 +354,9 @@ function maskCardByHeading(s,heading,message){
   card.style.position='relative';card.querySelectorAll('.live-cover').forEach(x=>x.remove());const cover=document.createElement('div');cover.className='live-cover';cover.textContent=message;card.appendChild(cover);
 }
 function chartLabels(labels){return (labels||[]).map(shortDate);}
-Chart.defaults.font.family='Poppins';Chart.defaults.font.size=11;Chart.defaults.font.weight='400';Chart.defaults.color='#c0ccdf';
-Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
-function commonOptions(yFormatter,stacked){return {responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#a6b8d4',boxWidth:10,font:{family:'Poppins',size:12.5,weight:'400'}}},tooltip:{callbacks:{title:items=>{const v=items&&items[0]?items[0].label:'';return /^\d{4}-\d{2}-\d{2}/.test(v)?shortDate(v):v;},label:c=>' '+c.dataset.label+': '+yFormatter(c.parsed.y)}}},scales:{x:{stacked:!!stacked,grid:{display:false},ticks:{color:'#a6b8d4',font:{family:'Poppins',size:11,weight:'400'},maxRotation:0,autoSkip:false,callback:function(value){const label=this.getLabelForValue(value);if(!/^\d{4}-\d{2}-\d{2}/.test(label))return label;const d=new Date(label.slice(0,10)+'T00:00:00');return !isNaN(d)&&d.getDay()===1?shortDate(label):'';}}},y:{stacked:!!stacked,beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#a6b8d4',font:{family:'Poppins',size:11,weight:'400'},callback:yFormatter,maxTicksLimit:5}}}};}
+Chart.defaults.font.family='Segoe UI';Chart.defaults.font.size=11;Chart.defaults.font.weight='400';Chart.defaults.color='#c0ccdf';
+Chart.defaults.plugins.legend.labels.font={family:'Segoe UI',size:12.5,weight:'400'};
+function commonOptions(yFormatter,stacked){return {responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#a6b8d4',boxWidth:10,font:{family:'Segoe UI',size:12.5,weight:'400'}}},tooltip:{callbacks:{title:items=>{const v=items&&items[0]?items[0].label:'';return /^\d{4}-\d{2}-\d{2}/.test(v)?shortDate(v):v;},label:c=>' '+c.dataset.label+': '+yFormatter(c.parsed.y)}}},scales:{x:{stacked:!!stacked,grid:{display:false},ticks:{color:'#a6b8d4',font:{family:'Segoe UI',size:11,weight:'400'},maxRotation:0,autoSkip:false,callback:function(value){const label=this.getLabelForValue(value);if(!/^\d{4}-\d{2}-\d{2}/.test(label))return label;const d=new Date(label.slice(0,10)+'T00:00:00');return !isNaN(d)&&d.getDay()===1?shortDate(label):'';}}},y:{stacked:!!stacked,beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#a6b8d4',font:{family:'Segoe UI',size:11,weight:'400'},callback:yFormatter,maxTicksLimit:5}}}};}
 function fitLineWindow(labels,series){
   labels=Array.isArray(labels)?labels:[];
   const actual=(series||[]).filter(s=>!s.dash&&Array.isArray(s.data));
@@ -382,7 +381,7 @@ const liveEndLabels={
   afterDatasetsDraw(chart,args,options){
     const {ctx,chartArea}=chart,formatter=options?.formatter||String;
     const labels=[];
-    ctx.save();ctx.font='400 12.5px Poppins,system-ui,sans-serif';
+    ctx.save();ctx.font='400 12.5px Segoe UI,system-ui,sans-serif';
     chart.data.datasets.forEach((dataset,datasetIndex)=>{
       const meta=chart.getDatasetMeta(datasetIndex);if(meta.hidden)return;
       let last=-1;for(let i=(dataset.data||[]).length-1;i>=0;i--){if(finite(dataset.data[i])){last=i;break;}}
@@ -419,7 +418,7 @@ const livePiePercentLabels={
     meta.data.forEach((arc,index)=>{
       const value=values[index],percent=finite(value)?value/total*100:0,arcLength=(arc.endAngle-arc.startAngle)*arc.outerRadius,thickness=arc.outerRadius-arc.innerRadius;
       const text=num(percent,1)+'%';
-      ctx.save();ctx.font='500 14px Poppins,system-ui,sans-serif';const width=ctx.measureText(text).width;
+      ctx.save();ctx.font='500 14px Segoe UI,system-ui,sans-serif';const width=ctx.measureText(text).width;
       if(percent<3||arcLength<width+10||thickness<18){ctx.restore();return;}
       const angle=(arc.startAngle+arc.endAngle)/2,radius=(arc.innerRadius+arc.outerRadius)/2,point={x:arc.x+Math.cos(angle)*radius,y:arc.y+Math.sin(angle)*radius};
       ctx.textAlign='center';ctx.textBaseline='middle';

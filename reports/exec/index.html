@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://cdnjs.cloudflare.com; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; base-uri 'self'; object-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://cdnjs.cloudflare.com; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; base-uri 'self'; object-src 'none';">
 <title>Playspare Pulse · Executive</title>
 <!-- The Playspare cube, stated here rather than assigned by script.
      It used to be a rel=icon link with an id and NO href, filled in
@@ -18,8 +18,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Quicksand:wght@500;600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/style.css"/>
+<link rel="stylesheet" href="../../design/reports/exec/style.css"/>
 </head>
 <body>
 <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
@@ -84,7 +83,6 @@
       <button class="tbtn" id="refreshBtn">↻ Refresh</button>
       <button class="tbtn" id="csvBtn">↓ CSV</button>
       <button class="tbtn" id="pdfBtn">↓ PDF</button>
-      <button class="tbtn" id="themeBtn">☀ Light</button>
       <span class="rolePill" id="rolePill"></span>
       <span class="uname" id="unameEl"></span>
       <button class="tbtn" id="logoutBtn">Sign Out</button>
@@ -104,8 +102,8 @@
         <button class="presetBtn" data-preset="thisQuarter">This Quarter</button>
         <button class="presetBtn" data-preset="thisYear">This Year</button>
         <div class="tsep u-style-011"></div>
-        <select class="fsel" id="fGame"><option value="">🎮 All Games</option></select>
-        <select class="fsel" id="fPlat"><option value="">📱 All Platforms</option></select>
+        <select class="fsel" id="fGame"><option value="">All Games</option></select>
+        <select class="fsel" id="fPlat"><option value="">All Platforms</option></select>
         <div class="tsep u-style-011"></div>
         <label class="u-style-012">From</label>
         <input type="date" class="fsel" id="fFrom"/>
@@ -168,8 +166,8 @@
       </div>
 
       <!-- DAILY OVERVIEW -->
-      <div class="card u-style-013">
-        <div class="cardHead"><span>📈 Daily Overview</span></div>
+      <div class="card u-style-013 exec-zoom-card daily-overview-card">
+        <div class="cardHead"><span>Daily Overview</span></div>
         <div class="u-style-014"><canvas id="dailyChart"></canvas></div>
       </div>
 
@@ -182,7 +180,7 @@
         <!-- PROJECTED -->
         <div class="projCard">
           <div class="cardHead">
-            <span>🎯 Month Projection</span>
+            <span>Month Projection</span>
             <span class="smartBadge">⚡ Smart EXP</span>
           </div>
           <!-- Month Filter -->
@@ -243,7 +241,7 @@
           <div class="gaugeWrap">
             <div class="gaugeTitle" id="qGaugeTitle">Quarter GP Target</div>
             <div class="gaugeRel">
-              <canvas id="gaugeQ" width="210" height="108"></canvas>
+              <canvas id="gaugeQ" width="390" height="202"></canvas>
             </div>
             <div class="gaugeInfo">
               <div class="gPct" id="gQpct">0%</div>
@@ -279,7 +277,7 @@
 
         <!-- MONTHLY TABLE (right column) -->
         <div class="card monthlyCard u-style-021">
-          <div class="cardHead"><span>📅 Monthly Achievement</span></div>
+          <div class="cardHead"><span>Monthly Achievement</span></div>
           <table class="mTable">
             <thead><tr>
               <th>Month</th><th>Target</th><th>Profit</th>
@@ -291,14 +289,14 @@
       </div>
 
       <!-- TARGET vs ACTUAL -->
-      <div class="card u-style-013">
-        <div class="cardHead"><span>📊 Target vs Actual — Profit, ROI & Variance</span></div>
+      <div class="card u-style-013 exec-zoom-card target-actual-card">
+        <div class="cardHead"><span>Target vs Actual — Profit, ROI & Variance</span></div>
         <div class="u-style-022"><canvas id="targetChart"></canvas></div>
       </div>
 
 
       <!-- GAME ANALYSIS SECTION -->
-      <div class="secTitle" id="gameAnalysis">🎮 Game Analysis</div>
+      <div class="secTitle" id="gameAnalysis">Game Analysis</div>
 
       <!-- Platform filter for game charts -->
       <div class="u-style-028">
@@ -315,12 +313,12 @@
         </button>
       </div>
 
-      <div class="g2 u-style-013">
-        <div class="card">
+      <div class="g2 u-style-013 exec-game-grid">
+        <div class="card exec-zoom-card game-performance-card">
           <div class="cardHead"><span>Revenue & Profit by Game</span><span class="u-style-025">MSS combined · legacy grouped<span id="gameBarPlatLbl" class="u-style-031"></span></span></div>
           <div id="gameBarList" class="gbar-list"></div>
         </div>
-        <div class="card">
+        <div class="card exec-zoom-card roi-ranking-card">
           <div class="cardHead"><span>ROI Ranking — Game &amp; Platform</span></div>
           <table id="roiRankTable" class="u-style-032"></table>
           <button class="gbar-expand u-style-010" id="roiExpandBtn"></button>
@@ -349,7 +347,7 @@
      Do not move them back without reading this.
 
      They are classic scripts that share one global scope: utils.js declares
-     getSession, charts, isLight; app.js and dashboard.js use them by name.
+     getSession and charts; app.js and dashboard.js use them by name.
      Vite can only bundle a <script> that says type="module", and a module has
      its own scope - converting them would make every one of those shared
      names invisible to the others, in a page that still parses and still
@@ -369,5 +367,7 @@
 <script src="js/dashboard.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/app.js"></script>
+<!-- Dashboard design (same look as the Overview) + UA-style date dropdown. -->
+<script type="module" src="../../design/reports/exec/exec-pro.js"></script>
 </body>
 </html>

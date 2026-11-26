@@ -24,6 +24,12 @@ import annotationPlugin from 'chartjs-plugin-annotation';
    have to discover this file first. */
 Chart.register(annotationPlugin);
 
+/* A dotted trend line under every line series, on every page and report that
+   draws with this Chart.js (the hub, the five reports, Executive). See
+   trend-line.js for what it skips and how to switch it off per chart. */
+import trendLine from './trend-line.js';
+Chart.register(trendLine);
+
 /* The report bundles construct charts through the bare global, exactly as
    they did when a <script src> put it there. */
 window.Chart = Chart;

@@ -1,0 +1,322 @@
+/* ---------------------------------------------------------------------------
+ * design.css — ASO page clean-up. Layout and type only; no colours change.
+ * ------------------------------------------------------------------------- */
+
+/* ===== Date bars and warnings removed on every ASO tab =====
+   ("Period · Oct 19 – Nov 15 · 28 days · daily granularity · live from Google
+   Sheets", the ANR-threshold and untranslated-reviews notes, …)
+   Hidden rather than deleted: the report still writes into these boxes, so
+   its code keeps working. The "Where They Differ" section on the Overview
+   (Star Rating Mix, Review Volume by Day) is shown again. */
+html body #ovRangeBar, html body #anRangeBar, html body #ioRangeBar, html body #rvRangeBar,
+html body #ovWarnings, html body #anWarnings, html body #ioWarnings, html body #rvNote { display: none !important }
+
+/* ===== KPI cards: the Overview card design on every tab =====
+   Sized like the UA Report's KPI cards - same padding, a bold headline
+   number, one supporting line (the extra small note line is dropped). */
+html body .view .kpi:not(#_) {
+  padding: 16px 20px !important; min-height: 0 !important;
+  display: flex; flex-direction: column; justify-content: center;
+}
+html body .view .kpi .v:not(#_) {
+  font-size: clamp(24px, 2.2vw, 32px) !important; font-weight: 700 !important;
+  letter-spacing: -.02em !important; line-height: 1.15 !important; margin: 8px 0 6px !important;
+}
+html body .view .kpi .duo:not(#_) { margin: 8px 0 6px !important; gap: 12px !important; align-items: flex-end }
+html body .view .kpi .wl:not(#_) { font-size: 12px !important; font-weight: 600 !important; letter-spacing: .06em !important }
+html body .view .kpi .wv:not(#_) {
+  font-size: clamp(22px, 2vw, 30px) !important; font-weight: 700 !important;
+  letter-spacing: -.02em !important; line-height: 1.15 !important;
+}
+html body .view .kpi .wv.big:not(#_) { font-size: clamp(24px, 2.2vw, 32px) !important }
+html body .view .kpi .sep:not(#_) { font-size: 12px !important; font-weight: 600 !important; padding-bottom: 6px }
+html body .view .kpi .p:not(#_) { display: none !important }   /* the small explanatory note */
+
+/* space between card rows that stack (e.g. Ratings: 3 cards, then the 5 star shares) */
+html body .view .kpi-row + .kpi-row { margin-top: 16px !important }
+
+/* ===== Theme Detail tables (Android + IOS), zoomed in ===== */
+html body #tblAnThemes table:not(#_), html body #tblIoThemes table:not(#_) { font-size: 16px !important }
+html body #tblAnThemes th:not(#_), html body #tblIoThemes th:not(#_) {
+  font-size: 15px !important; font-weight: 600 !important; padding: 12px 14px !important;
+}
+html body #tblAnThemes td:not(#_), html body #tblIoThemes td:not(#_),
+html body #tblAnThemes td:not(#_) *, html body #tblIoThemes td:not(#_) * {
+  font-size: 16px !important;
+}
+html body #tblAnThemes td:not(#_), html body #tblIoThemes td:not(#_) { padding: 12px 14px !important }
+html body #tblAnThemes td.num:not(#_), html body #tblIoThemes td.num:not(#_) { font-size: 16.5px !important; font-weight: 600 !important }
+
+/* the small grey subtitle beside every ASO card title ("Mixed = also raised
+   something else", "share of written reviews at each star" …) - was ~9px */
+html body .card h2 em:not(#_) { font-size: 13.5px !important; font-weight: 500 !important; letter-spacing: 0 !important; margin-left: 8px }
+
+/* section headings on the Android / IOS / Reviews tabs ("Stability",
+   "Ratings", "Reviews" …) and their tags, sized like the Overview headings */
+html body .secth h3:not(#_) { font-size: 22px !important; font-weight: 700 !important; letter-spacing: -.01em !important }
+html body .secth .tag:not(#_) { font-size: 12px !important; font-weight: 600 !important; letter-spacing: .1em !important; padding: 5px 12px !important }
+
+/* ===== Stability cards: up / down line =====
+   green ▼ = the rate fell (better), amber ▲ = it rose (worse) */
+html body .view .kpi .d .tr { font-weight: 600; white-space: nowrap }
+html body .view .kpi .d .tr.down { color: var(--green) }
+html body .view .kpi .d .tr.up { color: var(--amber) }
+html body .view .kpi .d .tr.flat { color: var(--t2) }
+html body .view .kpi .d .tr-sub { color: var(--t2); font-weight: 500 }
+
+/* ===== Reviews: filter bar as one tidy toolbar (as on Life Time) ===== */
+html body #reviews .filterbar:not(#_) {
+  gap: 14px !important; align-items: flex-end !important; padding: 4px 2px !important;
+}
+html body #reviews .filterbar .fgroup > span:not(#_) {
+  font-size: 12px !important; font-weight: 600 !important; letter-spacing: .1em !important; margin-bottom: 2px;
+}
+html body #reviews .filterbar select:not(#_), html body #reviews .filterbar input:not(#_) {
+  height: 40px !important; min-height: 40px !important; border-radius: 999px !important;
+  font-size: 15px !important; font-weight: 500 !important;
+}
+html body #reviews .filterbar select:not(#_) { padding: 0 36px 0 16px !important; max-width: 220px !important }
+html body #reviews .filterbar input:not(#_) { padding: 0 16px !important }
+html body #reviews .filterbar input[type=search]:not(#_) { min-width: 300px !important }
+html body #reviews .filterbar .btn:not(#_) {
+  height: 40px !important; padding: 0 20px !important; border-radius: 999px !important;
+  font-size: 15px !important; font-weight: 600 !important;
+}
+html body #reviews .fcount:not(#_), html body #reviews .fcount *:not(#_) {
+  font-size: 15px !important; font-weight: 500 !important; letter-spacing: 0 !important;
+}
+html body #reviews .fcount b:not(#_) { font-weight: 700 !important }
+
+/* ===== Review tables (Reviews tab + "Read the Reviews" on Android / IOS) ===== */
+html body #reviews table th:not(#_), html body #tblAnQuickRv th:not(#_), html body #tblIoQuickRv th:not(#_) {
+  font-size: 14px !important; font-weight: 600 !important; letter-spacing: 0 !important; padding: 12px 14px !important;
+}
+html body #reviews table td:not(#_), html body #tblAnQuickRv td:not(#_), html body #tblIoQuickRv td:not(#_) {
+  font-size: 15.5px !important; line-height: 1.55 !important; padding: 14px !important;
+}
+html body #reviews .stars:not(#_), html body #tblAnQuickRv .stars:not(#_), html body #tblIoQuickRv .stars:not(#_) {
+  font-size: 16px !important; letter-spacing: 1.5px !important;
+}
+html body #reviews .chip:not(#_), html body #tblAnQuickRv .chip:not(#_), html body #tblIoQuickRv .chip:not(#_) {
+  font-size: 13px !important; font-weight: 600 !important; padding: 5px 12px !important; border-radius: 999px !important;
+}
+/* the star-filter chips above the quick review tables */
+html body #anQuickRvChips .pill:not(#_), html body #ioQuickRvChips .pill:not(#_),
+html body #anQuickRvChips button:not(#_), html body #ioQuickRvChips button:not(#_) {
+  height: 36px !important; padding: 0 16px !important; border-radius: 999px !important;
+  font-size: 14px !important; font-weight: 500 !important;
+}
+html body #reviews .filterbar select:not(#_) { min-width: 140px !important }
+html body #reviews .filterbar .fgroup:has(> select[id*=heme]) select:not(#_) { min-width: 200px !important }
+
+/* ===== Android vs IOS cards: one arrow per platform ===== */
+html body .view .kpi .d .tr-pl { color: var(--t2); font-weight: 600; margin-right: 6px }
+html body .view .kpi .d .tr-gap { color: var(--t3); margin: 0 10px }
+html body .view .kpi .d .tr-vs { color: var(--t2); font-weight: 500; margin-left: 6px }
+html body .view .kpi .d:has(.tr-pl) { display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 2px }
+
+/* ============================================================================
+   REVIEWS - redesigned
+   ========================================================================== */
+
+/* the filters sit in one rounded panel */
+html body #reviews .filterbar:not(#_) {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 16px 20px !important; margin: 4px 0 20px !important;
+  gap: 14px 16px !important; box-shadow: var(--shs);
+}
+html body #reviews .filterbar .fgroup > span:not(#_) { color: var(--t2) !important; font-size: 11.5px !important }
+/* search box with a magnifier */
+html body #reviews .filterbar input[type=search]:not(#_) {
+  padding-left: 42px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23a6b8d4' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m11 11 3.5 3.5'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important; background-position: 16px 50% !important;
+}
+/* Reset is a quiet outline button, not a second primary */
+html body #reviews .filterbar .btn:not(#_) {
+  background: transparent !important; color: var(--t1) !important; border: 1px solid var(--borderB) !important;
+}
+html body #reviews .filterbar .btn:not(#_):hover { border-color: var(--teal) !important; color: var(--teal) !important }
+/* the count reads as a chip on the right */
+html body #reviews .fcount:not(#_) {
+  margin-left: auto !important; align-self: center !important;
+  background: var(--card2); border: 1px solid var(--border); border-radius: 999px; padding: 9px 16px;
+}
+
+/* ---- review tables: Reviews tab + "Read the Reviews" on Android / IOS ---- */
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) table:not(#_) { table-layout: fixed; width: 100% }
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) th:not(#_) {
+  font-size: 12.5px !important; font-weight: 600 !important; letter-spacing: .08em !important;
+  text-transform: uppercase !important; color: var(--t2) !important; padding: 13px 16px !important;
+  border-bottom: 1px solid var(--borderB) !important;
+}
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) td:not(#_) {
+  padding: 16px !important; vertical-align: top !important; border-bottom: 1px solid var(--border) !important;
+}
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) tbody tr:hover td:not(#_) { background: rgba(255, 255, 255, .025) !important }
+
+/* column widths - see the "column order" block further down */
+/* the review itself: the most readable thing in the row */
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) td:last-child:not(#_) {
+  color: var(--t1) !important; font-size: 15.5px !important; line-height: 1.6 !important; overflow-wrap: anywhere;
+}
+
+/* rating badge */
+html body .rv-rate:not(#_) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 56px; height: 28px; padding: 0 10px; border-radius: 999px;
+  font-size: 14px !important; font-weight: 700 !important; letter-spacing: 0 !important; white-space: nowrap;
+}
+html body .rv-rate.r5:not(#_), html body .rv-rate.r4:not(#_) { background: rgba(0, 196, 122, .16); color: var(--green) !important }
+html body .rv-rate.r3:not(#_) { background: rgba(255, 184, 0, .16); color: var(--amber) !important }
+html body .rv-rate.r2:not(#_), html body .rv-rate.r1:not(#_), html body .rv-rate.r0:not(#_) { background: rgba(255, 77, 109, .16); color: var(--coral) !important }
+
+/* theme tags: the main theme filled, the rest outlined, wrapping in a row */
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) .chip:not(#_) {
+  display: inline-flex !important; width: auto !important; margin: 0 6px 6px 0 !important;
+  padding: 5px 12px !important; border-radius: 999px !important;
+  font-size: 13px !important; font-weight: 600 !important; letter-spacing: 0 !important;
+  background: transparent !important; border: 1px solid var(--borderB) !important; color: var(--t2) !important;
+}
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) .chip.main:not(#_) {
+  background: rgba(77, 159, 255, .18) !important; border-color: transparent !important; color: var(--t1) !important;
+}
+/* the review column takes whatever the fixed columns leave (ASO pinned it at
+   50%, which spread the leftover space across every column) */
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) :is(th, td):last-child:not(#_) { width: auto !important }
+
+/* ---- review tables in the Overview card typography ----
+   headers read like the KPI card labels; cells are medium weight like the
+   cards' supporting lines; the date is semibold */
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) th:not(#_):not(#_) {
+  font-size: 13px !important; font-weight: 500 !important; letter-spacing: .1em !important;
+}
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) td:last-child:not(#_):not(#_) { font-weight: 500 !important }
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) .rv-number:not(#_):not(#_) {
+  font-size: 15px !important; font-weight: 600 !important; color: var(--t1) !important; white-space: nowrap;
+}
+
+/* ---- nothing may push the page wider than the window ----
+   A review of hundreds of emoji with no spaces (or a very long URL) used to
+   stretch the table, and with it the whole page, so the filter count and the
+   right edge of every row were cut off. */
+html body #reviews .sb, html body #reviews .card { min-width: 0; max-width: 100% }
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv):not(#_) { max-width: 100%; overflow-x: hidden !important }
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) td:last-child:not(#_):not(#_) {
+  overflow-wrap: anywhere !important; word-break: break-word !important; white-space: normal !important;
+}
+html body #reviews .filterbar:not(#_) { flex-wrap: wrap !important; max-width: 100% }
+
+/* ============================================================================
+   REVIEWS - layout after the reference design (font sizes unchanged)
+   ========================================================================== */
+
+/* ---- filter bar ---- */
+/* calendar icon on From / To, refresh icon on Reset */
+html body #reviews .filterbar .fgroup:is(:has(#fFrom), :has(#fTo)) .dd-btn:not(#_)::before,
+html body #reviews .filterbar #fReset:not(#_)::before {
+  content: ''; width: 15px; height: 15px; flex: none; background: currentColor; opacity: .75;
+  -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat;
+}
+html body #reviews .filterbar .fgroup:is(:has(#fFrom), :has(#fTo)) .dd-btn:not(#_) {
+  --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Crect x='2' y='3' width='12' height='11' rx='2'/%3E%3Cpath d='M2 6.5h12M5.5 1.8v2.4M10.5 1.8v2.4'/%3E%3C/svg%3E");
+  justify-content: flex-start; gap: 10px;
+}
+html body #reviews .filterbar .fgroup:is(:has(#fFrom), :has(#fTo)) .dd-btn:not(#_) .dd-chev { margin-left: auto }
+html body #reviews .filterbar #fReset:not(#_) {
+  --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 8a5.5 5.5 0 1 0 1.7-4'/%3E%3Cpath d='M2.5 2.5v3h3'/%3E%3C/svg%3E");
+  display: inline-flex !important; align-items: center; gap: 8px;
+}
+/* a divider between the date pair and the other filters */
+html body #reviews .filterbar .fgroup:has(#fTo) { padding-right: 18px; margin-right: 4px; border-right: 1px solid var(--borderB) }
+
+/* the count chip: teal-tinted, "count | avg", the average in amber */
+html body #reviews .fcount:not(#_) {
+  display: inline-flex !important; align-items: center; gap: 0;
+  background: rgba(0, 229, 195, .07) !important; border: 1px solid rgba(0, 229, 195, .28) !important;
+  border-radius: 12px !important; padding: 10px 16px !important; color: var(--t2) !important;
+}
+html body #reviews .fcount .fc-n b:not(#_) { color: var(--t1) !important; margin-right: 4px }
+html body #reviews .fcount .fc-avg:not(#_) { margin-left: 14px; padding-left: 14px; border-left: 1px solid var(--borderB) }
+html body #reviews .fcount .fc-avg b:not(#_) { color: var(--amber) !important; margin-left: 4px }
+html body #reviews .fcount .fc-load:not(#_) { margin-left: 14px; color: var(--amber) !important }
+
+/* ---- the table sits flush in the card, header as a darker strip ---- */
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv).tablewrap:not(#_) {
+  border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important;
+  border-top: 1px solid var(--border) !important;
+}
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) th:not(#_):not(#_) { background: var(--card2) !important; color: var(--t3) !important }
+/* the column being sorted is highlighted */
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) th:has(.sortmark):not(#_):not(#_),
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) th .sortmark { color: var(--teal) !important }
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) th .sortmark { margin-left: 6px; font-size: .8em }
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) td:not(#_):not(#_) { vertical-align: top !important }
+
+/* rating: a small outlined badge */
+html body .rv-rate:not(#_):not(#_) { border-radius: 7px !important; min-width: 48px; border: 1px solid }
+html body .rv-rate.r5:not(#_):not(#_), html body .rv-rate.r4:not(#_):not(#_) { background: rgba(0, 196, 122, .1) !important; border-color: rgba(0, 196, 122, .45) }
+html body .rv-rate.r3:not(#_):not(#_) { background: rgba(255, 184, 0, .1) !important; border-color: rgba(255, 184, 0, .45) }
+html body .rv-rate:is(.r2, .r1, .r0):not(#_):not(#_) { background: rgba(255, 77, 109, .1) !important; border-color: rgba(255, 77, 109, .45) }
+
+/* language: a small boxed tag */
+html body .rv-lang:not(#_) {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 26px; padding: 0 8px;
+  border: 1px solid var(--borderB); border-radius: 7px; background: var(--card2);
+  color: var(--t2); font-weight: 600; letter-spacing: .06em;
+}
+
+/* theme tags: each theme its own colour, a dot before the name */
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) .chip[data-t]:not(#_):not(#_) {
+  --c: #8a96ab;
+  align-items: center; gap: 7px;
+  background: color-mix(in srgb, var(--c) 11%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent) !important;
+  color: var(--c) !important;
+}
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) .chip[data-t]::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--c); flex: none;
+}
+.chip[data-t="ads"]          { --c: #ffb800 !important }
+.chip[data-t="praise"]       { --c: #00c47a !important }
+.chip[data-t="complaint"]    { --c: #ff4d6d !important }
+.chip[data-t="bug"]          { --c: #ff7a59 !important }
+.chip[data-t="connectivity"] { --c: #a87cf0 !important }
+.chip[data-t="request"]      { --c: #4d9fff !important }
+.chip[data-t="gameplay"]     { --c: #00e5c3 !important }
+.chip[data-t="progress"]     { --c: #19a6d8 !important }
+.chip[data-t="monetization"] { --c: #ec0a9b !important }
+.chip[data-t="performance"]  { --c: #ff9f43 !important }
+.chip[data-t="other"]        { --c: #8a96ab !important }
+/* ---- column order & widths ----
+   All Reviews (Google Play, 7 columns):
+     Date · User Name · Rating · Lang · Themes · Device · Review
+   All Reviews (App Store, 5 columns - no Lang / Device in that store):
+     Date · User Name · Rating · Themes · Review
+   "Read the Reviews" cards (3 columns): Rating · Date · Review
+   The review column always takes whatever is left. */
+html body #tblReviews th:nth-child(1):not(#_):not(#_) { width: 96px !important }    /* date */
+/* Android: Date · Rating · Lang · Themes · Device · Review
+   iOS:     Date · Rating · Themes · Review */
+html body #tblReviews th:nth-child(2):not(#_):not(#_) { width: 88px !important }    /* rating */
+html body #tblReviews table:has(th:nth-child(6)) th:nth-child(3):not(#_):not(#_) { width: 74px !important }   /* lang */
+html body #tblReviews table:has(th:nth-child(6)) th:nth-child(4):not(#_):not(#_),
+html body #tblReviews table:not(:has(th:nth-child(5))) th:nth-child(3):not(#_):not(#_) { width: 280px !important } /* themes */
+html body #tblReviews table:has(th:nth-child(6)) th:nth-child(5):not(#_):not(#_) { width: 170px !important }  /* device */
+html body :is(#tblAnQuickRv, #tblIoQuickRv) th:nth-child(1):not(#_):not(#_) { width: 96px !important }
+html body :is(#tblAnQuickRv, #tblIoQuickRv) th:nth-child(2):not(#_):not(#_) { width: 104px !important }
+
+/* Themes cell: the pills wrap onto more lines inside their own column
+   instead of running over Device and Review */
+html body #tblReviews td:has(> .chip):not(#_):not(#_) {
+  white-space: normal !important; overflow: hidden; padding-right: 16px !important; line-height: 1.9 !important;
+}
+html body #tblReviews td:has(> .chip) > .chip:not(#_):not(#_) {
+  display: inline-flex !important; margin: 0 6px 6px 0 !important; max-width: 100%; white-space: nowrap;
+}
+
+/* user name and device: one line, ellipsis if long; missing ones a quiet dash */
+html body .rv-user:not(#_) { display: block; font-weight: 600; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+html body .rv-dev:not(#_) { display: block; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+html body .rv-none:not(#_) { color: var(--t3) }
+html body :is(#tblReviews, #tblAnQuickRv, #tblIoQuickRv) .rv-lang:not(#_):not(#_) { font-size: 12.5px !important; font-weight: 600 !important }

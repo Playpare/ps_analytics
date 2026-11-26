@@ -4,22 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Playspare Pulse</title>
-<!-- THE PLAYSPARE CUBE, which is what the browser tab was missing.
-     This document carried no favicon of any kind, so every tab showed the
-     browser's own globe placeholder - not a wrong icon, an absent one. A
-     rel=icon is only honoured when it is in the markup at parse time, so it
-     is stated here and never assigned by script. -->
-<link rel="icon" type="image/png" href="assets/images/playspare-cube.png">
-<link rel="apple-touch-icon" href="assets/images/playspare-cube.png">
 
 
 
-  <!-- Reads mss3d_theme and stamps data-theme before the first paint. It has
-       to be inline and render-blocking: a module script is deferred, so a theme
-       applied from JS lands one frame late and anyone on light sees a flash of
-       black. The reports inside this page read the same key, so shell and
-       frames now agree from the very first frame rather than after a toggle. -->
-  <!--THEME_BOOT-->
 </head>
 <!-- Default scope, so the range strip is present on the first paint. The
      CSS hides it for report scopes, and applyScope() overwrites this
@@ -27,11 +14,13 @@
      paint, and without a starting value the strip would flash away and
      back on every load of a game section. -->
 <body data-scope="game">
+<div id="bootOverlay" role="status" aria-label="Loading"></div>
 
 <div id="loginScreen" style="display:flex">
   <div class="loginCard">
-    <h1 class="loginH">Game Analytics</h1>
-    <p class="loginSub">Sign in to access the dashboard</p>
+    <img class="loginLogo" src="assets/images/pulse-logo.png" alt="Playspare Pulse">
+    <h1 class="loginH">Welcome back</h1>
+    <p class="loginSub">Sign in to your dashboard</p>
     <!-- The Authentication tab lists full email addresses, so the placeholder
          shows one. "your username" sent people to type a bare name that is not
          on the list, and Auth.gs answers an unknown name and a wrong password
@@ -40,7 +29,7 @@
     <div class="lf"><label>Password</label><input id="lPass" type="password" placeholder="Enter password" autocomplete="current-password"/></div>
     <button class="loginBtn" onclick="doLogin()">Sign In</button>
     <div class="loginErr" id="loginErr"></div>
-    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)">Restricted access — authorized users only</div>
+    <div class="loginNote">Restricted access — authorized users only</div>
   </div>
 </div>
 
@@ -49,11 +38,9 @@
 <aside class="sidebar">
   <div class="sb-top">
     <div class="sb-logo">
-      <div class="sb-mark" id="sbMark">PP</div>
-      <div class="sb-text">
-        <div class="sb-game" id="sbGameName">PlaySpare Pulse</div>
-        <div class="sb-sub">Analytics</div>
-      </div>
+      <!-- the playspare | Pulse logo (logo.png) -->
+      <img class="sb-wordmark sb-pulse-logo" id="sbMark" src="/assets/images/pulse-logo.png" alt="Playspare Pulse">
+      <div class="sb-game" id="sbGameName" hidden>Pulse</div>
     </div>
     <!-- collapse / expand lives in the sidebar itself now (it used to sit at
          the left of the topbar) -->
@@ -68,10 +55,7 @@
   <div class="sb-footer">
     <!-- the signed-in user (filled from the session, see fillSidebarUser) -->
     <div class="sb-user" id="sbUser" title=""><div class="sb-av" id="sbAvatar">&middot;</div><div class="sb-who"><div class="sb-uname" id="sbUserName"></div><div class="sb-role" id="sbUserRole"></div></div></div>
-    <button class="theme-btn sb-theme" onclick="toggleTheme()" title="Switch light / dark">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="3.2"/><line x1="8" y1="1" x2="8" y2="2.5"/><line x1="8" y1="13.5" x2="8" y2="15"/><line x1="1" y1="8" x2="2.5" y2="8"/><line x1="13.5" y1="8" x2="15" y2="8"/><line x1="3" y1="3" x2="4.1" y2="4.1"/><line x1="11.9" y1="11.9" x2="13" y2="13"/><line x1="13" y1="3" x2="11.9" y2="4.1"/><line x1="4.1" y1="11.9" x2="3" y2="13"/></svg>
-      <span id="themeLbl">Light mode</span>
-    </button>
+    <!-- (the light / dark switch was removed: the dashboard is dark only) -->
     <!-- Moved out of the topbar. Sign out is not a thing you reach for while
          reading a report, and sitting beside SYNC it was one slip away from
          ending the session instead of refreshing it. Down here it keeps the
@@ -89,14 +73,21 @@
     <button class="icon-btn" id="sbToggle" onclick="toggleSidebar()" title="Collapse sidebar" aria-label="Toggle sidebar">
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="1.5" y="2.5" width="13" height="11" rx="1.6"/><line x1="6" y1="2.5" x2="6" y2="13.5"/></svg>
     </button>
-    <div class="topbar-title" id="topTitle">Overview</div>
+    <div class="topbar-heading">
+      <div class="topbar-title" id="topTitle">Overview</div>
+      <button type="button" id="overviewDataStatus" class="overview-data-status" onclick="goTab('alerts')" hidden>
+        <span class="overview-data-icon" aria-hidden="true">&#9888;&#65038;</span>
+        <span id="overviewDataStatusLabel"></span>
+      </button>
+    </div>
     <div class="topbar-range">
       <label class="range-lbl" for="rangePreset">Range</label>
+      <span id="rangeLabel" class="range-coverage"></span>
       <select class="range-select" id="rangePreset" data-popup="accent" onchange="onPresetChange()">
-        <option value="14">Last 2 weeks</option>
-        <option value="28">Last 4 weeks</option>
-        <option value="42">Last 6 weeks</option>
-        <option value="56">Last 8 weeks</option>
+        <option value="14">Last 14 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="60">Last 60 days</option>
+        <option value="90">Last 90 days</option>
         <option value="custom">Custom (from &ndash; to)</option>
         <option value="single">Single date</option>
       </select>
@@ -121,7 +112,6 @@
   <div class="rangebar">
     <div class="range-pills">
       <span id="platBadge" style="display:none;font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;border:1px solid var(--text3);border-radius:20px;padding:2px 9px;margin-left:8px;align-self:center"></span>
-      <span id="rangeLabel" style="font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-left:6px;align-self:center"></span>
     </div>
     <div class="date-inline" id="dateInline" style="display:none">
       <div class="date-group" id="dateFromGroup">
@@ -192,43 +182,26 @@
           <div class="card-hd"><span class="card-title">Stability <span class="card-sub">Crash & ANR</span></span><span class="card-cta">Details →</span></div>
           <div class="stat-grid" id="ovStab"></div>
         </div>
-        <div class="card clickable ov-section-card" data-section="rating" onclick="goToTab('rating')">
-          <div class="card-hd"><span class="card-title">Player Rating <span class="card-sub">in-game star rating</span></span><span class="card-cta">Details →</span></div>
-          <div id="ovRating"></div>
-        </div>
+        <!-- The Player Rating card stood here; the Player Rating page was
+             removed on request, so Stability now takes the full row. -->
       </div>
     </div>
 
     <!-- ── GROWTH ── -->
     <div class="tab-pane" id="tab-growth">
       <div class="section-label">Acquisition</div>
-      <div class="kpi-grid g3" id="growthAcqKpis"></div>
-      <div class="kpi-grid g3" id="growthAcqKpis2"></div>
-      <div class="card">
+
+      <div class="growth-headline-kpis">
+        <div class="kpi-grid g3" id="growthAcqKpis"></div>
+        <div class="kpi-grid g3" id="growthAcqKpis2"></div>
+      </div>
+
+      <p class="growth-context">ROI compares channel revenue with spend in this period. D7 ROAS measures payback on matured install cohorts.</p>
+
+      <div class="row row-2b growth-chart-row">
+        <div class="card">
         <div class="card-hd"><span class="card-title">Daily installs <span class="card-sub" id="installsSrcNote">—</span></span></div>
         <div class="cv-wrap tall"><canvas id="cvGrowthInstalls"></canvas></div>
-      </div>
-
-      <div class="card">
-        <div class="card-hd"><span class="card-title">Ad impressions by cohort day <span class="card-sub">how ad exposure decays after install — every ad type together</span></span></div>
-        <div class="cv-wrap tall"><canvas id="cvPlayAdCohort"></canvas></div>
-      </div>
-
-      <div class="row row-2b">
-        <div class="card">
-          <div class="card-hd"><span class="card-title">ROAS maturity <span class="card-sub">how much of its cost a cohort has paid back, by age</span></span></div>
-          <div class="cv-wrap tall"><canvas id="cvRoasMaturity"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Stickiness <span class="card-sub">DAU ÷ MAU — both from stickiness_combined, which counts ~20% more DAU than the Installs/DAU cards</span></span></div>
-          <div class="cv-wrap tall"><canvas id="cvStickiness"></canvas></div>
-        </div>
-      </div>
-
-      <div class="row row-2b">
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Store listing conversion <span class="card-sub">store visitors → acquisitions by source</span></span></div>
-          <div class="cv-wrap tall"><canvas id="cvGrowthAcqFunnel"></canvas></div>
         </div>
         <div class="card">
           <div class="card-hd"><span class="card-title">UA Spend vs Revenue <span class="card-sub">Sheet1: Spend (AG) vs Revenue (AF)</span></span></div>
@@ -236,20 +209,39 @@
         </div>
       </div>
 
-      <div class="card tbl-big tbl-scroll">
-        <div class="card-hd"><span class="card-title">Channel performance <span class="card-sub">attributed installs only — will not sum to Total Installs</span></span></div>
-        <div class="tbl-head eleven"><span>Channel</span><span>Share</span><span>Spend</span><span>Attr. installs</span><span>CPI</span><span>D0 ROAS</span><span>D7 ROAS</span><span>D28 ROAS</span><span>D1 ret.</span><span>D7 ret.</span><span>D30 ret.</span></div>
-        <div id="growthSourceTbl"></div>
+      <div class="row row-2b growth-chart-row">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">ROAS maturity <span class="card-sub">how much of its cost a cohort has paid back, by age</span></span></div>
+          <div class="cv-wrap tall"><canvas id="cvRoasMaturity"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Store listing conversion <span class="card-sub">store visitors → acquisitions by source</span></span></div>
+          <div class="cv-wrap tall"><canvas id="cvGrowthAcqFunnel"></canvas></div>
+        </div>
       </div>
 
       <div class="card tbl-big">
-        <div class="card-hd"><span class="card-title">Campaign performance <span class="card-sub">attributed installs only · top spend</span></span></div>
-        <div class="tbl-head ten"><span>Campaign</span><span>Cost</span><span>Attr. installs</span><span>eCPI</span><span>D0 ROAS</span><span>D7 ROAS</span><span>D28 ROAS</span><span>D1 ret.</span><span>D7 ret.</span><span>D30 ret.</span></div>
-        <div id="growthCampaignTbl"></div>
+      <div class="card-hd"><span class="card-title">Channel performance <span class="card-sub">attributed installs only — will not sum to Total Installs</span></span></div>
+      <div class="tbl-scroll growth-table" tabindex="0" role="region" aria-label="Channel performance table">
+        <div class="tbl-head eleven"><span>Channel</span><span>Share</span><span>Spend</span><span>Attr. installs</span><span>CPI</span><span>D0 ROAS</span><span>D7 ROAS</span><span>D28 ROAS</span><span>D1 ret.</span><span>D7 ret.</span><span>D30 ret.</span></div>
+        <div id="growthSourceTbl"></div>
+        </div>
+        <p class="growth-context">Attributed installs are a separate measure from total installs.</p>
       </div>
 
-      <!-- ── Spend & install matrix (Sheet4 mirror) ── -->
-      <div class="card">
+      <section class="growth-section">
+        <div class="card tbl-big">
+        <div class="card-hd"><span class="card-title">Campaign performance <span class="card-sub">attributed installs only · top spend</span></span></div>
+        <div class="tbl-scroll growth-table" tabindex="0" role="region" aria-label="Campaign performance table">
+          <div class="tbl-head ten"><span>Campaign</span><span>Cost</span><span>Attr. installs</span><span>eCPI</span><span>D0 ROAS</span><span>D7 ROAS</span><span>D28 ROAS</span><span>D1 ret.</span><span>D7 ret.</span><span>D30 ret.</span></div>
+          <div id="growthCampaignTbl"></div>
+          </div>
+          <p class="growth-context">Ranked by attributed spend.</p>
+        </div>
+      </section>
+
+      <section class="growth-section">
+        <div class="card">
         <div class="card-hd">
           <span class="card-title">Spend &amp; install matrix
             <span class="card-sub">Sheet4 rows · columns follow the range filter</span></span>
@@ -272,85 +264,92 @@
           <table class="mx" id="mxTable"></table>
         </div>
         <div class="mx-meta" style="margin-top:8px">Scroll sideways for older columns, or hold <b>Shift</b> and use the wheel. Row labels and the header stay pinned.</div>
-      </div>
-
-      <div class="section-label mon">Monetization</div>
-      <div class="kpi-grid g4" id="growthMonKpis"></div>
-      <div class="kpi-grid g4" id="growthMonKpis2"></div>
-      <div class="row row-2b">
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Revenue trend <span class="card-sub">all revenue — IAP and ads, stacked</span></span></div>
-          <div id="growthRevenueWrap"><div class="cv-wrap tall"><canvas id="cvGrowthRevenue"></canvas></div></div>
         </div>
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Cumulative LTV curve <span class="card-sub">revenue per install by day since install</span></span></div>
-          <div class="cv-wrap tall"><canvas id="cvGrowthLtv"></canvas></div>
-        </div>
-      </div>
+      </section>
 
-      <div class="row row-2b">
+      <section class="growth-section">
+        <h2 class="section-label">Stickiness &amp; ad exposure</h2>
+        <div class="row row-2b growth-chart-row">
+          <div class="card">
+            <div class="card-hd"><span class="card-title">Stickiness <span class="card-sub">DAU ÷ MAU — both from stickiness_combined, which counts ~20% more DAU than the Installs/DAU cards</span></span></div>
+            <div class="cv-wrap tall"><canvas id="cvStickiness"></canvas></div>
+          </div>
+          <div class="card">
+          <div class="card-hd"><span class="card-title">Ad impressions by cohort day <span class="card-sub">how ad exposure decays after install — every ad type together</span></span></div>
+          <div class="cv-wrap tall"><canvas id="cvPlayAdCohort"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="growth-section">
+        <div class="section-label" role="heading" aria-level="2">Monetization &amp; payer detail</div>
+        <div class="kpi-grid g4" id="growthMonKpis"></div>
+        <div class="kpi-grid g4" id="growthMonKpis2"></div>
+        <div class="row row-2b growth-chart-row">
+          <div class="card">
+            <div class="card-hd"><span class="card-title">Revenue trend <span class="card-sub">all revenue — IAP and ads, stacked</span></span></div>
+            <div id="growthRevenueWrap"><div class="cv-wrap tall"><canvas id="cvGrowthRevenue"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><span class="card-title">Cumulative LTV curve <span class="card-sub">revenue per install by day since install</span></span></div>
+            <div class="cv-wrap tall"><canvas id="cvGrowthLtv"></canvas></div>
+          </div>
+        </div>
         <div class="card">
           <div class="card-hd"><span class="card-title">First-time payer conversion <span class="card-sub">share of installs that become payers</span></span></div>
           <div class="cv-wrap tall"><canvas id="cvGrowthFtp"></canvas></div>
         </div>
-      </div>
+      </section>
 
-      <!-- United States.
-
-           Money from the stores' own sales reports, people from GA4, because
-           neither store will give a buyer count by country. The two are
-           separated on screen for the same reason they are separated in the
-           backend: on 29 Oct 2026 the GA4 US buyer figures were reported as
-           wrong, and the revenue beside them does not depend on any of it.
-
-           One axis per chart. Revenue and buyers are different scales and a
-           second y-axis would let any pair of lines be drawn as agreeing. -->
-      <div class="section-label mon">United States <span class="section-sub">store revenue · GA4 buyers</span></div>
-      <div id="growthUsNote"></div>
-      <div class="kpi-grid g4" id="growthUsKpis"></div>
-      <div class="row row-2b">
-        <div class="card">
-          <div class="card-hd"><span class="card-title">US revenue <span class="card-sub">what buyers paid, before the store's cut</span></span></div>
-          <div class="cv-wrap tall"><canvas id="cvGrowthUsRev"></canvas></div>
+      <section class="growth-section">
+        <div class="section-label" role="heading" aria-level="2">United States</div>
+        <div id="growthUsNote"></div>
+        <div class="kpi-grid g4" id="growthUsKpis"></div>
+        <div class="row row-2b growth-chart-row">
+          <div class="card">
+            <div class="card-hd"><span class="card-title">US revenue <span class="card-sub">what buyers paid, before the store's cut</span></span></div>
+            <div class="cv-wrap tall"><canvas id="cvGrowthUsRev"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><span class="card-title">US buyers <span class="card-sub">distinct people per day, from GA4</span></span></div>
+            <div class="cv-wrap tall"><canvas id="cvGrowthUsBuyers"></canvas></div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-hd"><span class="card-title">US buyers <span class="card-sub">distinct people per day, from GA4</span></span></div>
-          <div class="cv-wrap tall"><canvas id="cvGrowthUsBuyers"></canvas></div>
-        </div>
-      </div>
+      </section>
 
-      <div class="card tbl-big">
+      <section class="growth-section">
+        <h2 class="section-label">Ad networks &amp; ad types</h2>
+        <div class="card tbl-big">
         <div class="card-hd"><span class="card-title">Ad network performance <span class="card-sub">ad revenue only — excludes IAP</span></span></div>
-        <div class="tbl-head five"><span>Network</span><span>Revenue</span><span>Impressions</span><span>eCPM</span><span>Fill rate</span></div>
-        <div id="growthNetworkTbl"></div>
-      </div>
-
-      <div class="card tbl-big">
+        <div class="tbl-scroll growth-table" tabindex="0" role="region" aria-label="Ad network performance table">
+          <div class="tbl-head five"><span>Network</span><span>Revenue</span><span>Impressions</span><span>eCPM</span><span>Fill rate</span></div>
+          <div id="growthNetworkTbl"></div>
+          </div>
+          <p class="growth-context">Ad revenue excludes in-app purchases.</p>
+        </div>
+        <div class="card tbl-big">
         <div class="card-hd"><span class="card-title">Ad type performance <span class="card-sub">User Activity Raw · impressions reconstructed from Imp/dau × DAU</span></span></div>
-        <div class="tbl-head five"><span>Ad type</span><span>Revenue</span><span>Impressions</span><span>eCPM</span><span>Viewer rate</span></div>
-        <div id="growthAdTypeTbl"></div>
-      </div>
+        <div class="tbl-scroll growth-table" tabindex="0" role="region" aria-label="Ad type performance table">
+          <div class="tbl-head five"><span>Ad type</span><span>Revenue</span><span>Impressions</span><span>eCPM</span><span>Viewer rate</span></div>
+          <div id="growthAdTypeTbl"></div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- ── RETENTION ── -->
     <div class="tab-pane" id="tab-retention">
-      <div class="kpi-grid g4" id="retKpis"></div>
+      <div class="kpi-grid g5" id="retKpis"></div>
       <div class="card" style="margin-bottom:14px">
         <div class="card-hd"><span class="card-title">Cohort retention <span class="card-sub">daily cohorts × D1-D7 · D14</span></span><span class="card-badge" id="cohortBadge">—</span></div>
         <div id="retHeatmap"></div>
       </div>
-      <div class="row row-2b">
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Retention decay curve <span class="card-sub">avg % still active by day since install</span></span></div>
-          <div class="cv-wrap tall"><canvas id="cvRetCurve"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-hd"><span class="card-title">Churn by day <span class="card-sub">share of the cohort lost each day</span></span></div>
-          <div class="cv-wrap tall"><canvas id="cvRetChurn"></canvas></div>
-        </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hd"><span class="card-title">Retention decay curve</span></div>
+        <div class="cv-wrap tall"><canvas id="cvRetCurve"></canvas></div>
       </div>
       <div class="card" style="margin-bottom:14px">
-        <div class="card-hd"><span class="card-title">Retention by platform <span class="card-sub">D1-D7 · D14 · Android vs iOS</span></span><span class="card-badge" id="retPlatBadge">—</span></div>
+        <div class="card-hd"><span class="card-title">Retention by platform</span><span class="card-badge" id="retPlatBadge">—</span></div>
         <div class="cv-wrap tall"><canvas id="cvRetPlatform"></canvas></div>
       </div>
       <div class="card">
@@ -471,11 +470,10 @@
       <div class="prog-bar">
         <label class="range-lbl" for="progRange">Progression window</label>
         <select class="range-select" id="progRange" data-popup="accent" onchange="onProgRangeChange()">
-          <option value="7">Last week</option>
-          <option value="14">Last 2 weeks</option>
-          <option value="28">Last 4 weeks</option>
-          <option value="42">Last 6 weeks</option>
-          <option value="56">Last 8 weeks</option>
+          <option value="14">Last 14 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="60">Last 60 days</option>
+          <option value="90">Last 90 days</option>
         </select>
         <span class="grain-badge" id="eventsWindow" style="margin-left:0"></span>
         <span class="prog-status" id="progStatus"></span>
@@ -517,23 +515,10 @@
 
     <!-- ── THRESHOLDS ── -->
     <div class="tab-pane" id="tab-thresholds">
-      <!-- Executive targets come first because they are the ones somebody
-           opens this page to change. They are portfolio-wide - every game,
-           for a year - while the thresholds below are per-game, so the two
-           are separate cards rather than one list with a mixed meaning. -->
-      <div class="card" id="execTargetsCard" style="max-width:680px;margin-bottom:18px">
-        <div class="card-hd"><span class="card-title">Executive targets
-          <span class="card-sub">monthly profit &amp; ROI goals · all games</span></span></div>
-        <div id="execTargetsHost"></div>
-      </div>
-
       <div class="card" style="max-width:680px">
         <div class="card-hd"><span class="card-title">Alert thresholds <span class="card-sub">drive the alert strip</span></span></div>
         <div class="thresh-grid" id="threshGrid"></div>
-        <div style="margin-top:18px;display:flex;align-items:center;gap:14px">
-          <button class="btn-primary" id="threshSaveBtn" onclick="saveThresh()">Save thresholds</button>
-          <span class="thresh-lbl" id="threshMsg"></span>
-        </div>
+        <div style="margin-top:18px"><button class="btn-primary" onclick="saveThresh()">Save thresholds</button></div>
       </div>
       <div class="notice" style="margin-top:16px;max-width:680px">
         🎮 Games &amp; Google Sheet IDs Apps Script (<span style="color:var(--cyan)">Code.gs</span>) mein manage hongay — Phase 2 mein backend deploy karengay.
@@ -542,57 +527,94 @@
 
     <!-- ── USER MANAGEMENT ── -->
     <div class="tab-pane" id="tab-users">
-      <div style="max-width:760px">
+      <!-- Users | Teams. Admin only (see user_access.md). -->
+      <div class="um-tabs" role="tablist">
+        <button type="button" class="um-tab on" data-um="users" onclick="umShow('users')">Users</button>
+        <button type="button" class="um-tab" data-um="teams" onclick="umShow('teams')">Teams</button>
+      </div>
 
-        <!-- Add user form -->
-        <div class="card" style="margin-bottom:16px" id="addUserCard">
-          <div class="card-hd"><span class="card-title">Add user <span class="card-sub">admin only</span></span></div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-lbl">Email</label>
-              <input class="form-ctrl" id="nuEmail" type="email" placeholder="user@company.com"/>
-            </div>
-            <div class="form-group">
-              <label class="form-lbl">Name</label>
-              <input class="form-ctrl" id="nuName" placeholder="Full name"/>
-            </div>
+      <!-- ── USERS ── -->
+      <div class="um-pane" id="umUsers">
+        <div class="card" id="addUserCard">
+          <div class="card-hd"><span class="card-title">Add user</span></div>
+          <div class="um-form">
+            <div class="form-group"><label class="form-lbl" for="nuEmail">Email</label>
+              <input class="form-ctrl" id="nuEmail" type="email" placeholder="user@company.com"/></div>
+            <div class="form-group"><label class="form-lbl" for="nuName">Name</label>
+              <input class="form-ctrl" id="nuName" placeholder="Full name"/></div>
+            <div class="form-group"><label class="form-lbl" for="nuPwd">Password</label>
+              <input class="form-ctrl" id="nuPwd" type="password" placeholder="First password"/></div>
+            <div class="form-group"><label class="form-lbl" for="nuTeam">Team</label>
+              <select class="form-ctrl" id="nuTeam" data-popup><option value="">No team</option></select></div>
+            <div class="form-group"><label class="form-lbl" for="nuGames">Games</label>
+              <input class="form-ctrl" id="nuGames" placeholder="* for all, or mss_android,mss_ios" value="*"/></div>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-lbl">Password</label>
-              <input class="form-ctrl" id="nuPwd" type="password" placeholder="Set password"/>
-            </div>
-            <div class="form-group">
-              <label class="form-lbl">Role</label>
-              <select class="form-ctrl" id="nuRole">
-                <option value="viewer">Viewer — read only</option>
-                <option value="manager">Manager — read + feedback</option>
-                <option value="admin">Admin — full access</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group" style="margin-bottom:14px">
-            <label class="form-lbl">Games access</label>
-            <input class="form-ctrl" id="nuGames" placeholder="* for both, or: mss_android,mss_ios" value="*"/>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px">
-            <button class="btn-primary" onclick="addUser()">Add user</button>
-            <span id="addUserMsg" style="font-family:var(--mono);font-size:11px;color:var(--lime);display:none"></span>
+          <div class="um-actions">
+            <button class="btn-primary" id="nuAddBtn" onclick="addUser()">Add user</button>
+            <span id="addUserMsg" class="um-msg"></span>
           </div>
         </div>
 
-        <!-- Users list -->
         <div class="card">
           <div class="card-hd">
             <span class="card-title">All users</span>
-            <button onclick="loadUsers()" style="font-family:var(--mono);font-size:11px;color:var(--cyan);background:none;border:none;cursor:pointer;font-weight:600">↻ Refresh</button>
+            <button type="button" class="um-link" onclick="loadUsers()">↻ Refresh</button>
           </div>
-          <div id="usersList">
-            <div class="notice">Loading users…</div>
+          <div id="usersList"><div class="notice">Loading users…</div></div>
+        </div>
+      </div>
+
+      <!-- ── TEAMS ── -->
+      <div class="um-pane" id="umTeams" style="display:none">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Team access</span></div>
+          <div class="um-teambar">
+            <div class="form-group"><label class="form-lbl" for="tmSelect">Team</label>
+              <select class="form-ctrl" id="tmSelect" data-popup onchange="tmPick(this.value)"></select></div>
+            <div class="form-group"><label class="form-lbl" for="tmNew">New team</label>
+              <div class="um-inline">
+                <input class="form-ctrl" id="tmNew" placeholder="e.g. UA, Product"/>
+                <button type="button" class="um-btn" onclick="tmCreate()">+ Create</button>
+              </div></div>
+          </div>
+
+          <div class="um-access">
+            <div class="um-col">
+              <div class="um-col-hd">Pages this team can open</div>
+              <div id="tmPages"></div>
+            </div>
+            <div class="um-col">
+              <div class="um-col-hd" id="tmKpisHd">KPIs shown on that page</div>
+              <div id="tmKpis"><div class="um-hint">Tick a page, then click its name to choose KPIs.</div></div>
+            </div>
+            <div class="um-col">
+              <div class="um-col-hd">All teams</div>
+              <div id="tmList"></div>
+            </div>
+          </div>
+
+          <div class="um-actions">
+            <button class="btn-primary" id="tmSaveBtn" onclick="tmSave()">Save team</button>
+            <span id="tmMsg" class="um-msg"></span>
           </div>
         </div>
-
       </div>
+    </div>
+
+    <!-- ── ALERTS ── Data team only: every page and report, and the KPI cards
+         and charts on it that have no data points. Filled by renderAlerts(). -->
+    <div class="tab-pane" id="tab-alerts">
+      <div class="card al-head">
+        <div class="al-head-row">
+          <div>
+            <div class="card-title">Missing data</div>
+            <div class="al-sub" id="alSub">Pages and reports are checked when this page opens.</div>
+          </div>
+          <button type="button" class="um-btn" id="alScanBtn" onclick="alertsScan(true)">Check again</button>
+        </div>
+        <div class="al-summary" id="alSummary"></div>
+      </div>
+      <div id="alList"></div>
     </div>
 
   </div>
