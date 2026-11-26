@@ -12,15 +12,18 @@
  * label in step. syncDate() only writes when something actually changed, so
  * the observer cannot feed itself.
  */
-import './styles/date-popup.css';
+import '../../design/shared/date-popup.css';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-/* Which selects become popups: every report's date pill, plus the filter
-   dropdowns in a .filterbar (ASO Reviews) or any select marked data-popup.
-   Filter-bar ones get the plain pill look (.dd-plain) instead of the
-   gradient, since they are filters, not the page's one live date control. */
-const SELECTS = '.date-controls select.date, .filterbar select, select[data-popup]';
+/* Which selects become popups: every report's date pill, the filter
+   dropdowns in a .filterbar (ASO Reviews), the channel / network filters
+   (.chan-filter, .ctrl-select), the hub's form selects (.form-ctrl) and any
+   select marked data-popup. Every one is drawn as the same gradient pill as
+   the date range (design/shared/date-popup.css); .dd-plain only changes the
+   size and opens the menu to the left. */
+const SELECTS = '.date-controls select.date, .filterbar select, select[data-popup], ' +
+  'select.chan-filter, select.ctrl-select, select.form-ctrl';
 
 export function enhanceDate() {
   document.querySelectorAll(SELECTS).forEach((sel) => {

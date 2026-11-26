@@ -59,7 +59,7 @@ const GAME_HANDLERS = [
   'doLogout', 'goTab', 'goToTab', 'hardReset', 'jumpToLatest', 'loadUsers',
   'mxSetGrain', 'mxToggleSheetColours', 'onDateInput', 'onGameChange',
   'onPresetChange', 'onProgRangeChange', 'removeUser', 'saveThresh',
-  'syncNow', 'toggleSidebar', 'toggleTheme',
+  'syncNow', 'toggleSidebar',
 ];
 
 const PAGES = [
@@ -102,28 +102,8 @@ const PAGES = [
       const missing = names.filter((n) => typeof window[n] !== 'function');
       if (missing.length) return 'inline handlers not on window: ' + missing.join(', ');
 
-      // Its own theme path, since it is exempt from the shared one above:
-      // toggleTheme() must actually flip the attribute, and put it back.
-      const root = document.documentElement;
-      const before = root.getAttribute('data-theme');
-      window.toggleTheme();
-      const after = root.getAttribute('data-theme');
-      window.toggleTheme();
-      if (after === before) return 'toggleTheme() did not change data-theme';
-      if (root.getAttribute('data-theme') !== before) return 'toggleTheme() is not reversible';
-
-      /* The reports read localStorage['mss3d_theme'] and follow it. The hub
-         used to write it; this page does now. Without this the shell switches
-         to light and every report framed inside it stays dark, which is not
-         something the eye forgives. */
-      window.toggleTheme();
-      const written = (() => { try { return localStorage.getItem('mss3d_theme'); } catch (e) { return null; } })();
-      const nowTheme = root.getAttribute('data-theme');
-      window.toggleTheme();
-      if (written !== nowTheme) {
-        return 'toggleTheme() left mss3d_theme as ' + written + ' while the page is ' + nowTheme +
-               ' - framed reports would not follow';
-      }
+      /* dark only: the light theme and its switch were removed */
+      if (document.documentElement.getAttribute('data-theme') !== 'dark') return 'the hub is not dark';
 
       /* ---- the shell: scope, reports, and the controls ----
          Reached through window.__shell because the test cannot sign in, so it
@@ -312,18 +292,9 @@ for (const page of PAGES) {
     document.documentElement.getAttribute('data-theme')
   ).catch(() => null);
 
-  /* The light theme is applied by a different code path than the initial
-     paint — theme-boot writes the html attribute, theme.js adds the body
-     class — so exercising the switch is what proves both halves are wired. */
-  const lightOk = page.sharedTheme === false ? 'n/a' : await tab.evaluate(() => {
-    try {
-      localStorage.setItem('mss3d_theme', 'light');
-      window.dispatchEvent(new StorageEvent('storage', { key: 'mss3d_theme', newValue: 'light' }));
-      const on = document.body.classList.contains('lt');
-      localStorage.setItem('mss3d_theme', 'dark');
-      return on;
-    } catch (e) { return false; }
-  }).catch(() => false);
+  /* the dashboard is dark only (the light theme was removed), so there is no
+     light switch to exercise any more */
+  const lightOk = 'n/a';
 
   const assertion = page.assert
     ? await tab.evaluate(
@@ -350,7 +321,7 @@ for (const r of results) {
   const ok = r.crashes.length === 0 && r.theme !== 'NONE' && r.lightOk && !r.assertion;
   console.log(
     `${ok ? 'PASS' : 'FAIL'}  ${r.page.padEnd(16)} theme=${r.theme}  light-switch=${
-      r.lightOk === 'n/a' ? 'own theme' : r.lightOk ? 'ok' : 'BROKEN'}`
+      'dark only'}`
   );
   if (r.assertion) console.log(`        assert:   ${r.assertion}`);
   r.crashes.forEach((c) => console.log(`        uncaught: ${c.split('\n')[0]}`));

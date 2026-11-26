@@ -42,12 +42,16 @@ function paintLoadingProgress(value,label){
   const text = document.getElementById('loadProgressLabel');
   if (!box || !fill || !number || !text) return;
   _loadProgress = Math.max(0,Math.min(100,Number(value)||0));
+  /* the shared full-screen loader (ps-loader.css): lift it out of the page
+     so nothing hidden around it can hide it too */
+  if (box.parentElement !== document.body) document.body.appendChild(box);
   box.classList.add('show');
   box.classList.remove('error');
   fill.style.width = _loadProgress.toFixed(1) + '%';
   number.textContent = Math.round(_loadProgress) + '%';
   if (label) text.textContent = label;
   box.setAttribute('aria-valuenow',String(Math.round(_loadProgress)));
+  box.style.setProperty('--pl-real',String(Math.round(_loadProgress)));
 }
 
 function startLoadingProgress(label){
@@ -1014,19 +1018,8 @@ function loadDashboardAuth(){
  * decides anything: there is nothing role-dependent left in this page's UI.
  */
 function applyRoleUI(){
-  const chip   = document.getElementById('userChip');
-  const logout = document.getElementById('logoutBtn');
-
-  if (chip && SESSION_EMAIL){
-    chip.style.display = '';
-    /* 'Signed in' rather than 'Admin' or 'Viewer'. The role is not in the
-       token and this page will not guess at one - a chip that said "Viewer"
-       to an administrator would be worse than a chip that says neither. */
-    const roleEl = document.getElementById('userChipRole');
-    if (roleEl) roleEl.textContent = 'Signed in';
-    chip.title = SESSION_EMAIL;
-  }
-  if (logout) logout.style.display = SESSION_EMAIL ? '' : 'none';
+  /* Authentication is owned by the Playspare Pulse shell. Creative keeps no
+     duplicate signed-in badge or sign-out control in its report header. */
 }
 
 /**

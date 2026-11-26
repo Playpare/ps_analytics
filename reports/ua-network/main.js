@@ -2,16 +2,22 @@
  * UA Network Performance entry point.
  *
  * Import order is the contract: Chart.js has to be on `window` before the
- * render module draws anything, and the theme has to be stamped before first
- * paint or anyone on light sees a flash of dark.
+ * render module draws anything.
+ *
+ * Moved onto the design/ layer with the rest of the reports. The old
+ * src/shared/theme.js is gone - the palette now arrives as tokens through
+ * report-pro.js, and there is one theme rather than a light/dark pair, so
+ * there is nothing left to stamp before first paint and nothing to re-stamp
+ * afterwards.
  */
 
-import './ua-network.css';
-import '../../src/shared/styles/report-type.css';
+import '../../design/shared/motion.css';
+import '../../design/reports/ua-network/ua-network.css';
+/* dashboard-wide fonts, sizes and chart scale - colours untouched */
+import '../../design/shared/report-type.css';
 
-import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';
-import '../../src/shared/chart-type.js';
+import '../../design/shared/chart-type.js';
 
 import { GAME_IDS, windows, fetchWindow } from './api.js';
 import { renderPage, showError } from './render.js';
@@ -67,9 +73,10 @@ document.getElementById('fPlat').addEventListener('change', (e) => {
 
 document.getElementById('refreshBtn').addEventListener('click', () => load());
 
-/* The shell can switch theme while the report is open. Redrawing is not
-   optional: Chart.js reads the colour tokens once, when it builds, so the
-   charts keep the old theme's greys until they are rebuilt. */
-window.__themeRerender = () => load();
-
 load();
+
+/* the dashboard design, shared by all the reports */
+import '../../design/shared/report-pro.js';
+/* one loading screen for every page: the Pulse logo + a Loading bar */
+import '../../design/shared/ps-loader.css';
+import '../shared/ps-open.js';

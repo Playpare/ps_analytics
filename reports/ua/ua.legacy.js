@@ -1,7 +1,6 @@
 /* eslint-disable */
 /* --- from ua_report.html · block 513c0113a0 --- */
 /* ---- API client: URL arrives via ?api= from the hub, token via sessionStorage ---- */
-window.__themeRerender = function(){ if (typeof DATA !== 'undefined' && DATA) render(); };
 
 const API = {
   url: new URLSearchParams(location.search).get('api') || '',
@@ -179,10 +178,10 @@ const UA_WINDOW_PRESET=22;
 let LOADED_WINDOW=null;      // { start, end } the payload in DATA covers
 let FULL_RANGE=null;         // { start, end } the workbook actually spans
 let FULL_LOADED=false;       // true once a { full:1 } payload has landed
-Chart.defaults.color='#c0ccdf'; Chart.defaults.borderColor='rgba(255,255,255,.08)'; Chart.defaults.font.family='Poppins'; Chart.defaults.font.weight='500'; Chart.defaults.font.size=11;
-Chart.defaults.plugins.legend.labels.font={family:'Poppins',size:12.5,weight:'400'};
+Chart.defaults.color='#c0ccdf'; Chart.defaults.borderColor='rgba(255,255,255,.08)'; Chart.defaults.font.family='Segoe UI'; Chart.defaults.font.weight='500'; Chart.defaults.font.size=11;
+Chart.defaults.plugins.legend.labels.font={family:'Segoe UI',size:12.5,weight:'400'};
 Chart.defaults.plugins.legend.labels.padding=16;
-Chart.defaults.plugins.title.font={family:'Poppins',size:12.5,weight:'400'};
+Chart.defaults.plugins.title.font={family:'Segoe UI',size:12.5,weight:'400'};
 const uaLegendAxisGap={
   id:'uaLegendAxisGap',
   beforeUpdate(chart){
@@ -484,7 +483,7 @@ const uaPiePercentLabels={
       if(share<3)return;
       const text=share.toFixed(1)+'%';
       ctx.save();
-      ctx.font='500 14px Poppins,system-ui,sans-serif';
+      ctx.font='500 14px Segoe UI,system-ui,sans-serif';
       const w=ctx.measureText(text).width;
       if((arc.endAngle-arc.startAngle)*arc.outerRadius<w+10){ctx.restore();return}
       const ang=(arc.startAngle+arc.endAngle)/2;
@@ -650,6 +649,19 @@ function setKpis(prefix,platform){
   $(prefix+'Roi').textContent=roi?roi.toFixed(2):'—';
   setMoneyKpi(prefix+'Revenue',revenue);
   setMoneyKpi(prefix+'Profit',profit,moneyK);
+  const dates=items.map(x=>x.label);
+  setKpiSpark(prefix+'Spend',items.map(x=>x.cost),dates);
+  setKpiSpark(prefix+'Revenue',items.map(x=>x.revenue),dates);
+  setKpiSpark(prefix+'Profit',items.map(x=>x.profit||(x.revenue-x.cost)),dates);
+  setKpiSpark(prefix+'Roi',items.map(x=>x.roi||(x.cost?x.revenue/x.cost:null)),dates);
+}
+/* Give the shared KPI treatment the real daily values behind each tile. */
+function setKpiSpark(id,values,dates){
+  const card=$(id)?.closest('.kpi');if(!card)return;
+  const pairs=(values||[]).map((v,i)=>({v:Number(v),d:(dates||[])[i]})).filter(x=>Number.isFinite(x.v));
+  if(pairs.length<2){card.removeAttribute('data-spark');card.removeAttribute('data-spark-dates');return}
+  card.setAttribute('data-spark',pairs.map(x=>+x.v.toPrecision(8)).join(','));
+  card.setAttribute('data-spark-dates',pairs.map(x=>x.d||'').join(','));
 }
 function analysisTotalsFromRows(rows,platform){
   const isAndroid=platform==='android',isIos=platform==='ios';
@@ -682,7 +694,7 @@ function setKpiDelta(id,current,previous,higherIsBetter=true){
     detail.textContent='No prior-period baseline';detail.classList.add('delta-flat');return;
   }
   const change=(current-previous)/Math.abs(previous),up=change>0,flat=Math.abs(change)<0.0005;
-  detail.textContent=(flat?'• ':up?'▲ ':'▼ ')+Math.abs(change*100).toFixed(1)+'% vs previous period (prev: '+previousKpiValue(id,previous)+')';
+  detail.textContent=(flat?'• ':up?'▲ ':'▼ ')+Math.abs(change*100).toFixed(1)+'% vs '+previousKpiValue(id,previous);
   detail.classList.add(flat?'delta-flat':((up===higherIsBetter)?'delta-up':'delta-down'));
 }
 function renderPrimaryKpiDeltas(){
@@ -757,7 +769,7 @@ function logPlatformSplit(rows){
     if(none.length)console.warn('[UA] rows matching NEITHER platform:',[...new Set(none.map(r=>r.app))]);
   }catch(e){}
 }
-function render(){syncCardTitles();const overall=filterRows(DATA.overall_data?.rows||[]), daily=filterRows(DATA.networks_overview?.rows||[]);const cw=combinedAnalysis('weekly'),cd=combinedAnalysis('daily');combo('overallWeekly',cw.length?cw:groupedWeekly(daily,6));combo('overallDaily',cd.length?cd:grouped(daily,'day',14));setKpis('overall','overall');$('overallInstalls').textContent=compact(sum(overall.filter(r=>overviewInstallChannelAllowed(r.channel)),'installs'));
+function render(){syncCardTitles();const overall=filterRows(DATA.overall_data?.rows||[]), daily=filterRows(DATA.networks_overview?.rows||[]);const cw=combinedAnalysis('weekly'),cd=combinedAnalysis('daily');combo('overallWeekly',cw.length?cw:groupedWeekly(daily,6));combo('overallDaily',cd.length?cd:grouped(daily,'day',14));setKpis('overall','overall');$('overallInstalls').textContent=compact(sum(overall.filter(r=>overviewInstallChannelAllowed(r.channel)),'installs'));const installDays=grouped(overall.filter(r=>overviewInstallChannelAllowed(r.channel)),'day');setKpiSpark('overallInstalls',installDays.map(x=>x.installs),installDays.map(x=>x.label));
   /* The Overall tiles are set by the setKpis('overall', …) call above, which now
      reads the same merged rev&cost analysis rows the overall charts use. They
      used to be overwritten at the end of this function by sums of 'Networks
@@ -768,7 +780,7 @@ function render(){syncCardTitles();const overall=filterRows(DATA.overall_data?.r
   const rs=DATA.revenue_share||{};renderCurrentWeekPies(overall);renderPlatformRevenuePies(rs);
   const networks=daily;table('networkTable',networks,['day','app','channel','network_cost','all_revenue','roas_all_d0','all_revenue_total_d0','roas_ad_d0','ad_revenue']);const na=channelAgg(overall,'all_revenue');table('networkShareTable',na.map(([channel,total])=>({channel,total})),['channel','total']);pie('networkIapShare',na.slice(0,10).map(x=>x[0]),na.slice(0,10).map(x=>x[1]),'Revenue Share');table('revCostTable',filterRows(DATA.rev_cost_analysis?.rows||[]));
   renderGoogleAds(filterRows(DATA.campaigns_data?.rows||[]));renderLegacy();renderPrimaryKpiDeltas();renderSupplementalKpiDeltas();updateDates([...overall,...daily]);}
-function renderGoogleAds(campaigns){const rows=campaigns.filter(googleAds);const weekly=grouped(rows,'week',14);combo('googleAdsTrend',weekly);combo('googleAdsCost',weekly);const cost=sum(rows,'cost'),revenue=sum(rows,'all_revenue')||sum(rows,'revenue');$('googleCost').textContent=money(cost);$('googleRevenue').textContent=money(revenue);$('googleInstalls').textContent=compact(sum(rows,'installs'));$('googleRoas').textContent=cost?(revenue/cost).toFixed(2)+'x':'-';table('googleCampaignTable',rows)}
+function renderGoogleAds(campaigns){const rows=campaigns.filter(googleAds);const weekly=grouped(rows,'week',14),daily=grouped(rows,'day');combo('googleAdsTrend',weekly);combo('googleAdsCost',weekly);const cost=sum(rows,'cost'),revenue=sum(rows,'all_revenue')||sum(rows,'revenue');$('googleCost').textContent=money(cost);$('googleRevenue').textContent=money(revenue);$('googleInstalls').textContent=compact(sum(rows,'installs'));$('googleRoas').textContent=cost?(revenue/cost).toFixed(2)+'x':'-';const dates=daily.map(x=>x.label);setKpiSpark('googleCost',daily.map(x=>x.cost),dates);setKpiSpark('googleRevenue',daily.map(x=>x.revenue),dates);setKpiSpark('googleInstalls',daily.map(x=>x.installs),dates);setKpiSpark('googleRoas',daily.map(x=>x.cost?x.revenue/x.cost:null),dates);table('googleCampaignTable',rows)}
 
 /* ===========================================================================
    AD NETWORKS - ad revenue by mediation network

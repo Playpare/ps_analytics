@@ -2,20 +2,19 @@
  * Weekly report entry point. See reports/ua/main.js on why the order matters.
  */
 
-import '../../src/shared/styles/motion.css';
-import './weekly.css';
+import '../../design/shared/motion.css';
+import '../../design/reports/weekly/weekly.css';
 /* dashboard-wide fonts, sizes and chart scale - colours untouched */
-import '../../src/shared/styles/report-type.css';
+import '../../design/shared/report-type.css';
 
-import '../../src/shared/theme.js';
 import '../../src/shared/chart.js';
-import '../../src/shared/chart-type.js';
+import '../../design/shared/chart-type.js';
 import '../../src/shared/donut.js';
 
 /* The slide bodies are zoomed (design.css), which enlarges each canvas after
    Chart.js has sized its pixels. Rendering at the same factor more pixels
    keeps every chart crisp instead of upscaled. */
-import './design.css';
+import '../../design/reports/weekly/design.css';
 import Chart from '../../src/shared/chart.js';
 Chart.defaults.devicePixelRatio = (window.devicePixelRatio || 1) * 1.15;
 
@@ -39,3 +38,8 @@ import '../../src/shared/date-popup.js';
 import '../../src/shared/snapshot.js';
 
 import './weekly.legacy.js';
+/* the dashboard design, shared by all the reports */
+import '../../design/shared/report-pro.js';
+/* one loading screen for every page: the Pulse logo + a Loading bar */
+import '../../design/shared/ps-loader.css';
+import '../shared/ps-open.js';

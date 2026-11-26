@@ -19,8 +19,8 @@ const fmK = n => { const a=Math.abs(n); return(n<0?'-':'')+(a>=1e6?'$'+(a/1e6).t
 // Full number with commas — for KPI cards
 const fmFull = n => { const neg=n<0; const a=Math.abs(Math.round(n)); return(neg?'-':'')+'$'+a.toLocaleString(); };
 const fr2 = n => (+n).toFixed(2);
-const gc  = () => isLight ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.055)';
-const tc  = () => isLight ? '#4d6080' : '#7a8fad';
+const gc  = () => 'rgba(255,255,255,.055)';
+const tc  = () => '#c0cada';
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const staticDom = {
   tabPanels: [],
@@ -135,7 +135,7 @@ async function apiFetch(params) {
 /* ═══════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════ */
-let CU=null, isLight=false;
+let CU=null;
 let rawData=[], filteredData=[], prevPeriodData=[], roasData=[];
 let refreshTimer=null, lastRefresh=null;
 let charts={};

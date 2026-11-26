@@ -38,7 +38,7 @@ import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const css = readFileSync(join(ROOT, 'reports/weekly/weekly.css'), 'utf8');
+const css = readFileSync(join(ROOT, 'design/reports/weekly/weekly.css'), 'utf8');
 
 /* Measured in the live report, by cloning each card of .row2 and setting
    width:min-content on the clone. The two cards come to 108px and 267px.
@@ -157,7 +157,7 @@ ok('the two cards are still side by side at 1400px', wide.columns, 2);
    claim being tested: the frame takes the space that is actually left, at
    any size, without anyone re-deriving a number. */
 
-const shellCss = readFileSync(join(ROOT, 'game-analytics/game-analytics.css'), 'utf8');
+const shellCss = readFileSync(join(ROOT, 'design/hub/game-analytics.css'), 'utf8');
 
 /* data-scope is deliberately NOT "game": that is what a report section sets,
    and it is what hides the range bar. A fixture that left it as "game" would

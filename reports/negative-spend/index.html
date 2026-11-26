@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -11,10 +11,6 @@
 
 
 
-  <!--THEME_BOOT-->
-  <!-- The same cube the shell shows while this document loads, so the
-       wait looks like one thing instead of two. See the file. -->
-  <link rel="stylesheet" href="../shared/ps-loader.css">
 </head>
 <body>
 
@@ -22,14 +18,13 @@
   <select id="platformFilter" class="plat" title="Platform" hidden>
     <option value="android">Android</option><option value="ios">IOS</option><option value="all">All platforms</option>
   </select>
-  <span class="platform-drop" id="platformDrop">
-    <button id="platformFilterBtn" class="btn" type="button" aria-haspopup="true">Android</button>
-    <span class="platform-drop-menu" id="platformDropMenu">
-      <button type="button" data-platform="android" class="active">Android</button>
-      <button type="button" data-platform="ios">IOS</button>
-      <button type="button" data-platform="all">All platforms</button>
-    </span>
-  </span>
+  <!-- Platform as individual buttons, like the UA Report's tabs (was a
+       dropdown). Same data-platform buttons, so the page logic is unchanged. -->
+  <nav class="tabs plat-tabs" id="platformDropMenu" aria-label="Platform">
+    <button type="button" data-platform="android" class="active">Android</button>
+    <button type="button" data-platform="ios">IOS</button>
+    <button type="button" data-platform="all">All platforms</button>
+  </nav>
   <button id="mapBtn" class="btn" type="button" hidden>&#9998; Campaign settings</button>
   <div class="date" data-date-range>Live Sheet Data</div>
   <span id="status" class="status" hidden>Loading…</span>
